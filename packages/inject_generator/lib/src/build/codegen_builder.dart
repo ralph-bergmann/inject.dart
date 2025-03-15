@@ -18,7 +18,7 @@ import '../source/injected_type.dart';
 import '../source/lookup_key.dart';
 import '../source/symbol_path.dart';
 import '../summary.dart';
-import 'abstract_builder.dart';
+import 'builder_utils.dart';
 
 const _moduleFieldName = '_module';
 const _factoryFieldName = '_factory';
@@ -27,29 +27,26 @@ const _getMethodName = 'get';
 final _overrideRef = refer('override');
 
 /// Generates code for a dependency injection-aware library.
-class InjectCodegenBuilder extends AbstractInjectBuilder {
-  final bool _useScoping;
-
-  const InjectCodegenBuilder({bool useScoping = true}) : _useScoping = useScoping;
+class InjectCodegenBuilder implements Builder {
+  const InjectCodegenBuilder();
 
   @override
-  String get inputExtension => 'summary';
+  Map<String, List<String>> get buildExtensions => {
+        componentOutputExtension: [codegenOutputExtension],
+      };
 
   @override
-  String get outputExtension => 'dart';
+  Future<void> build(BuildStep buildStep) => runInContext<void>(buildStep, () => _buildInContext(buildStep));
 
-  @override
-  Future<String?> buildOutput(BuildStep buildStep) =>
-      runInContext<String?>(buildStep, () => _buildInContext(buildStep));
-
-  Future<String?> _buildInContext(BuildStep buildStep) async {
-    // We initially read in our <name>.inject.summary JSON blob, parse it, and
+  Future<void> _buildInContext(BuildStep buildStep) async {
+    // We initially read in our <name>.inject JSON blob, parse it, and
     // use it to generate a "{className}$Component" Dart class for each @component
     // annotation that was processed and put in the summary.
-    final summary = await buildStep.readAsString(buildStep.inputId).then(jsonDecode).then(LibrarySummary.fromJson);
+
+    final summary = await buildStep.readAsString(buildStep.inputId).then(jsonDecode).then(ComponentsSummary.fromJson);
 
     if (summary.components.isEmpty) {
-      return null;
+      return;
     }
 
     // If we require additional summaries (modules, etc) in other libraries we
@@ -89,10 +86,15 @@ class InjectCodegenBuilder extends AbstractInjectBuilder {
       }
     }
 
-    final emitter =
-        _useScoping ? DartEmitter.scoped(useNullSafetySyntax: true) : DartEmitter(useNullSafetySyntax: true);
-    return DartFormatter(languageVersion: Version.parse('3.6.0')).format(
+    final emitter = DartEmitter.scoped(useNullSafetySyntax: true);
+    final content = DartFormatter(languageVersion: Version.parse('3.6.0')).format(
       target.build().accept(emitter).toString(),
+    );
+    await saveContent(
+      buildStep,
+      componentOutputExtension,
+      codegenOutputExtension,
+      content,
     );
   }
 }

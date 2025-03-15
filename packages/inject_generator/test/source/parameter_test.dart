@@ -99,8 +99,8 @@ void main() {
       );
       expect(factories[0].factory.parameters[0].name, 'foo');
 
-      final asset = stb.content.entries.first;
-      final ctb = CodegenTestBed(inputAssetId: asset.key, input: asset.value);
+      final asset = stb.components.entries.first;
+      final ctb = CodegenTestBed(inputAssetId: asset.key, sourceAssets: stb.assets);
       await ctb.run();
       await ctb.compare();
     });

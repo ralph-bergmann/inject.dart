@@ -11,18 +11,12 @@ LookupKey _$LookupKeyFromJson(Map<String, dynamic> json) => $checkedCreate(
       json,
       ($checkedConvert) {
         final val = LookupKey(
-          $checkedConvert(
-              'root', (v) => SymbolPath.fromJson(v as Map<String, dynamic>)),
-          qualifier: $checkedConvert(
-              'qualifier',
-              (v) => v == null
-                  ? null
-                  : SymbolPath.fromJson(v as Map<String, dynamic>)),
-          typeArguments: $checkedConvert(
-              'typeArguments',
-              (v) => (v as List<dynamic>?)
-                  ?.map((e) => LookupKey.fromJson(e as Map<String, dynamic>))
-                  .toList()),
+          $checkedConvert('root', (v) => SymbolPath.fromJson(v as Map<String, dynamic>)),
+          qualifier:
+              $checkedConvert('qualifier', (v) => v == null ? null : SymbolPath.fromJson(v as Map<String, dynamic>)),
+          typeArguments: $checkedConvert('typeArguments',
+              (v) => (v as List<dynamic>?)?.map((e) => LookupKey.fromJson(e as Map<String, dynamic>)).toList()),
+          bound: $checkedConvert('bound', (v) => v == null ? null : LookupKey.fromJson(v as Map<String, dynamic>)),
         );
         return val;
       },
@@ -32,4 +26,5 @@ Map<String, dynamic> _$LookupKeyToJson(LookupKey instance) => <String, dynamic>{
       'root': instance.root,
       'qualifier': instance.qualifier,
       'typeArguments': instance.typeArguments,
+      'bound': instance.bound,
     };

@@ -19,8 +19,7 @@ SymbolPath _$SymbolPathFromJson(Map<String, dynamic> json) => $checkedCreate(
       },
     );
 
-Map<String, dynamic> _$SymbolPathToJson(SymbolPath instance) =>
-    <String, dynamic>{
+Map<String, dynamic> _$SymbolPathToJson(SymbolPath instance) => <String, dynamic>{
       'package': instance.package,
       'path': instance.path,
       'symbol': instance.symbol,

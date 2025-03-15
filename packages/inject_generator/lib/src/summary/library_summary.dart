@@ -5,9 +5,11 @@
 part of '../summary.dart';
 
 /// JSON-serializable subset of code analysis information about a Dart library
-/// containing dependency injection constructs.
+/// that includes dependency injection constructs but excludes component classes.
 ///
-/// A library summary generally corresponds to a ".dart" file.
+/// Component classes of a Dart library are summarized in ComponentsSummary.
+///
+/// A library summary usually corresponds to a “.dart” file.
 @JsonSerializable()
 class LibrarySummary {
   /// Points to the Dart file that defines the library from which this summary
@@ -15,9 +17,6 @@ class LibrarySummary {
   ///
   /// The URI uses the "asset:" scheme.
   final Uri assetUri;
-
-  /// Component classes defined in the library.
-  final List<ComponentSummary> components;
 
   /// Module classes defined in this library.
   final List<ModuleSummary> modules;
@@ -34,7 +33,6 @@ class LibrarySummary {
   /// Constructor.
   factory LibrarySummary(
     Uri assetUri, {
-    List<ComponentSummary> components = const [],
     List<ModuleSummary> modules = const [],
     List<InjectableSummary> injectables = const [],
     List<InjectableSummary> assistedInjectables = const [],
@@ -42,7 +40,6 @@ class LibrarySummary {
   }) =>
       LibrarySummary._(
         assetUri,
-        components,
         modules,
         injectables,
         assistedInjectables,
@@ -51,7 +48,6 @@ class LibrarySummary {
 
   const LibrarySummary._(
     this.assetUri,
-    this.components,
     this.modules,
     this.injectables,
     this.assistedInjectables,
@@ -61,4 +57,35 @@ class LibrarySummary {
   factory LibrarySummary.fromJson(dynamic json) => _$LibrarySummaryFromJson(json);
 
   Map<String, dynamic> toJson() => _$LibrarySummaryToJson(this);
+}
+
+@JsonSerializable()
+class ComponentsSummary {
+  /// Points to the Dart file that defines the library from which this summary
+  /// was extracted.
+  ///
+  /// The URI uses the "asset:" scheme.
+  final Uri assetUri;
+
+  /// Component classes defined in the library.
+  final List<ComponentSummary> components;
+
+  /// Constructor.
+  factory ComponentsSummary(
+    Uri assetUri, {
+    required List<ComponentSummary> components,
+  }) =>
+      ComponentsSummary._(
+        assetUri,
+        components,
+      );
+
+  const ComponentsSummary._(
+    this.assetUri,
+    this.components,
+  );
+
+  factory ComponentsSummary.fromJson(dynamic json) => _$ComponentsSummaryFromJson(json);
+
+  Map<String, dynamic> toJson() => _$ComponentsSummaryToJson(this);
 }

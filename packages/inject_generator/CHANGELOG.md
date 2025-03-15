@@ -1,6 +1,25 @@
+## 1.0.0-alpha.8
+
+- Improved code generation time
+
+  The `build_runner` process has been optimized to reduce code generation
+  time. In the standard workflow, `build_runner` processes all files in the
+  project and provides them to the code generator, which then generates a
+  summary for each Dart file. Version 1.0.0-alpha.7 already improved
+  performance by filtering out Dart files that don't import
+  `package:inject_annotation`. This release takes optimization further by
+  addressing the time-consuming process of finding `Component`
+  declarations. Previously, the generator had to read all summaries to
+  locate these `Component`s, which serve as the root of the dependency
+  graph and the starting point for code generation. Now, `Component`
+  declarations are extracted from summaries during the first step and
+  stored in a dedicated file. This means the second step of the process can
+  begin immediately with the component files rather than searching through
+  all summaries, resulting in significantly faster generation times.
+
 ## 1.0.0-alpha.7
 
-- improve code generator 
+- improve code generator
 
   skip Dart files which don't import `package:inject_annotation`
 

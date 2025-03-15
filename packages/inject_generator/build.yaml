@@ -3,16 +3,19 @@ builders:
   summarize_builder:
     import: "package:inject_generator/inject_generator.dart"
     builder_factories: [ "summarizeBuilder" ]
-    build_extensions: { ".dart": [ ".inject.summary" ] }
+    build_extensions: { ".dart": [ ".inject_summary.json", ".inject_component.json" ] }
     auto_apply: dependents
-    runs_before: [ ":generate_builder" ]
     build_to: cache
   generate_builder:
     import: "package:inject_generator/inject_generator.dart"
     builder_factories: [ "generateBuilder" ]
-    build_extensions: { ".summary": [ ".inject.dart" ] }
+    required_inputs: [".inject_component.json"]
+    build_extensions: { ".inject_component.json": [ ".inject.dart" ] }
     auto_apply: dependents
     build_to: source
+
+# build step to regenerate json serializable code
+# also enable package inports in pubspec.yaml 
 #targets:
 #  $default:
 #    builders:

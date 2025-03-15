@@ -11,6 +11,7 @@ import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 import 'package:path/path.dart' as path;
 
+import 'build/builder_utils.dart';
 import 'context.dart';
 import 'source/injected_type.dart';
 import 'source/lookup_key.dart';

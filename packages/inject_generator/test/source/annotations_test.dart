@@ -20,8 +20,9 @@ void main() {
       expect(summary, isNotNull);
       expect(summary.assetUri, testAssetId.uri);
 
-      expect(summary.components.length, 1);
-      final component = summary.components[0];
+      final components = stb.components.values.first.components;
+      expect(components.length, 1);
+      final component = components[0];
 
       expect(
         component.clazz,
@@ -41,7 +42,7 @@ void main() {
       );
 
       final asset = stb.content.entries.first;
-      final ctb = CodegenTestBed(inputAssetId: asset.key, input: asset.value);
+      final ctb = CodegenTestBed(inputAssetId: asset.key, sourceAssets: stb.assets);
       await ctb.run();
       await ctb.compare();
     });
@@ -60,8 +61,9 @@ void main() {
       expect(summary, isNotNull);
       expect(summary.assetUri, testAssetId.uri);
 
-      expect(summary.components.length, 1);
-      final component = summary.components[0];
+      final components = stb.components.values.first.components;
+      expect(components.length, 1);
+      final component = components[0];
 
       expect(
         component.clazz,
@@ -77,7 +79,7 @@ void main() {
       expect(summary.injectables.length, 0);
 
       final asset = stb.content.entries.first;
-      final ctb = CodegenTestBed(inputAssetId: asset.key, input: asset.value);
+      final ctb = CodegenTestBed(inputAssetId: asset.key, sourceAssets: stb.assets);
       await ctb.run();
       await ctb.compare();
     });
@@ -164,7 +166,7 @@ void main() {
       expect(module.providers[2].injectedType.isAsynchronous, true);
 
       final asset = stb.content.entries.first;
-      final ctb = CodegenTestBed(inputAssetId: asset.key, input: asset.value);
+      final ctb = CodegenTestBed(inputAssetId: asset.key, sourceAssets: stb.assets);
       await ctb.run();
       await ctb.compare();
     });
@@ -214,7 +216,7 @@ void main() {
       expect(injectable1.constructor.injectedType.isSingleton, true);
 
       final asset = stb.content.entries.first;
-      final ctb = CodegenTestBed(inputAssetId: asset.key, input: asset.value);
+      final ctb = CodegenTestBed(inputAssetId: asset.key, sourceAssets: stb.assets);
       await ctb.run();
       await ctb.compare();
     });
@@ -232,9 +234,11 @@ void main() {
       final summary = summaries.values.first;
       expect(summary, isNotNull);
       expect(summary.assetUri, testAssetId.uri);
-      expect(summary.components.length, 1);
 
-      final component = summary.components[0];
+      final components = stb.components.values.first.components;
+      expect(components.length, 1);
+
+      final component = components[0];
       expect(
         component.clazz,
         const SymbolPath(rootPackage, testFilePath, 'Component'),
@@ -327,7 +331,7 @@ void main() {
       expect(annotatedConstructor.constructor.dependencies[1].isAssisted, true);
 
       final asset = stb.content.entries.first;
-      final ctb = CodegenTestBed(inputAssetId: asset.key, input: asset.value);
+      final ctb = CodegenTestBed(inputAssetId: asset.key, sourceAssets: stb.assets);
       await ctb.run();
       await ctb.compare();
     });

@@ -44,38 +44,14 @@ BuilderContext get builderContext {
 
 /// Contains services related to the currently executing [BuildStep].
 class BuilderContext {
+  const BuilderContext._(this.buildStep);
+
   /// The build step currently being processed.
   final BuildStep buildStep;
-
-  /// A logger that provides source locations.
-  ///
-  /// Example:
-  ///
-  ///     Element sourceElement = ...;
-  ///     builderContext.log.warning(sourceElement,
-  ///         'is not expected at this location.');
-  final BuilderLogger log;
-
-  BuilderContext._(this.buildStep) : log = BuilderLogger(buildStep.inputId);
 
   /// The logger scoped to the current [buildStep] and therefore scoped to the
   /// currently processed input file.
   Logger get rawLogger => build.log;
-}
-
-/// A logger that provides human-readable source code locations related to the
-/// log messages.
-class BuilderLogger {
-  /// The primary asset being currently processed by the builder.
-  final AssetId _inputId;
-
-  /// Constructor.
-  const BuilderLogger(this._inputId);
-
-  /// Logs a info adding [element]'s source information to the message.
-  void info(Element? element, String message) {
-    builderContext.rawLogger.info(constructMessage(_inputId, element, message));
-  }
 }
 
 String constructMessage(AssetId inputId, Element? element, String message) {

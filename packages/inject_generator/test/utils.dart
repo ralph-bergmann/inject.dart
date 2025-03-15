@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:build/build.dart';
 import 'package:build_test/build_test.dart';
+import 'package:inject_generator/src/build/builder_utils.dart';
 import 'package:inject_generator/src/build/codegen_builder.dart';
 import 'package:inject_generator/src/build/summary_builder.dart';
 import 'package:inject_generator/src/summary.dart';
@@ -21,7 +22,11 @@ class SummaryTestBed extends _TestBed {
 
 class CodegenTestBed extends _TestBed {
   @override
-  CodegenTestBed({required super.inputAssetId, required super.input}) : super(builder: const InjectCodegenBuilder());
+  CodegenTestBed({required super.inputAssetId, required Map<AssetId, dynamic>? sourceAssets})
+      : super(
+          reader: InMemoryAssetReader(sourceAssets: sourceAssets, rootPackage: rootPackage),
+          builder: const InjectCodegenBuilder(),
+        );
 
   /// Compare the generated code with the code in the file.
   Future<void> compare() async {
@@ -37,9 +42,14 @@ class _TestBed {
   /// AssetId of the content to test for the builder.
   final AssetId inputAssetId;
 
-  /// The content to test for the builder.
-  final String? input;
+  /// The reader to read the assets from.
+  /// The builder will use it to read the needed assets.
+  /// Defaults to [PackageAssetReader.currentIsolate].
+  /// Must be set to a InMemoryAssetReader for the second stage of the test
+  /// to read assets written by the first stage of the test.
+  final MultiPackageAssetReader? reader;
 
+  /// The builder to test.
   final Builder builder;
 
   /// Log records written by the builder.
@@ -47,7 +57,10 @@ class _TestBed {
 
   final _TestingAssetWriter _writer = _TestingAssetWriter();
 
-  _TestBed({required this.inputAssetId, this.input, required this.builder});
+  _TestBed({required this.inputAssetId, this.reader, required this.builder});
+
+  /// Generated library components keyed by their paths.
+  Map<AssetId, ComponentsSummary> get components => _writer.components;
 
   /// Generated library summaries keyed by their paths.
   Map<AssetId, LibrarySummary> get summaries => _writer.summaries;
@@ -57,6 +70,9 @@ class _TestBed {
 
   /// Generated stuff as String keyed by their paths
   Map<AssetId, String> get content => _writer.assets.map((key, value) => MapEntry(key, utf8.decode(value)));
+
+  /// Generated stuff as bytes keyed by their paths
+  Map<AssetId, List<int>> get assets => _writer.assets;
 
   /// Verifies that [logRecords] contains a message with the desired [level] and
   /// [message].
@@ -84,9 +100,9 @@ class _TestBed {
 
   /// Runs the [InjectSummaryBuilder].
   Future<void> run() async {
-    final reader = await PackageAssetReader.currentIsolate(rootPackage: rootPackage);
+    final reader = this.reader ?? await PackageAssetReader.currentIsolate(rootPackage: rootPackage);
 
-    final content = input ?? await reader.readAsString(inputAssetId);
+    final content = await reader.readAsString(inputAssetId);
     await testBuilder(
       builder,
       {inputAssetId.toString(): content},
@@ -116,10 +132,9 @@ class _LogRecordMatcher extends Matcher {
 }
 
 class _TestingAssetWriter extends InMemoryAssetWriter {
-  final Map<AssetId, LibrarySummary> summaries = <AssetId, LibrarySummary>{};
-  final Map<AssetId, String> genFiles = <AssetId, String>{};
-
-  _TestingAssetWriter();
+  final components = <AssetId, ComponentsSummary>{};
+  final summaries = <AssetId, LibrarySummary>{};
+  final genFiles = <AssetId, String>{};
 
   @override
   Future writeAsString(
@@ -128,10 +143,11 @@ class _TestingAssetWriter extends InMemoryAssetWriter {
     Encoding encoding = utf8,
   }) async {
     await super.writeAsString(id, contents, encoding: encoding);
-    if (id.path.endsWith('.inject.summary')) {
+    if (id.path.endsWith(componentOutputExtension)) {
+      components[id] = ComponentsSummary.fromJson(json.decode(contents));
+    } else if (id.path.endsWith(summaryOutputExtension)) {
       summaries[id] = LibrarySummary.fromJson(json.decode(contents));
-    }
-    if (id.path.endsWith('.inject.dart')) {
+    } else if (id.path.endsWith(codegenOutputExtension)) {
       genFiles[id] = contents;
     }
   }

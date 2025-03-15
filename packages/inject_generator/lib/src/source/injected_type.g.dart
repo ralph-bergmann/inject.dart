@@ -6,14 +6,12 @@ part of 'injected_type.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-InjectedType _$InjectedTypeFromJson(Map<String, dynamic> json) =>
-    $checkedCreate(
+InjectedType _$InjectedTypeFromJson(Map<String, dynamic> json) => $checkedCreate(
       'InjectedType',
       json,
       ($checkedConvert) {
         final val = InjectedType(
-          $checkedConvert('lookupKey',
-              (v) => LookupKey.fromJson(v as Map<String, dynamic>)),
+          $checkedConvert('lookupKey', (v) => LookupKey.fromJson(v as Map<String, dynamic>)),
           name: $checkedConvert('name', (v) => v as String?),
           isNullable: $checkedConvert('isNullable', (v) => v as bool?),
           isRequired: $checkedConvert('isRequired', (v) => v as bool?),
@@ -28,8 +26,7 @@ InjectedType _$InjectedTypeFromJson(Map<String, dynamic> json) =>
       },
     );
 
-Map<String, dynamic> _$InjectedTypeToJson(InjectedType instance) =>
-    <String, dynamic>{
+Map<String, dynamic> _$InjectedTypeToJson(InjectedType instance) => <String, dynamic>{
       'lookupKey': instance.lookupKey,
       'name': instance.name,
       'isNullable': instance.isNullable,

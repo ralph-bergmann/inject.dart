@@ -44,11 +44,13 @@ class LookupKey {
     List<LookupKey> extractBoundTypes(DartType t) {
       if (t is ParameterizedType && t.typeArguments.isNotEmpty) {
         return t.typeArguments
-            .map((arg) => LookupKey(
-                  getSymbolPath(arg),
-                  // Recurse using the default constructor to avoid infinite recursion.
-                  typeArguments: extractBoundTypes(arg),
-                ))
+            .map(
+              (arg) => LookupKey(
+                getSymbolPath(arg),
+                // Recurse using the default constructor to avoid infinite recursion.
+                typeArguments: extractBoundTypes(arg),
+              ),
+            )
             .toList();
       }
       return [];

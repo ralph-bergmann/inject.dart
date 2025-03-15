@@ -1,5 +1,5 @@
 name: inject_generator
-version: 1.0.0-alpha.7
+version: 1.0.0-alpha.8
 description: Dev-time dependency for package:inject_annotation.
 repository: https://github.com/ralph-bergmann/inject.dart
 issue_tracker: https://github.com/ralph-bergmann/inject.dart/issues
@@ -29,5 +29,7 @@ dev_dependencies:
   lints: ^5.1.1
   test: ^1.24.9
 
+#  imports needed to regenerate json code
+#  also enable build step in build.yaml
 #  build_runner: ^2.4.14
 #  json_serializable: ^6.9.3

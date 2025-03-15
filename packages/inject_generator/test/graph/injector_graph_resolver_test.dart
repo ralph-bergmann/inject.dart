@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:inject_generator/src/build/builder_utils.dart';
 import 'package:inject_generator/src/graph.dart';
 import 'package:inject_generator/src/source/injected_type.dart';
 import 'package:inject_generator/src/source/lookup_key.dart';
@@ -13,11 +14,11 @@ void main() {
   group(
     '$ComponentGraphResolver',
     () {
-      FakeSummaryReader? reader;
+      _FakeSummaryReader? reader;
 
       setUp(() {
-        reader = FakeSummaryReader({
-          'foo/foo.inject.summary': LibrarySummary(
+        reader = _FakeSummaryReader({
+          'foo/foo$summaryOutputExtension': LibrarySummary(
             Uri.parse('asset:foo/foo.dart'),
             modules: [
               ModuleSummary(
@@ -118,21 +119,21 @@ void main() {
       //   await runZoned(
       //     () async {
       //       final componentSummary = ComponentSummary(
-      //         SymbolPath('foo', 'foo.dart', 'FooComponent'),
+      //         const SymbolPath('foo', 'foo.dart', 'FooComponent'),
       //         [],
       //         [
       //           ProviderSummary(
+      //             'getFoo',
+      //             ProviderKind.method,
       //             InjectedType(
       //               LookupKey(
       //                 SymbolPath.parseAbsoluteUri('asset:foo/missing.dart#Foo'),
       //               ),
       //             ),
-      //             'getFoo',
-      //             ProviderKind.method,
-      //           )
+      //           ),
       //         ],
       //       );
-      //       final resolver = ComponentGraphResolver(reader, componentSummary);
+      //       final resolver = ComponentGraphResolver(reader!, componentSummary);
       //       await resolver.resolve();
       //     },
       //     zoneValues: {#builderContext: ctx},
@@ -197,15 +198,12 @@ void main() {
 //
 //   @override
 //   BuildStep get buildStep => null;
-//
-//   @override
-//   BuilderLogger get log => null;
 // }
 
 /// An in-memory implementation of [SummaryReader].
 ///
 /// When [read] is called, it returns the mock summary.
-class FakeSummaryReader implements SummaryReader {
+class _FakeSummaryReader implements SummaryReader {
   final Map<String, LibrarySummary> _summaries;
 
   /// Create a fake summary reader with previously created summaries.
@@ -214,7 +212,7 @@ class FakeSummaryReader implements SummaryReader {
   ///     return new FakeSummary({
   ///       'foo/foo.dart': new LibrarySummary(...)
   ///     });
-  FakeSummaryReader(this._summaries);
+  _FakeSummaryReader(this._summaries);
 
   @override
   Future<LibrarySummary> read(String package, String path) {

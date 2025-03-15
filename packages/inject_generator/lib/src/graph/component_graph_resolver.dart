@@ -9,8 +9,6 @@ part of '../graph.dart';
 ///     var resolver = ComponentGraphResolver(summaryReader, componentSummary);
 ///     var graph = await resolver.resolve();
 class ComponentGraphResolver {
-  static const String _librarySummaryExtension = '.inject.summary';
-
   final ComponentSummary _componentSummary;
   final List<SymbolPath> _modules = <SymbolPath>[];
   final List<ProviderSummary> _providers = <ProviderSummary>[];
@@ -35,7 +33,7 @@ class ComponentGraphResolver {
     }
 
     final package = p.package!;
-    final filePath = path.withoutExtension(p.path!) + _librarySummaryExtension;
+    final filePath = path.withoutExtension(p.path!) + summaryOutputExtension;
     try {
       return _summaryCache[p] = await _reader.read(package, filePath);
     } on AssetNotFoundException {

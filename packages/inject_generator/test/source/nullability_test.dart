@@ -21,46 +21,47 @@ void main() {
       expect(summary, isNotNull);
       expect(summary.assetUri, testAssetId.uri);
 
-      expect(summary.components.length, 1);
+      final components = stb.components.values.first.components;
+      expect(components.length, 1);
       expect(
-        summary.components[0].clazz,
+        components[0].clazz,
         const SymbolPath(rootPackage, testFilePath, 'ComponentNullability'),
       );
 
-      expect(summary.components[0].providers.length, 3);
+      expect(components[0].providers.length, 3);
 
-      expect(summary.components[0].providers[0].name, 'fooBar');
+      expect(components[0].providers[0].name, 'fooBar');
       expect(
-        summary.components[0].providers[0].injectedType.lookupKey.root,
+        components[0].providers[0].injectedType.lookupKey.root,
         const SymbolPath(rootPackage, testFilePath, 'FooBar'),
       );
       expect(
-        summary.components[0].providers[0].injectedType.isNullable,
+        components[0].providers[0].injectedType.isNullable,
         false,
       );
 
-      expect(summary.components[0].providers[1].name, 'foo');
+      expect(components[0].providers[1].name, 'foo');
       expect(
-        summary.components[0].providers[1].injectedType.lookupKey.root,
+        components[0].providers[1].injectedType.lookupKey.root,
         const SymbolPath(rootPackage, testFilePath, 'Foo'),
       );
       expect(
-        summary.components[0].providers[1].injectedType.isNullable,
+        components[0].providers[1].injectedType.isNullable,
         false,
       );
 
-      expect(summary.components[0].providers[2].name, 'bar');
+      expect(components[0].providers[2].name, 'bar');
       expect(
-        summary.components[0].providers[2].injectedType.lookupKey.root,
+        components[0].providers[2].injectedType.lookupKey.root,
         const SymbolPath(rootPackage, testFilePath, 'Bar'),
       );
       expect(
-        summary.components[0].providers[2].injectedType.isNullable,
+        components[0].providers[2].injectedType.isNullable,
         true,
       );
 
       final asset = stb.content.entries.first;
-      final ctb = CodegenTestBed(inputAssetId: asset.key, input: asset.value);
+      final ctb = CodegenTestBed(inputAssetId: asset.key, sourceAssets: stb.assets);
       await ctb.run();
       await ctb.compare();
     });
@@ -73,7 +74,7 @@ void main() {
       stb.printLog();
 
       final asset = stb.content.entries.first;
-      final ctb = CodegenTestBed(inputAssetId: asset.key, input: asset.value);
+      final ctb = CodegenTestBed(inputAssetId: asset.key, sourceAssets: stb.assets);
       await ctb.run();
       await ctb.compare();
       ctb
@@ -92,7 +93,7 @@ void main() {
       stb.printLog();
 
       final asset = stb.content.entries.first;
-      final ctb = CodegenTestBed(inputAssetId: asset.key, input: asset.value);
+      final ctb = CodegenTestBed(inputAssetId: asset.key, sourceAssets: stb.assets);
       await ctb.run();
       await ctb.compare();
       ctb
