@@ -5,7 +5,7 @@
 /// Contains typed classes that represent collected metadata used by Inject.
 ///
 /// Internal library, **do not export**.
-library inject.src.summary;
+library;
 
 import 'package:json_annotation/json_annotation.dart';
 

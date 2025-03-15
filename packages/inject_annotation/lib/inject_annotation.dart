@@ -3,7 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 
 /// A DI framework for Dart
-library inject;
+library;
 
 export 'src/api/annotations.dart'
     show
