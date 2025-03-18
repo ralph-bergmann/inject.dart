@@ -1,0 +1,15 @@
+[book]
+title = "inject.dart Documentation"
+authors = ["Ralph Bergmann"]
+description = "Compile time dependency injection for Dart and Flutter"
+language = "en"
+multilingual = false
+src = "src"
+
+[output.html]
+preferred-dark-theme = "ayu"
+git-repository-url = "https://github.com/ralph-bergmann/inject.dart"
+git-repository-icon = "fa-github"
+
+[output.html.print]
+enable = false
