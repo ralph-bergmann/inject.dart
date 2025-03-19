@@ -114,9 +114,6 @@
                             <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
                         </ul>
-                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
-                            <i class="fa fa-search"></i>
-                        </button>
                     </div>
 
                     <h1 class="menu-title">inject.dart Documentation</h1>
@@ -129,16 +126,6 @@
                     </div>
                 </div>
 
-                <div id="search-wrapper" class="hidden">
-                    <form id="searchbar-outer" class="searchbar-outer">
-                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
-                    </form>
-                    <div id="searchresults-outer" class="searchresults-outer hidden">
-                        <div id="searchresults-header" class="searchresults-header"></div>
-                        <ul id="searchresults">
-                        </ul>
-                    </div>
-                </div>
 
                 <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
                 <script>
@@ -172,15 +159,23 @@ dependency relationships explicit and easy to understand.</p>
 <p>While many dependency injection frameworks operate at runtime, compile-time
 dependency injection offers several significant advantages:</p>
 <ul>
-<li>Performance — No runtime overhead since all the wiring happens during
+<li><strong>Performance</strong>: No runtime overhead since all the wiring happens during
 compilation</li>
-<li>Code Size — Your app remains lean without additional runtime overhead,
+<li><strong>Code Size</strong>: Your app remains lean without additional runtime overhead,
 and the compiler can optimize the generated code more effectively since
 the dependency graph is known at compile-time</li>
-<li>Compile-time Validation — Errors in your dependency graph are caught
+<li><strong>Compile-time Validation</strong>: Errors in your dependency graph are caught
 during compilation, not at runtime</li>
-<li>IDE Support — Better code navigation and refactoring capabilities</li>
+<li><strong>IDE Support</strong>: Better code navigation and refactoring capabilities</li>
 </ul>
+<blockquote>
+<p><strong>Technical note</strong>: For precision, what we call "compile-time dependency
+injection" actually happens during the build process, before final
+compilation. Some might argue "build-time dependency injection" would be
+more accurate. However, "compile-time" is the established term in contrast
+to "runtime" approaches, effectively communicating that dependencies are
+resolved statically rather than dynamically.</p>
+</blockquote>
 <h2 id="about-this-library"><a class="header" href="#about-this-library">About This Library</a></h2>
 <p>This library provides a clean, annotation-based approach to compile-time
 dependency injection in Dart and Flutter. It's inspired by
@@ -211,6 +206,9 @@ organizing dependencies in real-world applications.</p>
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
 
+                            <a rel="next prefetch" href="chapter_2_installation.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
 
                         <div style="clear: both"></div>
                     </nav>
@@ -219,6 +217,9 @@ organizing dependencies in real-world applications.</p>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
 
+                    <a rel="next prefetch" href="chapter_2_installation.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
             </nav>
 
         </div>
@@ -231,9 +232,6 @@ organizing dependencies in real-world applications.</p>
         </script>
 
 
-        <script src="elasticlunr.min.js"></script>
-        <script src="mark.min.js"></script>
-        <script src="searcher.js"></script>
 
         <script src="clipboard.min.js"></script>
         <script src="highlight.js"></script>

@@ -1,8 +1,0 @@
-arb-dir: lib/src/localization
-template-arb-file: app_en.arb
-output-localization-file: app_localizations.dart
-untranslated-messages-file: missingTranslations.json
-synthetic-package: false # makes automatic imports by IDE easier
-nullable-getter: false # AppLocalizations.of(context) isn't null
-format: true # dart format command is run after generating the localization files
-use-named-parameters: true # use named parameters for the generated localization methods

@@ -13,3 +13,7 @@ git-repository-icon = "fa-github"
 
 [output.html.print]
 enable = false
+
+[output.html.search]
+enable = false
+

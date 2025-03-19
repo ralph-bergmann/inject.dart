@@ -10,7 +10,7 @@ workspace:
   - packages/inject_annotation
   - packages/inject_generator
   - examples/coffee
-  - examples/flutter_skeleton
+  - examples/flutter_demo
   - examples/train
 
 dev_dependencies:
