@@ -25,14 +25,21 @@ dependency relationships explicit and easy to understand.
 While many dependency injection frameworks operate at runtime, compile-time
 dependency injection offers several significant advantages:
 
-- Performance — No runtime overhead since all the wiring happens during
+- **Performance**: No runtime overhead since all the wiring happens during
   compilation
-- Code Size — Your app remains lean without additional runtime overhead,
+- **Code Size**: Your app remains lean without additional runtime overhead,
   and the compiler can optimize the generated code more effectively since
   the dependency graph is known at compile-time
-- Compile-time Validation — Errors in your dependency graph are caught
+- **Compile-time Validation**: Errors in your dependency graph are caught
   during compilation, not at runtime
-- IDE Support — Better code navigation and refactoring capabilities
+- **IDE Support**: Better code navigation and refactoring capabilities
+
+> **Technical note**: For precision, what we call "compile-time dependency
+> injection" actually happens during the build process, before final
+> compilation. Some might argue "build-time dependency injection" would be
+> more accurate. However, "compile-time" is the established term in contrast
+> to "runtime" approaches, effectively communicating that dependencies are
+> resolved statically rather than dynamically.
 
 ## About This Library
 

@@ -1,0 +1,65 @@
+# This file configures the static analysis results for your project (errors,
+# warnings, and lints).
+#
+# This enables the 'recommended' set of lints from `package:lints`.
+# This set helps identify many issues that may lead to problems when running
+# or consuming Dart code, and enforces writing Dart using a single, idiomatic
+# style and format.
+#
+# If you want a smaller set of lints you can change this to specify
+# 'package:lints/core.yaml'. These are just the most critical lints
+# (the recommended set includes the core lints).
+# The core lints are also what is used by pub.dev for scoring packages.
+
+include: package:lints/recommended.yaml
+
+formatter:
+  page_width: 120
+
+
+# Uncomment the following section to specify additional rules.
+
+linter:
+  rules:
+    - always_declare_return_types # Declare method return types.
+    - always_put_control_body_on_new_line # Separate the control structure expression from its statement.
+    - avoid_types_on_closure_parameters # Avoid annotating types for function expression parameters.
+    - avoid_unused_constructor_parameters # Avoid defining unused parameters in constructors.
+    - cascade_invocations # Cascade consecutive method invocations on the same reference.
+    - combinators_ordering # Sort combinator names alphabetically.
+    - comment_references # Only reference in scope identifiers in doc comments.
+    - directives_ordering # Adhere to Effective Dart Guide directives sorting conventions.
+    - discarded_futures # Don’t invoke asynchronous functions in non-async blocks.
+    - eol_at_end_of_file # Put a single newline at end of file.
+    - matching_super_parameters # Use matching super parameter names.
+    - omit_local_variable_types # Omit type annotations for local variables.
+    - prefer_const_constructors # Prefer const with constant constructors.
+    - prefer_const_constructors_in_immutables # Prefer declaring const constructors on @immutable classes.
+    - prefer_const_declarations # Prefer const over final for declarations.
+    - prefer_final_in_for_each # Prefer final in for-each loop variable if reference is not reassigned.
+    - prefer_final_locals # Prefer final for variable declarations if they are not reassigned.
+    - prefer_foreach # Use forEach to only apply a function to all the elements.
+    - prefer_int_literals # Prefer int literals over double literals.
+    - prefer_null_aware_method_calls # Prefer null aware method calls.
+    - prefer_relative_imports # Prefer relative imports for files in lib/.
+    - prefer_single_quotes # Only use double quotes for strings containing single quotes.
+    - require_trailing_commas # Use trailing commas for all function calls and declarations.
+    - test_types_in_equals # Test type arguments in operator ==(Object other).
+    - throw_in_finally # Avoid throw in finally block.
+    - unawaited_futures # Future results in async function bodies must be awaited or marked unawaited using dart:async.
+    - unnecessary_await_in_return # Unnecessary await keyword in return.
+    - unnecessary_breaks # Don’t use explicit breaks when a break is implied.
+    - unnecessary_lambdas # Don’t create a lambda when a tear-off will do.
+    - use_super_parameters # Use super-initializer parameters where possible.
+
+
+analyzer:
+  exclude:
+    - "**/*.g.dart"
+    - "**/*.inject.dart"
+
+# For more information about the core and recommended set of lints, see
+# https://dart.dev/go/core-lints
+
+# For additional information about configuring this file, see
+# https://dart.dev/guides/language/analysis-options

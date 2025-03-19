@@ -1,0 +1,766 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Managing Application State through Dependency Injection - inject.dart Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Compile time dependency injection for Dart and Flutter">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="highlight-css" href="highlight.css">
+        <link rel="stylesheet" id="tomorrow-night-css" href="tomorrow-night.css">
+        <link rel="stylesheet" id="ayu-highlight-css" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "ayu" : "light";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                    </div>
+
+                    <h1 class="menu-title">inject.dart Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="https://github.com/ralph-bergmann/inject.dart" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="managing-application-state-through-dependency-injection"><a class="header" href="#managing-application-state-through-dependency-injection">Managing Application State through Dependency Injection</a></h1>
+<p>After setting up the basic structure of our application with dependency
+injection, we want to explore how a well-designed project structure can
+work alongside state management through DI. This approach aligns with
+Flutter's recommended best practices
+for <a href="https://docs.flutter.dev/app-architecture/guide">app architecture</a>
+and <a href="https://docs.flutter.dev/data-and-backend/state-mgmt/simple">state management</a>.</p>
+<p>Before we dive into state management, let's refactor our application to
+better separate concerns by extracting the app and home widgets into their
+own files. This restructuring will provide a cleaner foundation for
+implementing state management through dependency injection.</p>
+<h2 id="refactoring-the-application-structure"><a class="header" href="#refactoring-the-application-structure">Refactoring the Application Structure</a></h2>
+<p>First, let's reorganize our code to separate the UI components from the
+dependency injection setup. This creates a more maintainable architecture
+as our application grows.</p>
+<h3 id="extracting-widgets-into-feature-based-files"><a class="header" href="#extracting-widgets-into-feature-based-files">Extracting Widgets into Feature-Based Files</a></h3>
+<p>We'll extract our widgets from <code>main.dart</code> into separate files using a
+feature-based organization:</p>
+<ol>
+<li>Create a <code>src/features/app</code> directory for the application widget</li>
+<li>Create a <code>src/features/home</code> directory for the home page widget</li>
+<li>Move relevant code while maintaining dependencies and annotations</li>
+</ol>
+<p>Here's how we'll refactor each file:</p>
+<ol>
+<li><strong>main.dart</strong> - Will contain only the DI setup and application entry
+point:</li>
+</ol>
+<pre><code class="language-dart">import 'package:flutter/material.dart';
+import 'package:inject_annotation/inject_annotation.dart';
+
+import 'main.inject.dart' as g;
+import 'src/features/app/app.dart';
+
+void main() {
+  final mainComponent = MainComponent.create();
+  final app = mainComponent.myAppFactory.create();
+  runApp(app);
+}
+
+@component
+abstract class MainComponent {
+  static const create = g.MainComponent$Component.create;
+
+  @inject
+  MyAppFactory get myAppFactory;
+}
+</code></pre>
+<ol start="2">
+<li><strong>my_app.dart</strong> - Contains the app widget and its factory:</li>
+</ol>
+<pre><code class="language-dart">import 'package:flutter/material.dart';
+import 'package:inject_annotation/inject_annotation.dart';
+
+import '../home/home.dart';
+
+@assistedFactory
+abstract class MyAppFactory {
+  MyApp create({Key? key});
+}
+
+class MyApp extends StatelessWidget {
+  @assistedInject
+  const MyApp({@assisted super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Flutter Demo',
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        useMaterial3: true,
+      ),
+      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+    );
+  }
+}
+</code></pre>
+<ol start="3">
+<li><strong>my_home.dart</strong> - Contains the home page widget:</li>
+</ol>
+<pre><code class="language-dart">import 'package:flutter/material.dart';
+
+class MyHomePage extends StatefulWidget {
+  const MyHomePage({super.key, required this.title});
+
+  final String title;
+
+  @override
+  State&lt;MyHomePage&gt; createState() =&gt; _MyHomePageState();
+}
+
+class _MyHomePageState extends State&lt;MyHomePage&gt; {
+  int _counter = 0;
+
+  void _incrementCounter() {
+    setState(() {
+      _counter++;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        title: Text(widget.title),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: &lt;Widget&gt;[
+            const Text(
+              'You have pushed the button this many times:',
+            ),
+            Text(
+              '$_counter',
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
+          ],
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _incrementCounter,
+        tooltip: 'Increment',
+        child: const Icon(Icons.add),
+      ),
+    );
+  }
+}
+</code></pre>
+<p>This refactoring creates a cleaner, more scalable project structure with
+these technical benefits:</p>
+<ol>
+<li><strong>Separation of Concerns</strong>: Each file now has a distinct responsibility</li>
+<li><strong>Improved Maintainability</strong>: Changes to one feature won't affect files
+for other features</li>
+<li><strong>Better Dependency Management</strong>: Import paths clearly show dependencies
+between features</li>
+<li><strong>Enhanced Discoverability</strong>: New team members can quickly locate
+components by feature</li>
+<li><strong>DI-Friendly Organization</strong>: Structure supports targeted injection of
+dependencies where needed</li>
+</ol>
+<p>The resulting directory structure looks like this:</p>
+<pre><code>flutter_demo/
+└── lib/
+    ├── main.dart                 (DI setup and entry point)
+    └── src/
+        └── features/
+            ├── app/
+            │   └── my_app.dart   (MyApp and MyAppFactory)
+            └── home/
+                └── my_home.dart  (MyHomePage)
+</code></pre>
+<p>With this structure in place, we're now ready to implement state management
+through dependency injection.</p>
+<h2 id="implementing-state-management-with-dependency-injection"><a class="header" href="#implementing-state-management-with-dependency-injection">Implementing State Management with Dependency Injection</a></h2>
+<p>Now that we have a clean project structure, we'll implement state
+management using dependency injection principles. Our architecture will
+introduce two new components: a <code>CounterRepository</code> for data persistence
+and a <code>MyHomeViewModel</code> to connect the UI with this data layer.</p>
+<p>The <code>CounterRepository</code> will handle the persistence of our counter value.
+It will provide methods to store and retrieve the counter, effectively
+abstracting the storage mechanism from the rest of the application. This
+abstraction is powerful because it allows us to change the underlying
+storage implementation without affecting the components that use it.</p>
+<p>The <code>MyHomeViewModel</code> will serve as an intermediary between our UI and the
+data layer. It will depend on the <code>CounterRepository</code> (injected through our
+DI system) and provide the UI with the state and methods it needs. This
+creates a clean separation between how data is presented and how it's
+stored or processed.</p>
+<p>This architecture demonstrates one of the key benefits of dependency
+injection: the ability to create a system where components depend on
+abstractions rather than concrete implementations. When the
+<code>MyHomeViewModel</code> receives its <code>CounterRepository</code> through injection, it
+doesn't need to know the details of how the repository is implemented or
+how it's instantiated.</p>
+<p>This separation creates more maintainable code because changes to one layer
+don't necessarily affect others. It also dramatically improves testability
+since each component can be tested in isolation with mock implementations
+of its dependencies. The repository could be reused across different
+features if needed, showcasing how DI promotes code reuse through proper
+component design.</p>
+<p>After refactoring our application to use the <code>MyHomeViewModel</code> and the
+<code>CounterRepository</code> for handling the counter value, the project structure
+now looks like this:</p>
+<pre><code>flutter_demo/
+└── lib/
+    ├── main.dart                                (DI setup and entry point)
+    └── src/
+        ├── data/
+        │   ├── repositories/
+        │   │   └── counter_repository.dart      (Manages counter state)
+        │   └── services/
+        │       └── database.dart                (Simulated database service)
+        └── features/
+            ├── app/
+            │   └── my_app.dart                  (MyApp and MyAppFactory)
+            └── home/
+                ├── my_home_page.dart            (MyHomePage UI component)
+                └── my_home_page_view_model.dart (Home state management)
+</code></pre>
+<h2 id="injecting-the-viewmodel-into-the-ui"><a class="header" href="#injecting-the-viewmodel-into-the-ui">Injecting the ViewModel into the UI</a></h2>
+<p>Let's start by examining how we've implemented dependency injection at the
+UI layer.
+The key change is making our <code>MyHomePage</code> injectable to receive its
+ViewModel.</p>
+<h3 id="making-myhomepage-injectable"><a class="header" href="#making-myhomepage-injectable">Making MyHomePage Injectable</a></h3>
+<p>To inject dependencies into our home page, we've created a factory and
+restructured the widget:</p>
+<pre><code class="language-dart">import 'package:flutter/material.dart';
+import 'package:inject_annotation/inject_annotation.dart';
+
+import 'my_home_page_view_model.dart';
+
+/// Factory to create the [MyHomePage] widget with the [MyHomePageViewModel] injected.
+@assistedFactory
+abstract class MyHomePageFactory {
+  MyHomePage create({Key? key, required String title});
+}
+
+/// The home page of the application with a simple counter.
+/// The [MyHomePageViewModel] is injected into the widget at compile-time, while the
+/// [key] or [title] can be provided at runtime.
+class MyHomePage extends StatefulWidget {
+  @assistedInject
+  const MyHomePage({
+    @assisted super.key,
+    @assisted required this.title,
+    required this.viewModelProvider,
+  });
+
+  final String title;
+  final Provider&lt;MyHomePageViewModel&gt; viewModelProvider;
+
+  @override
+  State&lt;MyHomePage&gt; createState() =&gt; _MyHomePageState();
+}
+
+class _MyHomePageState extends State&lt;MyHomePage&gt; {
+  late final MyHomePageViewModel viewModel;
+
+  @override
+  void initState() {
+    super.initState();
+    viewModel = widget.viewModelProvider.get();
+  }
+
+  @override
+  void dispose() {
+    viewModel.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // UI implementation
+  }
+}
+</code></pre>
+<p>This approach demonstrates several important dependency injection concepts:</p>
+<ol>
+<li>
+<p>We've created a factory (<code>MyHomePageFactory</code>) that allows the DI system
+to create instances of <code>MyHomePage</code> with all dependencies properly
+injected.</p>
+</li>
+<li>
+<p>The <code>MyHomePage</code> widget now receives its <code>viewModel</code> as a constructor
+parameter, making the dependency explicit and testable.</p>
+</li>
+<li>
+<p>We use <code>@assistedInject</code> to mark the constructor as an injection point,
+while marking runtime parameters like <code>key</code> and <code>title</code> with
+<code>@assisted</code>.</p>
+</li>
+</ol>
+<h3 id="connecting-myhomepage-to-myapp"><a class="header" href="#connecting-myhomepage-to-myapp">Connecting MyHomePage to MyApp</a></h3>
+<p>In the <code>MyApp</code> widget, we inject the <code>MyHomePageFactory</code> and use it to
+create the home page:</p>
+<pre><code class="language-dart">import 'package:flutter/material.dart';
+import 'package:inject_annotation/inject_annotation.dart';
+
+import '../home/my_home_page.dart';
+
+/// Factory to create the [MyApp] widget with the [MyHomePageFactory] injected.
+@assistedFactory
+abstract class MyAppFactory {
+  MyApp create({Key? key});
+}
+
+/// The root widget of the application.
+/// The [MyHomePageFactory] is injected into the widget at compile-time.
+class MyApp extends StatelessWidget {
+  @assistedInject
+  const MyApp({
+    @assisted super.key,
+    required this.homePageFactory,
+  });
+
+  final MyHomePageFactory homePageFactory;
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Flutter Demo',
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        useMaterial3: true,
+      ),
+      home: homePageFactory.create(title: 'Flutter Demo Home Page'),
+    );
+  }
+}
+</code></pre>
+<p>This structure creates a clean dependency chain:</p>
+<ol>
+<li>The <code>MyApp</code> widget depends on <code>MyHomePageFactory</code> (injected)</li>
+<li>The <code>MyHomePage</code> widget depends on <code>MyHomePageViewModel</code> (injected)</li>
+<li>The <code>MyHomePageViewModel</code> depends on <code>CounterRepository</code> (injected, as
+we'll see later)</li>
+</ol>
+<p>By using factories, we ensure proper dependency injection throughout our
+widget tree while still allowing for runtime parameters like <code>title</code> and
+<code>key</code>.
+This approach gives us the best of both worlds: compile-time dependency
+injection with runtime flexibility.</p>
+<h2 id="data-layer-repository-and-database"><a class="header" href="#data-layer-repository-and-database">Data Layer: Repository and Database</a></h2>
+<p>Let's explore how we implement dependency injection for our data layer
+components.</p>
+<h3 id="the-repository-pattern"><a class="header" href="#the-repository-pattern">The Repository Pattern</a></h3>
+<p>Our <code>CounterRepository</code> acts as a mediator between the UI layer and the
+data storage:</p>
+<pre><code class="language-dart">import 'package:inject_annotation/inject_annotation.dart';
+
+import '../services/database.dart';
+
+/// Repository to manage the counter value.
+/// Uses the [Database] to persist the counter value.
+@inject
+@singleton
+class CounterRepository {
+  CounterRepository({required Database database}) : _database = database;
+
+  final Database _database;
+
+  Future&lt;int&gt; get count async =&gt; _database.selectCount();
+
+  Future&lt;void&gt; increaseCount() async {
+    final count = await _database.selectCount();
+    await _database.updateCount(count + 1);
+  }
+}
+</code></pre>
+<p>Notice the <code>@singleton</code> annotation - this tells our DI system to create
+only one instance of the repository throughout the application.
+This is crucial because:</p>
+<ol>
+<li>We want a single source of truth for data operations</li>
+<li>It ensures consistent state management across the application</li>
+<li>It avoids redundant database connections</li>
+</ol>
+<p>The repository depends on the <code>Database</code>, which is injected through its
+constructor.
+This creates a clean separation between data access logic and storage
+implementation.</p>
+<h3 id="providing-the-database-through-a-module"><a class="header" href="#providing-the-database-through-a-module">Providing the Database Through a Module</a></h3>
+<p>Since we are using a database from a third-party library that we cannot
+annotate with <code>@inject</code>, we use a module to provide it:</p>
+<pre><code class="language-dart">import 'package:inject_annotation/inject_annotation.dart';
+
+/// Module to provide the database instance.
+/// Modules are used to provide instances of classes from 3rd party libraries
+/// that can't be annotated with [inject].
+@module
+class DataBaseModule {
+  @provides
+  @singleton
+  Database provideDatabase() =&gt; Database();
+}
+
+/// Simulates a 3rd party database library for demonstration purposes.
+///
+/// This class mimics what you might find in an actual database package
+/// like Drift, Isar, or Hive, but with simplified functionality to focus
+/// on dependency injection concepts. In a real app, you would replace this
+/// with an actual database implementation.
+///
+/// Usage example:
+/// ```dart
+/// final db = Database();
+/// await db.updateCount(5);
+/// final value = await db.selectCount(); // Returns 5
+/// ```
+class Database {
+  /// In-memory storage for the counter value.
+  /// In a real database, this would be persisted to disk.
+  int _count = 0;
+
+  /// Simulates updating a record in the database.
+  ///
+  /// In a real database, this would write to persistent storage.
+  Future&lt;void&gt; updateCount(int count) async {
+    _count = count;
+  }
+
+  /// Simulates reading a record from the database.
+  ///
+  /// In a real database, this would fetch data from persistent storage.
+  Future&lt;int&gt; selectCount() {
+    return Future.value(_count);
+  }
+}
+</code></pre>
+<p>The <code>@module</code> annotation defines a class that provides dependencies.
+The <code>@provides</code> method tells inject.dart how to create an instance of the
+<code>Database</code> class.
+By adding the <code>@singleton</code> annotation, we ensure only one
+database instance exists in our application.</p>
+<p>This approach demonstrates how to integrate third-party libraries into your
+dependency injection system, even when you can't modify their source code.</p>
+<h3 id="viewmodels-why-theyre-not-singletons"><a class="header" href="#viewmodels-why-theyre-not-singletons">ViewModels: Why They're Not Singletons</a></h3>
+<p>In contrast to the repository and database, view models are deliberately
+<strong>not</strong> marked as singletons.
+This is an important architectural decision:</p>
+<ol>
+<li><strong>Lifecycle Alignment</strong>: Each view should have its own view model
+instance that matches its lifecycle</li>
+<li><strong>State Isolation</strong>: Different instances of the same view should have
+isolated state</li>
+<li><strong>Memory Efficiency</strong>: View models can be garbage collected when their
+associated view is disposed</li>
+</ol>
+<p>If view models were singletons, all instances of a view would share the
+same state, creating unexpected behavior and potential memory leaks. By
+making each view model instance-specific while keeping the data layer as
+singletons, we create a clean hierarchy where stable infrastructure is
+shared while UI state remains isolated.</p>
+<p>This pattern demonstrates a key strength of dependency injection: the
+ability to configure different scopes for different types of components in
+your application.</p>
+<h2 id="handling-dependencies-with-viewmodels"><a class="header" href="#handling-dependencies-with-viewmodels">Handling Dependencies with ViewModels</a></h2>
+<p>When working with ViewModels in Flutter, proper lifecycle management is
+critical. After careful consideration of the technical implications, we
+strongly recommend using StatefulWidgets when working with ViewModels.</p>
+<h3 id="why-statefulwidget-is-required-for-viewmodels"><a class="header" href="#why-statefulwidget-is-required-for-viewmodels">Why StatefulWidget is Required for ViewModels</a></h3>
+<p>ViewModels, especially those extending ChangeNotifier, require proper
+initialization and disposal to prevent memory leaks and ensure efficient
+resource management. StatefulWidget provides the necessary lifecycle hooks
+for this management:</p>
+<pre><code class="language-dart">@assistedFactory
+abstract class MyHomePageFactory {
+  MyHomePage create({Key? key, required String title});
+}
+
+class MyHomePage extends StatefulWidget {
+  @assistedInject
+  const MyHomePage({
+    @assisted super.key,
+    @assisted required this.title,
+    required this.viewModelProvider,
+  });
+
+  final String title;
+  final Provider&lt;MyHomePageViewModel&gt; viewModelProvider;
+
+  @override
+  State&lt;MyHomePage&gt; createState() =&gt; _MyHomePageState();
+}
+
+class _MyHomePageState extends State&lt;MyHomePage&gt; {
+  late final MyHomePageViewModel viewModel;
+
+  @override
+  void initState() {
+    super.initState();
+    viewModel = widget.viewModelProvider.get();
+  }
+
+  @override
+  void dispose() {
+    viewModel.dispose(); // Critical for proper cleanup
+    super.dispose();
+  }
+
+// Widget implementation...
+}
+</code></pre>
+<p>This pattern provides several important benefits:</p>
+<ol>
+<li>
+<p><strong>Proper Resource Management</strong>: ChangeNotifiers maintain internal
+listener lists and sometimes other resources that require explicit
+cleanup.</p>
+</li>
+<li>
+<p><strong>Predictable Lifecycle</strong>: The ViewModel is created and destroyed at
+well-defined points in the widget lifecycle.</p>
+</li>
+<li>
+<p><strong>Memory Efficiency</strong>: Resources are released immediately rather than
+waiting for garbage collection.</p>
+</li>
+<li>
+<p><strong>Future-Proofing</strong>: Your ViewModels can evolve to manage more complex
+resources without requiring architectural changes.</p>
+</li>
+</ol>
+<h3 id="why-not-statelesswidget"><a class="header" href="#why-not-statelesswidget">Why Not StatelessWidget?</a></h3>
+<p>While StatelessWidget is simpler and might seem adequate if you're relying
+on garbage collection to eventually clean up resources, this approach has
+significant drawbacks:</p>
+<ol>
+<li>
+<p><strong>Unpredictable Cleanup</strong>: Garbage collection timing is not guaranteed,
+which can lead to resources being held longer than necessary.</p>
+</li>
+<li>
+<p><strong>Incomplete Cleanup</strong>: Some resources need explicit disposal beyond
+what garbage collection provides.</p>
+</li>
+<li>
+<p><strong>Hidden Dependencies</strong>: The relationship between widget and ViewModel
+lifecycle becomes implicit rather than explicit.</p>
+</li>
+<li>
+<p><strong>Limited Evolution</strong>: As your ViewModels grow more complex, you'll
+eventually need StatefulWidget anyway.</p>
+</li>
+</ol>
+<h3 id="implementation-best-practices"><a class="header" href="#implementation-best-practices">Implementation Best Practices</a></h3>
+<p>For clean ViewModel integration with StatefulWidget:</p>
+<ol>
+<li>Inject a Provider<ViewModel> rather than the ViewModel directly</li>
+<li>Initialize the ViewModel in <code>initState()</code></li>
+<li>Always call <code>viewModel.dispose()</code> in the State's <code>dispose()</code> method</li>
+<li>Keep UI-related logic in the <code>build</code> method, delegating events to the
+ViewModel</li>
+</ol>
+<p>By following this pattern consistently, you'll create a more maintainable,
+predictable, and efficient application architecture.</p>
+<h2 id="conclusion"><a class="header" href="#conclusion">Conclusion</a></h2>
+<p>In this chapter, we've explored how dependency injection naturally
+complements state management in Flutter applications. By separating our
+application into clean layers — UI components, ViewModels, repositories, and
+services — we've created a maintainable architecture that's both flexible and
+testable.</p>
+<p>The key principles we've covered include:</p>
+<ol>
+<li>Using dependency injection to provide state management services</li>
+<li>Creating a clear separation between UI and business logic</li>
+<li>Implementing proper lifecycle management with StatefulWidgets</li>
+<li>Leveraging singletons for shared infrastructure like repositories and
+databases</li>
+</ol>
+<h3 id="complete-example"><a class="header" href="#complete-example">Complete Example</a></h3>
+<p>You can find the complete source code for all examples in this chapter in
+the <a href="https://github.com/ralph-bergmann/inject.dart/tree/master/examples/flutter_demo"><code>examples/flutter_demo</code></a>
+folder of the inject.dart repository. This working implementation
+demonstrates all the patterns and practices we've discussed.</p>
+<h3 id="coming-next-testing-with-dependency-injection"><a class="header" href="#coming-next-testing-with-dependency-injection">Coming Next: Testing with Dependency Injection</a></h3>
+<p>In the next chapter, we'll explore one of the most powerful benefits of our
+architecture: testability. We'll show how to create a separate dependency
+graph for unit testing that allows us to:</p>
+<ol>
+<li>Test ViewModels by injecting mock repositories</li>
+<li>Test repositories with a FakeDatabase implementation</li>
+<li>Write integration tests that validate the entire dependency chain</li>
+<li>Create targeted tests that focus on specific components</li>
+</ol>
+<p>This testing approach demonstrates how dependency injection doesn't just
+make your code more maintainable—it makes it substantially easier to verify
+and validate your application's behavior through automated testing.</p>
+<p>By separating concerns and making dependencies explicit, we've built a
+foundation that will continue to pay dividends as your application grows in
+complexity.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="chapter_3_quickstart.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="chapter_5_inject_annotations.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="chapter_3_quickstart.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="chapter_5_inject_annotations.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>
