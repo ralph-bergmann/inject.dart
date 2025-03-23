@@ -96,7 +96,7 @@ class _LibraryVisitor extends RecursiveElementVisitor<void> {
         isAssistedFactory ? 'isAssistedFactory' : null,
         isModule ? 'module' : null,
         isComponent ? 'component' : null,
-      ].whereNotNull();
+      ].nonNulls;
 
       throw StateError(
         constructMessage(
@@ -171,7 +171,7 @@ List<SymbolPath> _extractModules(ClassElement clazz) {
   if (modules == null) {
     return const <SymbolPath>[];
   }
-  return modules.map((obj) => obj.toTypeValue()).whereNotNull().map(getSymbolPath).toList();
+  return modules.map((obj) => obj.toTypeValue()).nonNulls.map(getSymbolPath).toList();
 }
 
 /// Scans a resolved [ClassElement] looking for metadata-annotated members.

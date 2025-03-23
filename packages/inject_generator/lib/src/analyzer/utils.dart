@@ -79,12 +79,12 @@ DartType _reducedType(DartType type, String? name) {
   }
 
   if (type is! ParameterizedType) {
-    throw 'Generic type for `${type.getDisplayString(withNullability: false)} $name` not specified.';
+    throw 'Generic type for `${type.getDisplayString()} $name` not specified.';
   }
 
   final providedType = (type).typeArguments.firstOrNull;
   if (providedType == null || providedType is DynamicType) {
-    throw 'Generic type for `${type.getDisplayString(withNullability: false)} $name` not specified.';
+    throw 'Generic type for `${type.getDisplayString()} $name` not specified.';
   }
   return _reducedType(providedType, name);
 }

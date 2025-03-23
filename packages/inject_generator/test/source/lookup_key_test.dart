@@ -351,7 +351,9 @@ Future<Map<String, Map<String, LookupKey>>> analyzeDartCode(String code) async {
   // Iterate over all class declarations.
   for (final declaration in resolvedUnitResult.unit.declarations.whereType<ClassDeclaration>()) {
     final classElement = declaration.declaredElement;
-    if (classElement == null) continue;
+    if (classElement == null) {
+      continue;
+    }
     final className = classElement.name;
     final visitor = TestTypeVisitor();
     final memberMap = <String, LookupKey>{};
@@ -372,7 +374,7 @@ Future<Map<String, Map<String, LookupKey>>> analyzeDartCode(String code) async {
     // Process constructors.
     for (final constructor in classElement.constructors) {
       // Use the constructor name if available (or empty string for unnamed).
-      final prefix = constructor.name ?? '';
+      final prefix = constructor.name;
       for (final param in constructor.parameters) {
         memberMap['${prefix}_param_${param.name}'] = param.type.accept(visitor);
       }

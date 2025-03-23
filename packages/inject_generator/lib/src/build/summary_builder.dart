@@ -98,23 +98,17 @@ class InjectSummaryBuilder implements Builder {
     }
   }
 
-  bool _hasInjectImports(LibraryElement library) => library.nonCoreImports.any((import) {
-        final uri = import.importedLibrary?.source.uri;
-        return uri?.toString() == 'package:inject_annotation/inject_annotation.dart';
-      });
+  bool _hasInjectImports(LibraryElement library) => library.nonCoreImports
+      .any((lib) => lib.source.uri.toString() == 'package:inject_annotation/inject_annotation.dart');
 }
 
 extension NonCoreImports on LibraryElement {
-  Iterable<LibraryImportElement> get nonCoreImports => library.libraryImports.where((element) {
-        final lib = element.importedLibrary;
-        if (lib == null) {
-          return false;
-        }
-
-        return !lib.isDartAsync && //
+  Iterable<LibraryElement> get nonCoreImports => importedLibraries.where(
+        (lib) =>
+            !lib.isDartAsync && //
             !lib.isDartCore &&
-            !lib.isInSdk;
-      });
+            !lib.isInSdk,
+      );
 }
 
 class _SummaryBuilderVisitor extends InjectLibraryVisitor {
@@ -401,7 +395,7 @@ class _FactorySummaryVisitor extends FactoryClassVisitor {
               throw StateError(
                 constructMessage(
                     builderContext.buildStep.inputId,
-                    p.enclosingElement,
+                    p.enclosingElement3,
                     'Parameter named `${p.name}` resolved to dynamic. This can '
                     'happen when the return type is not specified, when it is '
                     'specified as `dynamic`, or when the return type failed to '
@@ -419,7 +413,7 @@ class _FactorySummaryVisitor extends FactoryClassVisitor {
               qualifier: hasQualifier(p) ? extractQualifier(p) : null,
             );
           })
-          .whereNotNull()
+          .nonNulls
           .toList(),
     );
     _factories.add(summary);
@@ -471,7 +465,7 @@ class _ProviderSummaryVisitor extends InjectClassVisitor {
           throw StateError(
             constructMessage(
               builderContext.buildStep.inputId,
-              p.enclosingElement,
+              p.enclosingElement3,
               'Parameter named `${p.name}` resolved to dynamic. This can '
               'happen when the return type is not specified, when it is '
               'specified as `dynamic`, or when the return type failed to '
@@ -490,7 +484,7 @@ class _ProviderSummaryVisitor extends InjectClassVisitor {
           isNamed: p.isNamed,
           isAssisted: hasAssistedAnnotation(p),
         );
-      }).whereNotNull(),
+      }).nonNulls,
     );
     _providers.add(summary);
   }
@@ -535,7 +529,7 @@ ProviderSummary _createConstructorProviderSummary(
   bool isAssisted,
   bool isConst,
 ) {
-  final returnType = element.enclosingElement.thisType;
+  final returnType = element.enclosingElement3.thisType;
   return ProviderSummary(
     element.name,
     ProviderKind.constructor,
@@ -558,7 +552,7 @@ ProviderSummary _createConstructorProviderSummary(
         // Clazz(this._some);
         //
         // Extract @someQualifier as the qualifier.
-        final clazz = element.enclosingElement;
+        final clazz = element.enclosingElement3;
         final formal = clazz.getField(p.name)!;
         if (hasQualifier(formal)) {
           qualifier = extractQualifier(formal);
@@ -588,7 +582,7 @@ ProviderSummary _createConstructorProviderSummary(
         isNamed: p.isNamed,
         isAssisted: hasAssistedAnnotation(p),
       );
-    }).whereNotNull(),
+    }).nonNulls,
   );
 }
 

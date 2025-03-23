@@ -91,7 +91,7 @@ class ComponentGraphResolver {
       }
       return first;
     });
-    final allModules = (await Future.wait<ModuleSummary?>(modulesToLoad)).whereNotNull().toList();
+    final allModules = (await Future.wait<ModuleSummary?>(modulesToLoad)).nonNulls.toList();
 
     final providersByModules = <LookupKey, DependencyProvidedByModule>{};
 
