@@ -7,26 +7,20 @@ class MainComponent$Component implements _i1.MainComponent {
   factory MainComponent$Component.create({_i1.MainModule? mainModule}) =>
       MainComponent$Component._(mainModule ?? _i1.MainModule());
 
-  MainComponent$Component._(this._mainModule) {
-    _initialize();
+  MainComponent$Component._(_i1.MainModule mainModule) {
+    _addition$Provider = _Addition$Provider(mainModule);
+    _foo$Provider = _Foo$Provider(mainModule);
+    _bar$Provider = _Bar$Provider(
+      foo$Provider,
+      mainModule,
+    );
   }
-
-  final _i1.MainModule _mainModule;
 
   late final _Addition$Provider _addition$Provider;
 
   late final _Foo$Provider _foo$Provider;
 
   late final _Bar$Provider _bar$Provider;
-
-  void _initialize() {
-    _addition$Provider = _Addition$Provider(_mainModule);
-    _foo$Provider = _Foo$Provider(_mainModule);
-    _bar$Provider = _Bar$Provider(
-      _foo$Provider,
-      _mainModule,
-    );
-  }
 
   @override
   _i1.Addition get add => _addition$Provider.get();

@@ -18,36 +18,24 @@ class TrainServices$Component implements _i1.TrainServices {
       );
 
   TrainServices$Component._(
-    this._bikeServices,
-    this._foodServices,
-    this._commonServices,
+    _i2.BikeServices bikeServices,
+    _i3.FoodServices foodServices,
+    _i4.CommonServices commonServices,
   ) {
-    _initialize();
+    final carMaintenance$Provider = _CarMaintenance$Provider(commonServices);
+    _bikeRack$Provider = _BikeRack$Provider(
+      carMaintenance$Provider,
+      bikeServices,
+    );
+    _kitchen$Provider = _Kitchen$Provider(
+      carMaintenance$Provider,
+      foodServices,
+    );
   }
-
-  final _i2.BikeServices _bikeServices;
-
-  final _i3.FoodServices _foodServices;
-
-  final _i4.CommonServices _commonServices;
-
-  late final _CarMaintenance$Provider _carMaintenance$Provider;
 
   late final _BikeRack$Provider _bikeRack$Provider;
 
   late final _Kitchen$Provider _kitchen$Provider;
-
-  void _initialize() {
-    _carMaintenance$Provider = _CarMaintenance$Provider(_commonServices);
-    _bikeRack$Provider = _BikeRack$Provider(
-      _carMaintenance$Provider,
-      _bikeServices,
-    );
-    _kitchen$Provider = _Kitchen$Provider(
-      _carMaintenance$Provider,
-      _foodServices,
-    );
-  }
 
   @override
   _i2.BikeRack get bikeRack => _bikeRack$Provider.get();

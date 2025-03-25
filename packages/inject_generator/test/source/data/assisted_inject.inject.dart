@@ -6,23 +6,17 @@ class Component$Component implements _i1.Component {
   factory Component$Component.create() => Component$Component._();
 
   Component$Component._() {
-    _initialize();
+    final foo$Provider = _Foo$Provider();
+    _annotatedClassFactory$Provider =
+        _AnnotatedClassFactory$Provider(foo$Provider);
+    _annotatedConstructorFactory$Provider =
+        _AnnotatedConstructorFactory$Provider(foo$Provider);
   }
-
-  late final _Foo$Provider _foo$Provider;
 
   late final _AnnotatedClassFactory$Provider _annotatedClassFactory$Provider;
 
   late final _AnnotatedConstructorFactory$Provider
       _annotatedConstructorFactory$Provider;
-
-  void _initialize() {
-    _foo$Provider = _Foo$Provider();
-    _annotatedClassFactory$Provider =
-        _AnnotatedClassFactory$Provider(_foo$Provider);
-    _annotatedConstructorFactory$Provider =
-        _AnnotatedConstructorFactory$Provider(_foo$Provider);
-  }
 
   @override
   _i1.AnnotatedClassFactory get annotatedClassFactory =>

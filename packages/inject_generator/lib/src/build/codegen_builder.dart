@@ -201,7 +201,7 @@ class _ComponentBuilder {
   (Class, Set<ResolvedDependency>) build() {
     graph.mergedDependencies.values.forEach(_collectDependencies);
     _generateConstructor();
-    _generateInitializeMethod();
+    _generateConstructorBody();
     _generateComponentProviders();
     final clazz = Class(
       (b) => b
@@ -218,7 +218,7 @@ class _ComponentBuilder {
   // goes through all modules to add them as field and factory/constructor parameter.
   void _generateConstructor() {
     final moduleVariables = <SymbolPath, _Variable>{};
-    final invokeExpressions = <Expression>[];
+    final factoryBodyExpressions = <Expression>[];
 
     for (final moduleSummary in graph.includeModules) {
       final symbolPath = moduleSummary.clazz;
@@ -227,21 +227,7 @@ class _ComponentBuilder {
       }
 
       final paramName = symbolPath.symbol.decapitalize();
-      final fieldName = '_$paramName';
       final moduleType = _reference(libraryUri, symbolPath);
-      fields.add(
-        FieldBuilder()
-          ..name = fieldName
-          ..modifier = FieldModifier.final$
-          ..type = moduleType,
-      );
-      constructor.requiredParameters.add(
-        Parameter(
-          (b) => b
-            ..name = fieldName
-            ..toThis = true,
-        ),
-      );
       factoryConstructor.optionalParameters.add(
         Parameter(
           (b) => b
@@ -251,31 +237,50 @@ class _ComponentBuilder {
             ..type = moduleSummary.hasDefaultConstructor ? moduleType.toNullable() : moduleType,
         ),
       );
+      constructor.requiredParameters.add(
+        Parameter(
+          (b) => b
+            ..name = paramName
+            ..type = moduleType,
+        ),
+      );
 
       if (moduleSummary.hasDefaultConstructor) {
-        invokeExpressions.add(refer(paramName).ifNullThen(moduleType.newInstance(const [])));
+        factoryBodyExpressions.add(refer(paramName).ifNullThen(moduleType.newInstance(const [])));
       } else {
-        invokeExpressions.add(refer(paramName).expression);
+        factoryBodyExpressions.add(refer(paramName).expression);
       }
+
       moduleVariables[symbolPath] = _Variable(name: paramName, type: moduleType);
     }
 
-    factoryConstructor.body = concreteComponentType.newInstanceNamed('_', invokeExpressions).code;
+    factoryConstructor.body = concreteComponentType.newInstanceNamed('_', factoryBodyExpressions).code;
   }
 
-  void _generateInitializeMethod() {
+  // Generates the body of the constructor.
+  // Gets all modules as constructor parameter.
+  // Goes through all dependencies and creates all needed Providers for that component.
+  // Providers that this component provides assigned to appropriate fields created in _generateComponentProviders(),
+  // all others are created as local variables.
+  void _generateConstructorBody() {
     final body = BlockBuilder();
 
     for (final dependency in _orderedDependencies) {
-      final providerClassName = _providerClassName(dependency.injectedType.lookupKey);
+      final providerClassName = _providerClassName(dependency.injectedType.lookupKey, private: false);
       final fieldName = providerClassName.decapitalize();
-      fields.add(
-        FieldBuilder()
-          ..name = fieldName
-          ..late = true
-          ..modifier = FieldModifier.final$
-          ..type = refer(providerClassName),
-      );
+      final providedByComponent = graph.providers
+              .firstWhereOrNull((element) => element.injectedType.lookupKey == dependency.injectedType.lookupKey) !=
+          null;
+
+      if (providedByComponent) {
+        fields.add(
+          FieldBuilder()
+            ..name = '_$fieldName'
+            ..late = true
+            ..modifier = FieldModifier.final$
+            ..type = refer('_$providerClassName'),
+        );
+      }
 
       // TODO: Find a better way to do this. The order of the [arguments] must
       // be the same as that of the constructor parameters of [_ProviderBuilder].
@@ -288,27 +293,25 @@ class _ComponentBuilder {
         }
         seen.add(injected.lookupKey);
 
-        arguments.add(refer(_providerClassName(injected.lookupKey).decapitalize()));
+        arguments.add(refer(_providerClassName(injected.lookupKey, private: false).decapitalize()));
       }
 
       if (dependency is DependencyProvidedByModule) {
-        arguments.add(refer('_${dependency.moduleClass.symbol.decapitalize()}'));
+        arguments.add(refer(dependency.moduleClass.symbol.decapitalize()));
       }
-      body.statements.add(
-        refer(fieldName)
-            .assign(
-              refer(providerClassName).newInstance(arguments),
-            )
-            .statement,
-      );
+
+      if (providedByComponent) {
+        body.statements.add(
+          refer('_$fieldName').assign(refer('_$providerClassName').newInstance(arguments)).statement,
+        );
+      } else {
+        body.statements.add(
+          declareFinal(fieldName).assign(refer('_$providerClassName').newInstance(arguments)).statement,
+        );
+      }
     }
-    methods.add(
-      MethodBuilder()
-        ..name = '_initialize'
-        ..returns = refer('void')
-        ..body = body.build(),
-    );
-    constructor.body = refer('_initialize').call(const []).statement;
+
+    constructor.body = body.build();
   }
 
   // Generate getters/methods for all types the component provides.
@@ -819,9 +822,10 @@ class _FactoryBuilder {
   }
 }
 
-String _providerClassName(LookupKey key) => '_${key.toClassName().capitalize()}\$Provider';
+String _providerClassName(LookupKey key, {bool private = true}) =>
+    '${private ? '_' : ''}${key.toClassName()}\$Provider';
 
-String _factoryClassName(LookupKey key) => '_${key.toClassName().capitalize()}\$Factory';
+String _factoryClassName(LookupKey key, {bool private = true}) => '${private ? '_' : ''}${key.toClassName()}\$Factory';
 
 TypeReference _referenceForType(
   Uri libraryUri,

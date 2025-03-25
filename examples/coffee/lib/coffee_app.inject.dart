@@ -13,52 +13,36 @@ class Coffee$Component implements _i1.Coffee {
   factory Coffee$Component.create({_i2.DripCoffeeModule? dripCoffeeModule}) =>
       Coffee$Component._(dripCoffeeModule ?? _i2.DripCoffeeModule());
 
-  Coffee$Component._(this._dripCoffeeModule) {
-    _initialize();
+  Coffee$Component._(_i2.DripCoffeeModule dripCoffeeModule) {
+    final powerOutlet$Provider = _PowerOutlet$Provider(dripCoffeeModule);
+    final electricity$Provider = _Electricity$Provider(
+      powerOutlet$Provider,
+      dripCoffeeModule,
+    );
+    final heater$Provider = _Heater$Provider(
+      electricity$Provider,
+      dripCoffeeModule,
+    );
+    _thermosiphon$Provider = _Thermosiphon$Provider(heater$Provider);
+    final pump$Provider = _Pump$Provider(
+      heater$Provider,
+      dripCoffeeModule,
+    );
+    final stringBrandName$Provider =
+        _StringBrandName$Provider(dripCoffeeModule);
+    final stringModelName$Provider =
+        _StringModelName$Provider(dripCoffeeModule);
+    _coffeeMaker$Provider = _CoffeeMaker$Provider(
+      heater$Provider,
+      pump$Provider,
+      stringBrandName$Provider,
+      stringModelName$Provider,
+    );
   }
-
-  final _i2.DripCoffeeModule _dripCoffeeModule;
-
-  late final _PowerOutlet$Provider _powerOutlet$Provider;
-
-  late final _Electricity$Provider _electricity$Provider;
-
-  late final _Heater$Provider _heater$Provider;
 
   late final _Thermosiphon$Provider _thermosiphon$Provider;
 
-  late final _Pump$Provider _pump$Provider;
-
-  late final _StringBrandName$Provider _stringBrandName$Provider;
-
-  late final _StringModelName$Provider _stringModelName$Provider;
-
   late final _CoffeeMaker$Provider _coffeeMaker$Provider;
-
-  void _initialize() {
-    _powerOutlet$Provider = _PowerOutlet$Provider(_dripCoffeeModule);
-    _electricity$Provider = _Electricity$Provider(
-      _powerOutlet$Provider,
-      _dripCoffeeModule,
-    );
-    _heater$Provider = _Heater$Provider(
-      _electricity$Provider,
-      _dripCoffeeModule,
-    );
-    _thermosiphon$Provider = _Thermosiphon$Provider(_heater$Provider);
-    _pump$Provider = _Pump$Provider(
-      _heater$Provider,
-      _dripCoffeeModule,
-    );
-    _stringBrandName$Provider = _StringBrandName$Provider(_dripCoffeeModule);
-    _stringModelName$Provider = _StringModelName$Provider(_dripCoffeeModule);
-    _coffeeMaker$Provider = _CoffeeMaker$Provider(
-      _heater$Provider,
-      _pump$Provider,
-      _stringBrandName$Provider,
-      _stringModelName$Provider,
-    );
-  }
 
   @override
   _i3.Provider<_i4.Future<_i5.Thermosiphon>> get thermosiphon =>

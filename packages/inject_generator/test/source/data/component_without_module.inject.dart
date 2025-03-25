@@ -7,14 +7,10 @@ class ComponentWithoutModule$Component implements _i1.ComponentWithoutModule {
       ComponentWithoutModule$Component._();
 
   ComponentWithoutModule$Component._() {
-    _initialize();
+    _bar$Provider = _Bar$Provider();
   }
 
   late final _Bar$Provider _bar$Provider;
-
-  void _initialize() {
-    _bar$Provider = _Bar$Provider();
-  }
 
   @override
   _i1.Bar getBar() => _bar$Provider.get();

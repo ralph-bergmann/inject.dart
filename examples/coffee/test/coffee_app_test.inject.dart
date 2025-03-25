@@ -19,53 +19,34 @@ class TestCoffee$Component implements _i1.TestCoffee {
       );
 
   TestCoffee$Component._(
-    this._dripCoffeeModule,
-    this._testModule,
+    _i2.DripCoffeeModule dripCoffeeModule,
+    _i1.TestModule testModule,
   ) {
-    _initialize();
+    final powerOutlet$Provider = _PowerOutlet$Provider(dripCoffeeModule);
+    final electricity$Provider = _Electricity$Provider(
+      powerOutlet$Provider,
+      dripCoffeeModule,
+    );
+    final heater$Provider = _Heater$Provider(
+      electricity$Provider,
+      testModule,
+    );
+    final pump$Provider = _Pump$Provider(
+      heater$Provider,
+      dripCoffeeModule,
+    );
+    final stringBrandName$Provider =
+        _StringBrandName$Provider(dripCoffeeModule);
+    final stringModelName$Provider = _StringModelName$Provider(testModule);
+    _coffeeMaker$Provider = _CoffeeMaker$Provider(
+      heater$Provider,
+      pump$Provider,
+      stringBrandName$Provider,
+      stringModelName$Provider,
+    );
   }
-
-  final _i2.DripCoffeeModule _dripCoffeeModule;
-
-  final _i1.TestModule _testModule;
-
-  late final _PowerOutlet$Provider _powerOutlet$Provider;
-
-  late final _Electricity$Provider _electricity$Provider;
-
-  late final _Heater$Provider _heater$Provider;
-
-  late final _Pump$Provider _pump$Provider;
-
-  late final _StringBrandName$Provider _stringBrandName$Provider;
-
-  late final _StringModelName$Provider _stringModelName$Provider;
 
   late final _CoffeeMaker$Provider _coffeeMaker$Provider;
-
-  void _initialize() {
-    _powerOutlet$Provider = _PowerOutlet$Provider(_dripCoffeeModule);
-    _electricity$Provider = _Electricity$Provider(
-      _powerOutlet$Provider,
-      _dripCoffeeModule,
-    );
-    _heater$Provider = _Heater$Provider(
-      _electricity$Provider,
-      _testModule,
-    );
-    _pump$Provider = _Pump$Provider(
-      _heater$Provider,
-      _dripCoffeeModule,
-    );
-    _stringBrandName$Provider = _StringBrandName$Provider(_dripCoffeeModule);
-    _stringModelName$Provider = _StringModelName$Provider(_testModule);
-    _coffeeMaker$Provider = _CoffeeMaker$Provider(
-      _heater$Provider,
-      _pump$Provider,
-      _stringBrandName$Provider,
-      _stringModelName$Provider,
-    );
-  }
 
   @override
   _i3.Future<_i4.CoffeeMaker> getCoffeeMaker() => _coffeeMaker$Provider.get();

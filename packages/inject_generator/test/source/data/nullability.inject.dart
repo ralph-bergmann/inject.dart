@@ -6,27 +6,21 @@ class ComponentNullability$Component implements _i1.ComponentNullability {
   factory ComponentNullability$Component.create({_i1.BarModule? barModule}) =>
       ComponentNullability$Component._(barModule ?? _i1.BarModule());
 
-  ComponentNullability$Component._(this._barModule) {
-    _initialize();
+  ComponentNullability$Component._(_i1.BarModule barModule) {
+    _foo$Provider = _Foo$Provider(barModule);
+    _bar$Provider = _Bar$Provider(barModule);
+    _fooBar$Provider = _FooBar$Provider(
+      foo$Provider,
+      bar$Provider,
+      barModule,
+    );
   }
-
-  final _i1.BarModule _barModule;
 
   late final _Foo$Provider _foo$Provider;
 
   late final _Bar$Provider _bar$Provider;
 
   late final _FooBar$Provider _fooBar$Provider;
-
-  void _initialize() {
-    _foo$Provider = _Foo$Provider(_barModule);
-    _bar$Provider = _Bar$Provider(_barModule);
-    _fooBar$Provider = _FooBar$Provider(
-      _foo$Provider,
-      _bar$Provider,
-      _barModule,
-    );
-  }
 
   @override
   _i1.FooBar get fooBar => _fooBar$Provider.get();

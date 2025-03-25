@@ -4,7 +4,6 @@
 
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/visitor.dart';
-import 'package:collection/collection.dart';
 
 import '../context.dart';
 import '../source/symbol_path.dart';

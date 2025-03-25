@@ -13,33 +13,18 @@ class MainComponent$Component implements _i1.MainComponent {
           {_i2.DataBaseModule? dataBaseModule}) =>
       MainComponent$Component._(dataBaseModule ?? _i2.DataBaseModule());
 
-  MainComponent$Component._(this._dataBaseModule) {
-    _initialize();
+  MainComponent$Component._(_i2.DataBaseModule dataBaseModule) {
+    final database$Provider = _Database$Provider(dataBaseModule);
+    final counterRepository$Provider =
+        _CounterRepository$Provider(database$Provider);
+    final myHomePageViewModel$Provider =
+        _MyHomePageViewModel$Provider(counterRepository$Provider);
+    final myHomePageFactory$Provider =
+        _MyHomePageFactory$Provider(myHomePageViewModel$Provider);
+    _myAppFactory$Provider = _MyAppFactory$Provider(myHomePageFactory$Provider);
   }
-
-  final _i2.DataBaseModule _dataBaseModule;
-
-  late final _Database$Provider _database$Provider;
-
-  late final _CounterRepository$Provider _counterRepository$Provider;
-
-  late final _MyHomePageViewModel$Provider _myHomePageViewModel$Provider;
-
-  late final _MyHomePageFactory$Provider _myHomePageFactory$Provider;
 
   late final _MyAppFactory$Provider _myAppFactory$Provider;
-
-  void _initialize() {
-    _database$Provider = _Database$Provider(_dataBaseModule);
-    _counterRepository$Provider =
-        _CounterRepository$Provider(_database$Provider);
-    _myHomePageViewModel$Provider =
-        _MyHomePageViewModel$Provider(_counterRepository$Provider);
-    _myHomePageFactory$Provider =
-        _MyHomePageFactory$Provider(_myHomePageViewModel$Provider);
-    _myAppFactory$Provider =
-        _MyAppFactory$Provider(_myHomePageFactory$Provider);
-  }
 
   @override
   _i3.MyAppFactory get myAppFactory => _myAppFactory$Provider.get();

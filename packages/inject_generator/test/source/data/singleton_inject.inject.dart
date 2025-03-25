@@ -6,26 +6,20 @@ class ComponentWithModule$Component implements _i1.ComponentWithModule {
   factory ComponentWithModule$Component.create({_i1.BarModule? barModule}) =>
       ComponentWithModule$Component._(barModule ?? _i1.BarModule());
 
-  ComponentWithModule$Component._(this._barModule) {
-    _initialize();
+  ComponentWithModule$Component._(_i1.BarModule barModule) {
+    _foo$Provider = _Foo$Provider();
+    _foo2$Provider = _Foo2$Provider();
+    _bar$Provider = _Bar$Provider(
+      foo$Provider,
+      barModule,
+    );
   }
-
-  final _i1.BarModule _barModule;
 
   late final _Foo$Provider _foo$Provider;
 
   late final _Foo2$Provider _foo2$Provider;
 
   late final _Bar$Provider _bar$Provider;
-
-  void _initialize() {
-    _foo$Provider = _Foo$Provider();
-    _foo2$Provider = _Foo2$Provider();
-    _bar$Provider = _Bar$Provider(
-      _foo$Provider,
-      _barModule,
-    );
-  }
 
   @override
   _i1.Foo get foo => _foo$Provider.get();

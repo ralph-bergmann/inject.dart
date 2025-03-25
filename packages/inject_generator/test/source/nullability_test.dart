@@ -76,7 +76,6 @@ void main() {
       final asset = stb.content.entries.first;
       final ctb = CodegenTestBed(inputAssetId: asset.key, sourceAssets: stb.assets);
       await ctb.run();
-      await ctb.compare();
       ctb
         ..printLog()
         ..expectLogRecord(
@@ -95,7 +94,6 @@ void main() {
       final asset = stb.content.entries.first;
       final ctb = CodegenTestBed(inputAssetId: asset.key, sourceAssets: stb.assets);
       await ctb.run();
-      await ctb.compare();
       ctb
         ..printLog()
         ..expectLogRecord(

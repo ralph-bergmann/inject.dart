@@ -7,38 +7,27 @@ class ParameterComponent$Component implements _i1.ParameterComponent {
           {_i1.Inject2Module? inject2Module}) =>
       ParameterComponent$Component._(inject2Module ?? _i1.Inject2Module());
 
-  ParameterComponent$Component._(this._inject2Module) {
-    _initialize();
+  ParameterComponent$Component._(_i1.Inject2Module inject2Module) {
+    final dependency1$Provider = _Dependency1$Provider();
+    _inject1$Provider = _Inject1$Provider(dependency1$Provider);
+    final inject4Factory$Provider =
+        _Inject4Factory$Provider(dependency1$Provider);
+    final inject5Factory$Provider = _Inject5Factory$Provider();
+    _inject3$Provider = _Inject3$Provider(
+      inject4Factory$Provider,
+      inject5Factory$Provider,
+    );
+    _inject2$Provider = _Inject2$Provider(
+      dependency1$Provider,
+      inject2Module,
+    );
   }
 
-  final _i1.Inject2Module _inject2Module;
-
-  late final _Dependency1$Provider _dependency1$Provider;
-
   late final _Inject1$Provider _inject1$Provider;
-
-  late final _Inject4Factory$Provider _inject4Factory$Provider;
-
-  late final _Inject5Factory$Provider _inject5Factory$Provider;
 
   late final _Inject3$Provider _inject3$Provider;
 
   late final _Inject2$Provider _inject2$Provider;
-
-  void _initialize() {
-    _dependency1$Provider = _Dependency1$Provider();
-    _inject1$Provider = _Inject1$Provider(_dependency1$Provider);
-    _inject4Factory$Provider = _Inject4Factory$Provider(_dependency1$Provider);
-    _inject5Factory$Provider = _Inject5Factory$Provider();
-    _inject3$Provider = _Inject3$Provider(
-      _inject4Factory$Provider,
-      _inject5Factory$Provider,
-    );
-    _inject2$Provider = _Inject2$Provider(
-      _dependency1$Provider,
-      _inject2Module,
-    );
-  }
 
   @override
   _i1.Inject1 get bar => _inject1$Provider.get();
