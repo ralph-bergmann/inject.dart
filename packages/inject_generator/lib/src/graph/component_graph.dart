@@ -97,6 +97,23 @@ class DependencyProvidedByFactory extends ResolvedDependency {
   );
 }
 
+/// A view model provided by a `ViewModelFactory<T>`.
+@immutable
+class DependencyProvidedByViewModel extends ResolvedDependency {
+  /// The name of the field in which the view model is injected.
+  final String methodName;
+
+  /// Type of the view model (the type parameter of `ViewModelFactory<T>`).
+  final LookupKey createdType;
+
+  const DependencyProvidedByViewModel._(
+    super.injectedType,
+    super.dependencies,
+    this.methodName,
+    this.createdType,
+  );
+}
+
 /// All of the data that is needed to generate an `@Component` class.
 class ComponentGraph {
   /// Modules used by the component.

@@ -281,7 +281,8 @@ void main() {
 
       final callbackType = types['TestClass']?['processor'];
       expect(callbackType?.root.symbol, 'Callback');
-      expect(callbackType?.typeArguments, isNull);
+      expect(callbackType?.typeArguments, isNotNull);
+      expect(callbackType?.typeArguments!.first.root.symbol, 'String');
     });
 
     test('throws UnsupportedError for record types', () async {

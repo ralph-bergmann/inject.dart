@@ -12,6 +12,7 @@ import 'package:dart_style/dart_style.dart';
 import 'package:inject_annotation/inject_annotation.dart';
 import 'package:pub_semver/pub_semver.dart';
 
+import '../analyzer/utils.dart';
 import '../context.dart';
 import '../graph.dart';
 import '../source/injected_type.dart';
@@ -428,6 +429,7 @@ class _ProviderBuilder {
       DependencyProvidedByModule() => _buildProvidedByModule(dependency as DependencyProvidedByModule),
       DependencyProvidedByInjectable() => _buildProvidedByInjectable(dependency as DependencyProvidedByInjectable),
       DependencyProvidedByFactory() => _buildProvidedByFactory(dependency as DependencyProvidedByFactory),
+      DependencyProvidedByViewModel() => _buildProvidedByViewModel(dependency as DependencyProvidedByViewModel),
     };
 
     asynchronous = asynchronous || dependency.injectedType.isAsynchronous;
@@ -589,6 +591,52 @@ class _ProviderBuilder {
         ..assignment = params.isEmpty
             ? refer(_factoryClassName(dep.injectedType.lookupKey)).constInstance([]).code
             : refer(_factoryClassName(dep.injectedType.lookupKey)).newInstance(params).code,
+    );
+
+    methodBuilder.body = refer(_factoryFieldName).code;
+
+    return false;
+  }
+
+  bool _buildProvidedByViewModel(DependencyProvidedByViewModel dep) {
+    constructor.constant = false;
+
+    fields.add(
+      FieldBuilder()
+        ..name = _factoryFieldName
+        ..late = true
+        ..modifier = FieldModifier.final$
+        ..type = _referenceForKey(libraryUri, dep.injectedType.lookupKey)
+        ..assignment = Method(
+          (b) => b
+            ..optionalParameters.addAll([
+              Parameter(
+                (b) => b
+                  ..named = true
+                  ..name = 'key',
+              ),
+              Parameter(
+                (b) => b
+                  ..named = true
+                  ..required = true
+                  ..name = 'builder',
+              ),
+              Parameter(
+                (b) => b
+                  ..named = true
+                  ..name = 'child',
+              ),
+            ])
+            ..body = _referenceForKey(libraryUri, dep.createdType).toViewModelBuilder().newInstance(
+              [],
+              <String, Expression>{
+                'key': refer('key'),
+                'viewModelProvider': refer(_providerClassName(dep.createdType).decapitalize()),
+                'builder': refer('builder'),
+                'child': refer('child'),
+              },
+            ).code,
+        ).closure.code,
     );
 
     methodBuilder.body = refer(_factoryFieldName).code;
@@ -912,14 +960,27 @@ extension _TypeReferenceExtension on TypeReference {
   }
 
   TypeReference toProvider() {
-    if (symbol == 'Provider' && url == 'package:inject_annotation/inject_annotation.dart') {
+    if (symbol == providerClassName && url == providerPackage) {
       return this;
     }
 
     return TypeReference(
       (b) => b
-        ..symbol = 'Provider'
-        ..url = 'package:inject_annotation/inject_annotation.dart'
+        ..symbol = providerClassName
+        ..url = providerPackage
+        ..types.add(this),
+    );
+  }
+
+  TypeReference toViewModelBuilder() {
+    if (symbol == viewModelBuilderClassName && url == viewModelBuilderPackage) {
+      return this;
+    }
+
+    return TypeReference(
+      (b) => b
+        ..symbol = viewModelBuilderClassName
+        ..url = viewModelBuilderPackage
         ..types.add(this),
     );
   }
@@ -951,14 +1012,10 @@ void _logNullabilityMismatchDependency({
 }) {
   final dependencyClassName = dependency.lookupKey.toPrettyString();
 
-  final SymbolPath resolvedSymbolPath;
-  if (resolved is DependencyProvidedByModule) {
-    resolvedSymbolPath = resolved.moduleClass;
-  } else if (resolved is DependencyProvidedByFactory) {
-    resolvedSymbolPath = resolved.injectedType.lookupKey.root;
-  } else {
-    resolvedSymbolPath = resolved.injectedType.lookupKey.root;
-  }
+  final resolvedSymbolPath = switch (resolved) {
+    DependencyProvidedByModule() => resolved.moduleClass,
+    _ => resolved.injectedType.lookupKey.root,
+  };
 
   builderContext.rawLogger
       .severe('''Could not find a way to provide "$dependencyClassName" which is injected in "${requestedBy.symbol}".

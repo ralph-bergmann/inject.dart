@@ -46,6 +46,11 @@ class InjectedType {
   /// Return `true` if its constructor is a const constructor
   final bool isConst;
 
+  /// True if the user is trying to inject [LookupKey] as ViewModel
+  /// (a class extending Flutter's `ChangeNotifier`) using `ViewModelFactory`
+  /// from package:inject_flutter.
+  final bool isViewModelFactory;
+
   factory InjectedType(
     LookupKey lookupKey, {
     String? name,
@@ -57,6 +62,7 @@ class InjectedType {
     bool? isAsynchronous,
     bool? isAssisted,
     bool? isConst,
+    bool? isViewModelFactory,
   }) =>
       InjectedType._(
         lookupKey: lookupKey,
@@ -69,6 +75,7 @@ class InjectedType {
         isAsynchronous: isAsynchronous ?? false,
         isAssisted: isAssisted ?? false,
         isConst: isConst ?? false,
+        isViewModelFactory: isViewModelFactory ?? false,
       );
 
   const InjectedType._({
@@ -82,6 +89,7 @@ class InjectedType {
     required this.isAsynchronous,
     required this.isAssisted,
     required this.isConst,
+    required this.isViewModelFactory,
   });
 
   factory InjectedType.fromJson(Map<String, dynamic> json) => _$InjectedTypeFromJson(json);
@@ -102,7 +110,8 @@ class InjectedType {
           isSingleton == other.isSingleton &&
           isAsynchronous == other.isAsynchronous &&
           isAssisted == other.isAssisted &&
-          isConst == other.isConst;
+          isConst == other.isConst &&
+          isViewModelFactory == other.isViewModelFactory;
 
   @override
   int get hashCode =>
@@ -115,5 +124,6 @@ class InjectedType {
       isSingleton.hashCode ^
       isAsynchronous.hashCode ^
       isAssisted.hashCode ^
-      isConst.hashCode;
+      isConst.hashCode ^
+      isViewModelFactory.hashCode;
 }

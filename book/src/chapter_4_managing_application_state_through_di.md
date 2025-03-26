@@ -174,7 +174,7 @@ through dependency injection.
 Now that we have a clean project structure, we'll implement state
 management using dependency injection principles. Our architecture will
 introduce two new components: a `CounterRepository` for data persistence
-and a `MyHomeViewModel` to connect the UI with this data layer.
+and a `MyHomePageViewModel` to connect the UI with this data layer.
 
 The `CounterRepository` will handle the persistence of our counter value.
 It will provide methods to store and retrieve the counter, effectively
@@ -182,7 +182,7 @@ abstracting the storage mechanism from the rest of the application. This
 abstraction is powerful because it allows us to change the underlying
 storage implementation without affecting the components that use it.
 
-The `MyHomeViewModel` will serve as an intermediary between our UI and the
+The `MyHomePageViewModel` will serve as an intermediary between our UI and the
 data layer. It will depend on the `CounterRepository` (injected through our
 DI system) and provide the UI with the state and methods it needs. This
 creates a clean separation between how data is presented and how it's
@@ -191,7 +191,7 @@ stored or processed.
 This architecture demonstrates one of the key benefits of dependency
 injection: the ability to create a system where components depend on
 abstractions rather than concrete implementations. When the
-`MyHomeViewModel` receives its `CounterRepository` through injection, it
+`MyHomePageViewModel` receives its `CounterRepository` through injection, it
 doesn't need to know the details of how the repository is implemented or
 how it's instantiated.
 
@@ -224,82 +224,44 @@ flutter_demo/
                 └── my_home_page_view_model.dart (Home state management)
 ```
 
-## Injecting the ViewModel into the UI
-
-Let's start by examining how we've implemented dependency injection at the
-UI layer.
-The key change is making our `MyHomePage` injectable to receive its
-ViewModel.
-
 ### Making MyHomePage Injectable
 
-To inject dependencies into our home page, we've created a factory and
-restructured the widget:
+To make our home page injectable, we create a factory that allows the DI system
+to instantiate it:
 
-```dart 
+```dart
 import 'package:flutter/material.dart';
 import 'package:inject_annotation/inject_annotation.dart';
 
-import 'my_home_page_view_model.dart';
-
-/// Factory to create the [MyHomePage] widget with the [MyHomePageViewModel] injected.
+/// Factory to create the [MyHomePage] widget with its dependencies.
 @assistedFactory
 abstract class MyHomePageFactory {
   MyHomePage create({Key? key, required String title});
 }
 
 /// The home page of the application with a simple counter.
-/// The [MyHomePageViewModel] is injected into the widget at compile-time, while the
-/// [key] or [title] can be provided at runtime.
-class MyHomePage extends StatefulWidget {
+class MyHomePage extends StatelessWidget {
   @assistedInject
   const MyHomePage({
     @assisted super.key,
     @assisted required this.title,
-    required this.viewModelProvider,
   });
 
-  final String title;
-  final Provider<MyHomePageViewModel> viewModelProvider;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  late final MyHomePageViewModel viewModel;
-
-  @override
-  void initState() {
-    super.initState();
-    viewModel = widget.viewModelProvider.get();
-  }
-
-  @override
-  void dispose() {
-    viewModel.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // UI implementation
-  }
+// Widget implementation...
 }
 ```
-
-This approach demonstrates several important dependency injection concepts:
 
 1. We've created a factory (`MyHomePageFactory`) that allows the DI system
    to create instances of `MyHomePage` with all dependencies properly
    injected.
 
-2. The `MyHomePage` widget now receives its `viewModel` as a constructor
-   parameter, making the dependency explicit and testable.
-
-3. We use `@assistedInject` to mark the constructor as an injection point,
+2. We use `@assistedInject` to mark the constructor as an injection point,
    while marking runtime parameters like `key` and `title` with
    `@assisted`.
+
+3. Notice that we also changed it to be a `StatelessWidget` instead of a
+   `StatefulWidget`. When we later add the view model, we'll see how we
+   use the view model to manage the state of the widget.
 
 ### Connecting MyHomePage to MyApp
 
@@ -346,15 +308,201 @@ class MyApp extends StatelessWidget {
 This structure creates a clean dependency chain:
 
 1. The `MyApp` widget depends on `MyHomePageFactory` (injected)
-2. The `MyHomePage` widget depends on `MyHomePageViewModel` (injected)
-3. The `MyHomePageViewModel` depends on `CounterRepository` (injected, as
-   we'll see later)
+2. The `homePageFactory.create()` method is called to instantiate the home page
+
+This approach demonstrates nested widget creation through dependency injection,
+allowing each component to receive its required dependencies.
 
 By using factories, we ensure proper dependency injection throughout our
 widget tree while still allowing for runtime parameters like `title` and
 `key`.
 This approach gives us the best of both worlds: compile-time dependency
 injection with runtime flexibility.
+
+## Adding State Management with ViewModel
+
+Now that we have our basic widget structure with dependency injection, we need
+to implement state management. We'll use a ViewModel approach that provides a
+clean separation between UI and business logic.
+
+### Creating the ViewModel
+
+First, let's create a ViewModel class that handles the state and business logic
+for our counter feature:
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:inject_annotation/inject_annotation.dart';
+
+import '../../data/repositories/counter_repository.dart';
+import 'my_home_page.dart';
+
+/// The view model for the [MyHomePage] widget.
+@inject
+class MyHomePageViewModel extends ChangeNotifier {
+  MyHomePageViewModel({required CounterRepository repository})
+      : _repository = repository;
+
+  final CounterRepository _repository;
+
+  int count = 0;
+
+  Future<void> increaseCount() async {
+    await _repository.increaseCount();
+    count = await _repository.count;
+    notifyListeners();
+  }
+}
+```
+
+The ViewModel has these important characteristics:
+
+1. It's marked with `@inject` so it can be created by the DI system
+2. It extends `ChangeNotifier` to provide change notifications to the UI
+3. It depends on `CounterRepository`, which is injected through its constructor
+4. It manages state (the count variable) and provides a method to update it
+5. It calls `notifyListeners()` when the state changes to trigger UI updates
+
+This pattern creates a clear separation of concerns:
+
+- The ViewModel handles business logic and state management
+- The repository handles data operations
+- The UI focuses solely on presentation
+
+Note the constructor implementation pattern:
+
+```dart
+MyHomePageViewModel({required CounterRepository repository})
+      : _repository = repository;
+
+final CounterRepository _repository;
+```
+
+Rather than using the more concise `this.repository` syntax and a public field, 
+we deliberately use a private field with manual assignment to enforce strict 
+encapsulation. This approach provides significant architectural benefits:
+
+1. **True Encapsulation**: Dependencies like `_repository` remain truly private.
+   If we use a public field, any component that received the ViewModel could 
+   potentially access its repository directly. This would violate the
+   encapsulation principle and make it difficult to change the implementation
+   later without breaking existing code.
+
+2. **Preventing Dependency Leakage**: When a view model is injected into a UI
+   component, we want to ensure the UI can only access the intended public API.
+   Manual assignment to private fields creates a clear boundary that prevents
+   dependency leakage across architectural layers.
+
+3. **Layer Isolation**: This pattern supports the principle that each layer
+   should only know about its immediate dependencies. The UI knows about the
+   ViewModel but should have no knowledge of or access to the repositories or
+   services the ViewModel uses.
+
+This small syntax choice reinforces an important architectural principle:
+components should expose only what their consumers need and nothing more,
+maintaining clear boundaries between different layers of the application.
+
+### Injecting the ViewModel with ViewModelFactory
+
+Now, let's update our MyHomePage to use this ViewModel with the ViewModelFactory
+pattern:
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:inject_annotation/inject_annotation.dart';
+import 'package:inject_flutter/inject_flutter.dart';
+
+import 'my_home_page_view_model.dart';
+
+/// Factory to create the [MyHomePage] widget with the [MyHomePageViewModel] injected.
+@assistedFactory
+abstract class MyHomePageFactory {
+  MyHomePage create({Key? key, required String title});
+}
+
+/// The home page of the application with a simple counter.
+/// The [viewModelFactory] is injected into the widget at compile-time, while the
+/// [key] or [title] can be provided at runtime.
+class MyHomePage extends StatelessWidget {
+  @assistedInject
+  const MyHomePage({
+    @assisted super.key,
+    @assisted required this.title,
+    required this.viewModelFactory,
+  });
+
+  final String title;
+  final ViewModelFactory<MyHomePageViewModel> viewModelFactory;
+
+  @override
+  Widget build(BuildContext context) {
+    return viewModelFactory(
+      builder: (context, viewModel, _) {
+        return Scaffold(
+          appBar: AppBar(
+            backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+            title: Text(title),
+          ),
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                const Text(
+                  'You have pushed the button this many times:',
+                ),
+                Text(
+                  '${viewModel.count}',
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
+              ],
+            ),
+          ),
+          floatingActionButton: FloatingActionButton(
+            onPressed: viewModel.increaseCount,
+            tooltip: 'Increment',
+            child: const Icon(Icons.add),
+          ),
+        );
+      },
+    );
+  }
+}
+```
+
+### How ViewModelFactory Works
+
+The `ViewModelFactory<T>` is a typedef for a function that returns a
+`ViewModelBuilder<T>`:
+
+```dart
+typedef ViewModelFactory<T extends ChangeNotifier> = ViewModelBuilder<T> Function({
+   Key? key,
+   required ViewModelWidgetBuilder<T> builder,
+   Widget? child,
+});
+```
+
+When you call this function in the build method, it:
+
+1. **Creates a ViewModelBuilder**: This StatefulWidget handles the ViewModel
+   lifecycle
+2. **Passes Your Builder Function**: Your UI-building logic receives the
+   ViewModel instance
+3. **Manages ViewModel Creation**: The ViewModel is created when the
+   ViewModelBuilder first builds
+4. **Handles ViewModel Disposal**: When the ViewModelBuilder is disposed, it
+   disposes the ViewModel
+
+The builder function pattern provides a clean way to access the ViewModel's
+state and methods inside your UI code. By using this approach:
+
+1. The UI reacts to changes in the ViewModel automatically
+2. Business logic stays in the ViewModel
+3. The widget remains a simple StatelessWidget
+4. Lifecycle management happens behind the scenes
+
+This creates a maintainable architecture where each component has a clear
+responsibility.
 
 ## Data Layer: Repository and Database
 
@@ -486,105 +634,6 @@ This pattern demonstrates a key strength of dependency injection: the
 ability to configure different scopes for different types of components in
 your application.
 
-## Handling Dependencies with ViewModels
-
-When working with ViewModels in Flutter, proper lifecycle management is
-critical. After careful consideration of the technical implications, we
-strongly recommend using StatefulWidgets when working with ViewModels.
-
-### Why StatefulWidget is Required for ViewModels
-
-ViewModels, especially those extending ChangeNotifier, require proper
-initialization and disposal to prevent memory leaks and ensure efficient
-resource management. StatefulWidget provides the necessary lifecycle hooks
-for this management:
-
-```dart
-@assistedFactory
-abstract class MyHomePageFactory {
-  MyHomePage create({Key? key, required String title});
-}
-
-class MyHomePage extends StatefulWidget {
-  @assistedInject
-  const MyHomePage({
-    @assisted super.key,
-    @assisted required this.title,
-    required this.viewModelProvider,
-  });
-
-  final String title;
-  final Provider<MyHomePageViewModel> viewModelProvider;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  late final MyHomePageViewModel viewModel;
-
-  @override
-  void initState() {
-    super.initState();
-    viewModel = widget.viewModelProvider.get();
-  }
-
-  @override
-  void dispose() {
-    viewModel.dispose(); // Critical for proper cleanup
-    super.dispose();
-  }
-
-// Widget implementation...
-}
-```
-
-This pattern provides several important benefits:
-
-1. **Proper Resource Management**: ChangeNotifiers maintain internal
-   listener lists and sometimes other resources that require explicit
-   cleanup.
-
-2. **Predictable Lifecycle**: The ViewModel is created and destroyed at
-   well-defined points in the widget lifecycle.
-
-3. **Memory Efficiency**: Resources are released immediately rather than
-   waiting for garbage collection.
-
-4. **Future-Proofing**: Your ViewModels can evolve to manage more complex
-   resources without requiring architectural changes.
-
-### Why Not StatelessWidget?
-
-While StatelessWidget is simpler and might seem adequate if you're relying
-on garbage collection to eventually clean up resources, this approach has
-significant drawbacks:
-
-1. **Unpredictable Cleanup**: Garbage collection timing is not guaranteed,
-   which can lead to resources being held longer than necessary.
-
-2. **Incomplete Cleanup**: Some resources need explicit disposal beyond
-   what garbage collection provides.
-
-3. **Hidden Dependencies**: The relationship between widget and ViewModel
-   lifecycle becomes implicit rather than explicit.
-
-4. **Limited Evolution**: As your ViewModels grow more complex, you'll
-   eventually need StatefulWidget anyway.
-
-### Implementation Best Practices
-
-For clean ViewModel integration with StatefulWidget:
-
-1. Inject a Provider<ViewModel> rather than the ViewModel directly
-2. Initialize the ViewModel in `initState()`
-3. Always call `viewModel.dispose()` in the State's `dispose()` method
-4. Keep UI-related logic in the `build` method, delegating events to the
-   ViewModel
-
-By following this pattern consistently, you'll create a more maintainable,
-predictable, and efficient application architecture.
-
 ## Conclusion
 
 In this chapter, we've explored how dependency injection naturally
@@ -597,14 +646,15 @@ The key principles we've covered include:
 
 1. Using dependency injection to provide state management services
 2. Creating a clear separation between UI and business logic
-3. Implementing proper lifecycle management with StatefulWidgets
+3. Implementing proper lifecycle management with ViewModelFactory
 4. Leveraging singletons for shared infrastructure like repositories and
    databases
 
 ### Complete Example
 
 You can find the complete source code for all examples in this chapter in
-the [`examples/flutter_demo`](https://github.com/ralph-bergmann/inject.dart/tree/master/examples/flutter_demo)
+the [
+`examples/flutter_demo`](https://github.com/ralph-bergmann/inject.dart/tree/master/examples/flutter_demo)
 folder of the inject.dart repository. This working implementation
 demonstrates all the patterns and practices we've discussed.
 

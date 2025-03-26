@@ -7,11 +7,13 @@ environment:
   sdk: ^3.6.0
 
 workspace:
-  - packages/inject_annotation
-  - packages/inject_generator
   - examples/coffee
   - examples/flutter_demo
   - examples/train
+  - packages/inject_annotation
+  - packages/inject_flutter
+  - packages/inject_flutter/example
+  - packages/inject_generator
 
 dev_dependencies:
   melos: ^7.0.0-dev.7

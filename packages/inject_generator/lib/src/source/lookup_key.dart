@@ -56,19 +56,12 @@ class LookupKey {
       return [];
     }
 
-    if (type.alias != null) {
-      return LookupKey(
-        getSymbolPath(type),
-        qualifier: qualifier,
-      );
-    }
-
-    if (type is RecordType) {
+    if (type is RecordType && type.alias == null) {
       throw UnsupportedError('Record types are not supported for injection. '
           'Please define a typedef for your record type to provide a stable name.');
     }
 
-    if (type is FunctionType) {
+    if (type is FunctionType && type.alias == null) {
       throw UnsupportedError(
           'Function types cannot be directly used for dependency injection because they lack a stable, canonical name. '
           'Please define a typedef for your function type and use that typedef instead.');
@@ -94,11 +87,11 @@ class LookupKey {
       );
     }
 
-    if (type is ParameterizedType && type.typeArguments.isNotEmpty) {
+    if (type is ParameterizedType && type.typeArguments.isNotEmpty || type.alias != null) {
       return LookupKey(
         getSymbolPath(type),
         qualifier: qualifier,
-        typeArguments: type.typeArguments.map(LookupKey.fromDartType).toList(),
+        typeArguments: type.allTypeArguments?.map(LookupKey.fromDartType).toList(),
       );
     }
     return LookupKey(getSymbolPath(type), qualifier: qualifier);
@@ -154,4 +147,27 @@ class LookupKey {
         _listEquality.hash(typeArguments),
         bound,
       );
+}
+
+extension _TypeArgumentExtension on DartType {
+  List<DartType>? get allTypeArguments => _getTypeArguments(this);
+}
+
+/// Gets the type arguments from a DartType, handling both regular types and typedefs
+List<DartType>? _getTypeArguments(DartType type) {
+  if (type.alias != null) {
+    // Case 1: It's a typedef (has an alias)
+    final alias = type.alias!;
+
+    // If it's a parameterized typedef (like ViewModelFactory<T>)
+    if (alias.typeArguments.isNotEmpty) {
+      return alias.typeArguments;
+    }
+  } else if (type is ParameterizedType && type.typeArguments.isNotEmpty) {
+    // Case 2: It's a regular parameterized type
+    return type.typeArguments;
+  }
+
+  // No type arguments found
+  return null;
 }

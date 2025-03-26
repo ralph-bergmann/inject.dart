@@ -94,6 +94,9 @@ class ComponentGraphResolver {
     final allModules = (await Future.wait<ModuleSummary?>(modulesToLoad)).nonNulls.toList();
 
     final providersByModules = <LookupKey, DependencyProvidedByModule>{};
+    final providersByInjectables = <LookupKey, DependencyProvidedByInjectable>{};
+    final providersByFactory = <LookupKey, DependencyProvidedByFactory>{};
+    final providersByViewModel = <LookupKey, DependencyProvidedByViewModel>{};
 
     // We compute the providers by modules in two passes. The first pass finds
     // all keys that are explicitly provided.
@@ -108,9 +111,6 @@ class ComponentGraphResolver {
         );
       }
     }
-
-    final providersByInjectables = <LookupKey, DependencyProvidedByInjectable>{};
-    final providersByFactory = <LookupKey, DependencyProvidedByFactory>{};
 
     Future<void> addInjectableIfExists(
       LookupKey key, {
@@ -161,10 +161,26 @@ class ComponentGraphResolver {
             );
 
             for (final dependency in dependencies) {
-              await addInjectableIfExists(
-                dependency.lookupKey,
-                requestedBy: injectable.root,
-              );
+              if (dependency.isViewModelFactory) {
+                // Special case for view models.
+                // Currently, view models are for Widgets, which are usually created by a factory,
+                // so I think this is the only place where we need to handle them.
+                providersByViewModel[dependency.lookupKey] = DependencyProvidedByViewModel._(
+                  InjectedType(dependency.lookupKey),
+                  [InjectedType(dependency.lookupKey.typeArguments!.first)],
+                  dependency.name!,
+                  dependency.lookupKey.typeArguments!.first,
+                );
+                await addInjectableIfExists(
+                  dependency.lookupKey.typeArguments!.first,
+                  requestedBy: dependency.lookupKey.root,
+                );
+              } else {
+                await addInjectableIfExists(
+                  dependency.lookupKey,
+                  requestedBy: injectable.root,
+                );
+              }
             }
           } else {
             builderContext.rawLogger.severe(
@@ -208,7 +224,8 @@ class ComponentGraphResolver {
     final mergedDependencies = <LookupKey, ResolvedDependency>{}
       ..addAll(providersByInjectables)
       ..addAll(providersByFactory)
-      ..addAll(providersByModules);
+      ..addAll(providersByModules)
+      ..addAll(providersByViewModel);
 
     // Providers defined on the component class.
     final componentProviders = <ComponentProvider>[];

@@ -5,8 +5,10 @@ import 'src/features/app/my_app.dart' as _i3;
 import 'package:inject_annotation/inject_annotation.dart' as _i4;
 import 'src/data/repositories/counter_repository.dart' as _i5;
 import 'src/features/home/my_home_page_view_model.dart' as _i6;
-import 'src/features/home/my_home_page.dart' as _i7;
-import 'package:flutter/src/foundation/key.dart' as _i8;
+import 'package:inject_flutter/src/view_model_factory.dart' as _i7;
+import 'package:inject_flutter/inject_flutter.dart' as _i8;
+import 'src/features/home/my_home_page.dart' as _i9;
+import 'package:flutter/src/foundation/key.dart' as _i10;
 
 class MainComponent$Component implements _i1.MainComponent {
   factory MainComponent$Component.create(
@@ -19,8 +21,11 @@ class MainComponent$Component implements _i1.MainComponent {
         _CounterRepository$Provider(database$Provider);
     final myHomePageViewModel$Provider =
         _MyHomePageViewModel$Provider(counterRepository$Provider);
-    final myHomePageFactory$Provider =
-        _MyHomePageFactory$Provider(myHomePageViewModel$Provider);
+    final viewModelFactoryMyHomePageViewModel$Provider =
+        _ViewModelFactoryMyHomePageViewModel$Provider(
+            myHomePageViewModel$Provider);
+    final myHomePageFactory$Provider = _MyHomePageFactory$Provider(
+        viewModelFactoryMyHomePageViewModel$Provider);
     _myAppFactory$Provider = _MyAppFactory$Provider(myHomePageFactory$Provider);
   }
 
@@ -65,33 +70,60 @@ class _MyHomePageViewModel$Provider
       _i6.MyHomePageViewModel(repository: _counterRepository$Provider.get());
 }
 
-class _MyHomePageFactory$Provider
-    implements _i4.Provider<_i7.MyHomePageFactory> {
-  _MyHomePageFactory$Provider(this._myHomePageViewModel$Provider);
+class _ViewModelFactoryMyHomePageViewModel$Provider
+    implements _i4.Provider<_i7.ViewModelFactory<_i6.MyHomePageViewModel>> {
+  _ViewModelFactoryMyHomePageViewModel$Provider(
+      this._myHomePageViewModel$Provider);
 
   final _MyHomePageViewModel$Provider _myHomePageViewModel$Provider;
 
-  late final _i7.MyHomePageFactory _factory =
-      _MyHomePageFactory$Factory(_myHomePageViewModel$Provider);
+  late final _i7.ViewModelFactory<_i6.MyHomePageViewModel> _factory = ({
+    key,
+    required builder,
+    child,
+  }) =>
+      _i8.ViewModelBuilder<_i6.MyHomePageViewModel>(
+        key: key,
+        viewModelProvider: _myHomePageViewModel$Provider,
+        builder: builder,
+        child: child,
+      );
 
   @override
-  _i7.MyHomePageFactory get() => _factory;
+  _i7.ViewModelFactory<_i6.MyHomePageViewModel> get() => _factory;
 }
 
-class _MyHomePageFactory$Factory implements _i7.MyHomePageFactory {
-  const _MyHomePageFactory$Factory(this._myHomePageViewModel$Provider);
+class _MyHomePageFactory$Provider
+    implements _i4.Provider<_i9.MyHomePageFactory> {
+  _MyHomePageFactory$Provider(
+      this._viewModelFactoryMyHomePageViewModel$Provider);
 
-  final _MyHomePageViewModel$Provider _myHomePageViewModel$Provider;
+  final _ViewModelFactoryMyHomePageViewModel$Provider
+      _viewModelFactoryMyHomePageViewModel$Provider;
+
+  late final _i9.MyHomePageFactory _factory =
+      _MyHomePageFactory$Factory(_viewModelFactoryMyHomePageViewModel$Provider);
 
   @override
-  _i7.MyHomePage create({
-    _i8.Key? key,
+  _i9.MyHomePageFactory get() => _factory;
+}
+
+class _MyHomePageFactory$Factory implements _i9.MyHomePageFactory {
+  const _MyHomePageFactory$Factory(
+      this._viewModelFactoryMyHomePageViewModel$Provider);
+
+  final _ViewModelFactoryMyHomePageViewModel$Provider
+      _viewModelFactoryMyHomePageViewModel$Provider;
+
+  @override
+  _i9.MyHomePage create({
+    _i10.Key? key,
     required String title,
   }) =>
-      _i7.MyHomePage(
+      _i9.MyHomePage(
         key: key,
         title: title,
-        viewModelProvider: _myHomePageViewModel$Provider,
+        viewModelFactory: _viewModelFactoryMyHomePageViewModel$Provider.get(),
       );
 }
 
@@ -113,7 +145,7 @@ class _MyAppFactory$Factory implements _i3.MyAppFactory {
   final _MyHomePageFactory$Provider _myHomePageFactory$Provider;
 
   @override
-  _i3.MyApp create({_i8.Key? key}) => _i3.MyApp(
+  _i3.MyApp create({_i10.Key? key}) => _i3.MyApp(
         key: key,
         homePageFactory: _myHomePageFactory$Provider.get(),
       );

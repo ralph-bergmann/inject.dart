@@ -49,6 +49,7 @@ InjectedType getInjectedType(
       isAsynchronous: type.isDartAsyncFuture,
       isAssisted: isAssisted,
       isConst: isConst,
+      isViewModelFactory: type.isViewModelFactory,
     );
 
 Uri _uriOf(DartType type) {
@@ -250,7 +251,21 @@ ElementAnnotation? getAssistedInjectAnnotation(Element e) => _getAnnotation(e, S
 extension DartTypeExtensions on DartType {
   bool get isNullable => nullabilitySuffix == NullabilitySuffix.question;
 
-  bool get isProvider =>
-      element?.name == 'Provider' &&
-      element?.library?.source.uri == Uri.parse('package:inject_annotation/src/api/provider.dart');
+  bool get isProvider => element?.name == providerClassName && element?.library?.source.uri == Uri.parse(providerPath);
+
+  bool get isViewModelFactory =>
+      alias?.element.name == viewModelFactoryClassName &&
+      alias?.element.library.source.uri.toString() == viewModelFactoryPath;
 }
+
+const providerClassName = 'Provider';
+const providerPath = 'package:inject_annotation/src/api/provider.dart';
+const providerPackage = 'package:inject_annotation/inject_annotation.dart';
+
+const viewModelFactoryClassName = 'ViewModelFactory';
+const viewModelFactoryPath = 'package:inject_flutter/src/view_model_factory.dart';
+const viewModelFactoryPackage = 'package:inject_flutter/inject_flutter.dart';
+
+const viewModelBuilderClassName = 'ViewModelBuilder';
+const viewModelBuilderPath = 'package:inject_flutter/src/view_model_factory.dart';
+const viewModelBuilderPackage = 'package:inject_flutter/inject_flutter.dart';

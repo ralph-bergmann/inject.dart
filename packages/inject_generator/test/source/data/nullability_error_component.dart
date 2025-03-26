@@ -1,11 +1,7 @@
 import 'package:inject_annotation/inject_annotation.dart';
 
-import 'nullability_error_component.inject.dart' as g;
-
 @Component([BarModule])
 abstract class ComponentNullability {
-  static const create = g.ComponentNullability$Component.create;
-
   @inject
   FooBar get fooBar;
 
