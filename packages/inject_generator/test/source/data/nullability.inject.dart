@@ -10,8 +10,8 @@ class ComponentNullability$Component implements _i1.ComponentNullability {
     _foo$Provider = _Foo$Provider(barModule);
     _bar$Provider = _Bar$Provider(barModule);
     _fooBar$Provider = _FooBar$Provider(
-      foo$Provider,
-      bar$Provider,
+      _foo$Provider,
+      _bar$Provider,
       barModule,
     );
   }

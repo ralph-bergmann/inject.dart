@@ -10,7 +10,7 @@ class ComponentWithModule$Component implements _i1.ComponentWithModule {
     _foo$Provider = _Foo$Provider();
     _foo2$Provider = _Foo2$Provider();
     _bar$Provider = _Bar$Provider(
-      foo$Provider,
+      _foo$Provider,
       barModule,
     );
   }

@@ -269,9 +269,7 @@ class _ComponentBuilder {
     for (final dependency in _orderedDependencies) {
       final providerClassName = _providerClassName(dependency.injectedType.lookupKey, private: false);
       final fieldName = providerClassName.decapitalize();
-      final providedByComponent = graph.providers
-              .firstWhereOrNull((element) => element.injectedType.lookupKey == dependency.injectedType.lookupKey) !=
-          null;
+      final providedByComponent = _isProvidedByComponent(dependency.injectedType);
 
       if (providedByComponent) {
         fields.add(
@@ -294,7 +292,13 @@ class _ComponentBuilder {
         }
         seen.add(injected.lookupKey);
 
-        arguments.add(refer(_providerClassName(injected.lookupKey, private: false).decapitalize()));
+        // the private parameter may be a bit annoying:
+        // - if the dependency is also provided by the component, the _providerClassName must be private
+        //   to match with the field name
+        // - if the dependency is not provided by the component, the _providerClassName must be public
+        //   to match with the local variable name
+        final argumentByComponent = _isProvidedByComponent(injected);
+        arguments.add(refer(_providerClassName(injected.lookupKey, private: argumentByComponent).decapitalize()));
       }
 
       if (dependency is DependencyProvidedByModule) {
@@ -376,6 +380,11 @@ class _ComponentBuilder {
 
     _orderedDependencies.add(dep);
   }
+
+  // Returns true if the dependency is provided by this component.
+  // Means when the component itself has a @inject annotation on a field with the same type.
+  bool _isProvidedByComponent(InjectedType injectedType) =>
+      graph.providers.firstWhereOrNull((element) => element.injectedType.lookupKey == injectedType.lookupKey) != null;
 }
 
 /// Generates code for a [Provider] class for the [dependency].

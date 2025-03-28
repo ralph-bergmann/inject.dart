@@ -8,9 +8,29 @@ abstract class ComponentWithoutModule {
 
   @inject
   Bar getBar();
+
+  @inject
+  FooBar getFooBar();
+}
+
+@inject
+class Foo {
+  const Foo();
+
+  String get foo => 'foo';
 }
 
 @inject
 class Bar {
-  String get foo => 'foo';
+  String get bar => 'bar';
+}
+
+@inject
+class FooBar {
+  const FooBar(this.foo, this.bar);
+
+  final Foo foo;
+  final Bar bar;
+
+  String get fooBar => '${foo.foo}_${bar.bar}';
 }

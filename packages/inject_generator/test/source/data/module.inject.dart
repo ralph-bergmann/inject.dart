@@ -11,7 +11,7 @@ class MainComponent$Component implements _i1.MainComponent {
     _addition$Provider = _Addition$Provider(mainModule);
     _foo$Provider = _Foo$Provider(mainModule);
     _bar$Provider = _Bar$Provider(
-      foo$Provider,
+      _foo$Provider,
       mainModule,
     );
   }

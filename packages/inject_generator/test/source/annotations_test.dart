@@ -28,17 +28,30 @@ void main() {
         component.clazz,
         const SymbolPath(rootPackage, testFilePath, 'ComponentWithoutModule'),
       );
-      expect(component.providers.length, 1);
+      expect(component.providers.length, 2);
       expect(component.providers[0].name, 'getBar');
+      expect(component.providers[1].name, 'getFooBar');
       expect(
         component.providers[0].injectedType.lookupKey.root,
         const SymbolPath(rootPackage, testFilePath, 'Bar'),
       );
+      expect(
+        component.providers[1].injectedType.lookupKey.root,
+        const SymbolPath(rootPackage, testFilePath, 'FooBar'),
+      );
 
-      expect(summary.injectables.length, 1);
+      expect(summary.injectables.length, 3);
       expect(
         summary.injectables[0].clazz,
+        const SymbolPath(rootPackage, testFilePath, 'Foo'),
+      );
+      expect(
+        summary.injectables[1].clazz,
         const SymbolPath(rootPackage, testFilePath, 'Bar'),
+      );
+      expect(
+        summary.injectables[2].clazz,
+        const SymbolPath(rootPackage, testFilePath, 'FooBar'),
       );
 
       final asset = stb.content.entries.first;
