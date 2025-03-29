@@ -214,7 +214,7 @@ class Singleton {
 ///     abstract class CarModule {
 ///       @provides
 ///       @asynchronous
-///       Future<Car> provideCar();
+///       Future&lt;Car&gt; provideCar();
 ///     }
 ///
 ///     class Dealership {
@@ -235,7 +235,7 @@ class Singleton {
 ///     @module
 ///     abstract class CarModule {
 ///       @provides
-///       Future<Car> provideCar();
+///       Future&lt;Car&gt; provideCar();
 ///     }
 ///
 ///     class Dealership {
