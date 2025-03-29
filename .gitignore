@@ -12,5 +12,10 @@ pubspec.lock
 .flutter-plugins
 .flutter-plugins-dependencies
 
+# VSCode stuff
+.vscode/
+
 # FVM Version Cache
 .fvm
+
+

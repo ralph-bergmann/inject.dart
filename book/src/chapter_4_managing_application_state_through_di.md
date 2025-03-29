@@ -319,15 +319,15 @@ widget tree while still allowing for runtime parameters like `title` and
 This approach gives us the best of both worlds: compile-time dependency
 injection with runtime flexibility.
 
-## Adding State Management with ViewModel
+## Adding State Management with View Model
 
 Now that we have our basic widget structure with dependency injection, we need
-to implement state management. We'll use a ViewModel approach that provides a
+to implement state management. We'll use a view model approach that provides a
 clean separation between UI and business logic.
 
-### Creating the ViewModel
+### Creating the View Model
 
-First, let's create a ViewModel class that handles the state and business logic
+First, let's create a view model class that handles the state and business logic
 for our counter feature:
 
 ```dart
@@ -355,7 +355,7 @@ class MyHomePageViewModel extends ChangeNotifier {
 }
 ```
 
-The ViewModel has these important characteristics:
+The view model has these important characteristics:
 
 1. It's marked with `@inject` so it can be created by the DI system
 2. It extends `ChangeNotifier` to provide change notifications to the UI
@@ -365,7 +365,7 @@ The ViewModel has these important characteristics:
 
 This pattern creates a clear separation of concerns:
 
-- The ViewModel handles business logic and state management
+- The view model handles business logic and state management
 - The repository handles data operations
 - The UI focuses solely on presentation
 
@@ -378,12 +378,12 @@ MyHomePageViewModel({required CounterRepository repository})
 final CounterRepository _repository;
 ```
 
-Rather than using the more concise `this.repository` syntax and a public field, 
-we deliberately use a private field with manual assignment to enforce strict 
+Rather than using the more concise `this.repository` syntax and a public field,
+we deliberately use a private field with manual assignment to enforce strict
 encapsulation. This approach provides significant architectural benefits:
 
 1. **True Encapsulation**: Dependencies like `_repository` remain truly private.
-   If we use a public field, any component that received the ViewModel could 
+   If we use a public field, any component that received the view model could
    potentially access its repository directly. This would violate the
    encapsulation principle and make it difficult to change the implementation
    later without breaking existing code.
@@ -395,16 +395,17 @@ encapsulation. This approach provides significant architectural benefits:
 
 3. **Layer Isolation**: This pattern supports the principle that each layer
    should only know about its immediate dependencies. The UI knows about the
-   ViewModel but should have no knowledge of or access to the repositories or
-   services the ViewModel uses.
+   view model but should have no knowledge of or access to the repositories or
+   services the view model uses.
 
 This small syntax choice reinforces an important architectural principle:
 components should expose only what their consumers need and nothing more,
 maintaining clear boundaries between different layers of the application.
 
-### Injecting the ViewModel with ViewModelFactory
+### Injecting the View Model with ViewModelFactory
 
-Now, let's update our MyHomePage to use this ViewModel with the ViewModelFactory
+Now, let's update our MyHomePage to use this view model with the
+ViewModelFactory
 pattern:
 
 ```dart
@@ -484,20 +485,20 @@ typedef ViewModelFactory<T extends ChangeNotifier> = ViewModelBuilder<T> Functio
 
 When you call this function in the build method, it:
 
-1. **Creates a ViewModelBuilder**: This StatefulWidget handles the ViewModel
+1. **Creates a ViewModelBuilder**: This StatefulWidget handles the view model
    lifecycle
 2. **Passes Your Builder Function**: Your UI-building logic receives the
-   ViewModel instance
-3. **Manages ViewModel Creation**: The ViewModel is created when the
+   view model instance
+3. **Manages View Model Creation**: The view model is created when the
    ViewModelBuilder first builds
-4. **Handles ViewModel Disposal**: When the ViewModelBuilder is disposed, it
-   disposes the ViewModel
+4. **Handles View Model Disposal**: When the ViewModelBuilder is disposed, it
+   disposes the view model
 
-The builder function pattern provides a clean way to access the ViewModel's
+The builder function pattern provides a clean way to access the view model's
 state and methods inside your UI code. By using this approach:
 
-1. The UI reacts to changes in the ViewModel automatically
-2. Business logic stays in the ViewModel
+1. The UI reacts to changes in the view model automatically
+2. Business logic stays in the view model
 3. The widget remains a simple StatelessWidget
 4. Lifecycle management happens behind the scenes
 
@@ -611,7 +612,7 @@ database instance exists in our application.
 This approach demonstrates how to integrate third-party libraries into your
 dependency injection system, even when you can't modify their source code.
 
-### ViewModels: Why They're Not Singletons
+### View Models: Why They're Not Singletons
 
 In contrast to the repository and database, view models are deliberately
 **not** marked as singletons.
@@ -638,7 +639,7 @@ your application.
 
 In this chapter, we've explored how dependency injection naturally
 complements state management in Flutter applications. By separating our
-application into clean layers — UI components, ViewModels, repositories, and
+application into clean layers — UI components, view models, repositories, and
 services — we've created a maintainable architecture that's both flexible and
 testable.
 
@@ -653,8 +654,7 @@ The key principles we've covered include:
 ### Complete Example
 
 You can find the complete source code for all examples in this chapter in
-the [
-`examples/flutter_demo`](https://github.com/ralph-bergmann/inject.dart/tree/master/examples/flutter_demo)
+the [`examples/flutter_demo`](https://github.com/ralph-bergmann/inject.dart/tree/master/examples/flutter_demo)
 folder of the inject.dart repository. This working implementation
 demonstrates all the patterns and practices we've discussed.
 
@@ -664,10 +664,8 @@ In the next chapter, we'll explore one of the most powerful benefits of our
 architecture: testability. We'll show how to create a separate dependency
 graph for unit testing that allows us to:
 
-1. Test ViewModels by injecting mock repositories
+1. Test view models by injecting a FakeCounterRepository
 2. Test repositories with a FakeDatabase implementation
-3. Write integration tests that validate the entire dependency chain
-4. Create targeted tests that focus on specific components
 
 This testing approach demonstrates how dependency injection doesn't just
 make your code more maintainable — it makes it substantially easier to verify

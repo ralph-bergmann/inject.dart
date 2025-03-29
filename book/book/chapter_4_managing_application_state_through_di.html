@@ -431,12 +431,12 @@ widget tree while still allowing for runtime parameters like <code>title</code> 
 <code>key</code>.
 This approach gives us the best of both worlds: compile-time dependency
 injection with runtime flexibility.</p>
-<h2 id="adding-state-management-with-viewmodel"><a class="header" href="#adding-state-management-with-viewmodel">Adding State Management with ViewModel</a></h2>
+<h2 id="adding-state-management-with-view-model"><a class="header" href="#adding-state-management-with-view-model">Adding State Management with View Model</a></h2>
 <p>Now that we have our basic widget structure with dependency injection, we need
-to implement state management. We'll use a ViewModel approach that provides a
+to implement state management. We'll use a view model approach that provides a
 clean separation between UI and business logic.</p>
-<h3 id="creating-the-viewmodel"><a class="header" href="#creating-the-viewmodel">Creating the ViewModel</a></h3>
-<p>First, let's create a ViewModel class that handles the state and business logic
+<h3 id="creating-the-view-model"><a class="header" href="#creating-the-view-model">Creating the View Model</a></h3>
+<p>First, let's create a view model class that handles the state and business logic
 for our counter feature:</p>
 <pre><code class="language-dart">import 'package:flutter/material.dart';
 import 'package:inject_annotation/inject_annotation.dart';
@@ -461,7 +461,7 @@ class MyHomePageViewModel extends ChangeNotifier {
   }
 }
 </code></pre>
-<p>The ViewModel has these important characteristics:</p>
+<p>The view model has these important characteristics:</p>
 <ol>
 <li>It's marked with <code>@inject</code> so it can be created by the DI system</li>
 <li>It extends <code>ChangeNotifier</code> to provide change notifications to the UI</li>
@@ -471,7 +471,7 @@ class MyHomePageViewModel extends ChangeNotifier {
 </ol>
 <p>This pattern creates a clear separation of concerns:</p>
 <ul>
-<li>The ViewModel handles business logic and state management</li>
+<li>The view model handles business logic and state management</li>
 <li>The repository handles data operations</li>
 <li>The UI focuses solely on presentation</li>
 </ul>
@@ -487,7 +487,7 @@ encapsulation. This approach provides significant architectural benefits:</p>
 <ol>
 <li>
 <p><strong>True Encapsulation</strong>: Dependencies like <code>_repository</code> remain truly private.
-If we use a public field, any component that received the ViewModel could
+If we use a public field, any component that received the view model could
 potentially access its repository directly. This would violate the
 encapsulation principle and make it difficult to change the implementation
 later without breaking existing code.</p>
@@ -501,15 +501,16 @@ dependency leakage across architectural layers.</p>
 <li>
 <p><strong>Layer Isolation</strong>: This pattern supports the principle that each layer
 should only know about its immediate dependencies. The UI knows about the
-ViewModel but should have no knowledge of or access to the repositories or
-services the ViewModel uses.</p>
+view model but should have no knowledge of or access to the repositories or
+services the view model uses.</p>
 </li>
 </ol>
 <p>This small syntax choice reinforces an important architectural principle:
 components should expose only what their consumers need and nothing more,
 maintaining clear boundaries between different layers of the application.</p>
-<h3 id="injecting-the-viewmodel-with-viewmodelfactory"><a class="header" href="#injecting-the-viewmodel-with-viewmodelfactory">Injecting the ViewModel with ViewModelFactory</a></h3>
-<p>Now, let's update our MyHomePage to use this ViewModel with the ViewModelFactory
+<h3 id="injecting-the-view-model-with-viewmodelfactory"><a class="header" href="#injecting-the-view-model-with-viewmodelfactory">Injecting the View Model with ViewModelFactory</a></h3>
+<p>Now, let's update our MyHomePage to use this view model with the
+ViewModelFactory
 pattern:</p>
 <pre><code class="language-dart">import 'package:flutter/material.dart';
 import 'package:inject_annotation/inject_annotation.dart';
@@ -582,20 +583,20 @@ class MyHomePage extends StatelessWidget {
 </code></pre>
 <p>When you call this function in the build method, it:</p>
 <ol>
-<li><strong>Creates a ViewModelBuilder</strong>: This StatefulWidget handles the ViewModel
+<li><strong>Creates a ViewModelBuilder</strong>: This StatefulWidget handles the view model
 lifecycle</li>
 <li><strong>Passes Your Builder Function</strong>: Your UI-building logic receives the
-ViewModel instance</li>
-<li><strong>Manages ViewModel Creation</strong>: The ViewModel is created when the
+view model instance</li>
+<li><strong>Manages View Model Creation</strong>: The view model is created when the
 ViewModelBuilder first builds</li>
-<li><strong>Handles ViewModel Disposal</strong>: When the ViewModelBuilder is disposed, it
-disposes the ViewModel</li>
+<li><strong>Handles View Model Disposal</strong>: When the ViewModelBuilder is disposed, it
+disposes the view model</li>
 </ol>
-<p>The builder function pattern provides a clean way to access the ViewModel's
+<p>The builder function pattern provides a clean way to access the view model's
 state and methods inside your UI code. By using this approach:</p>
 <ol>
-<li>The UI reacts to changes in the ViewModel automatically</li>
-<li>Business logic stays in the ViewModel</li>
+<li>The UI reacts to changes in the view model automatically</li>
+<li>Business logic stays in the view model</li>
 <li>The widget remains a simple StatelessWidget</li>
 <li>Lifecycle management happens behind the scenes</li>
 </ol>
@@ -695,7 +696,7 @@ By adding the <code>@singleton</code> annotation, we ensure only one
 database instance exists in our application.</p>
 <p>This approach demonstrates how to integrate third-party libraries into your
 dependency injection system, even when you can't modify their source code.</p>
-<h3 id="viewmodels-why-theyre-not-singletons"><a class="header" href="#viewmodels-why-theyre-not-singletons">ViewModels: Why They're Not Singletons</a></h3>
+<h3 id="view-models-why-theyre-not-singletons"><a class="header" href="#view-models-why-theyre-not-singletons">View Models: Why They're Not Singletons</a></h3>
 <p>In contrast to the repository and database, view models are deliberately
 <strong>not</strong> marked as singletons.
 This is an important architectural decision:</p>
@@ -718,7 +719,7 @@ your application.</p>
 <h2 id="conclusion"><a class="header" href="#conclusion">Conclusion</a></h2>
 <p>In this chapter, we've explored how dependency injection naturally
 complements state management in Flutter applications. By separating our
-application into clean layers — UI components, ViewModels, repositories, and
+application into clean layers — UI components, view models, repositories, and
 services — we've created a maintainable architecture that's both flexible and
 testable.</p>
 <p>The key principles we've covered include:</p>
@@ -731,8 +732,7 @@ databases</li>
 </ol>
 <h3 id="complete-example"><a class="header" href="#complete-example">Complete Example</a></h3>
 <p>You can find the complete source code for all examples in this chapter in
-the <a href="https://github.com/ralph-bergmann/inject.dart/tree/master/examples/flutter_demo">
-<code>examples/flutter_demo</code></a>
+the <a href="https://github.com/ralph-bergmann/inject.dart/tree/master/examples/flutter_demo"><code>examples/flutter_demo</code></a>
 folder of the inject.dart repository. This working implementation
 demonstrates all the patterns and practices we've discussed.</p>
 <h3 id="coming-next-testing-with-dependency-injection"><a class="header" href="#coming-next-testing-with-dependency-injection">Coming Next: Testing with Dependency Injection</a></h3>
@@ -740,10 +740,8 @@ demonstrates all the patterns and practices we've discussed.</p>
 architecture: testability. We'll show how to create a separate dependency
 graph for unit testing that allows us to:</p>
 <ol>
-<li>Test ViewModels by injecting mock repositories</li>
+<li>Test view models by injecting a FakeCounterRepository</li>
 <li>Test repositories with a FakeDatabase implementation</li>
-<li>Write integration tests that validate the entire dependency chain</li>
-<li>Create targeted tests that focus on specific components</li>
 </ol>
 <p>This testing approach demonstrates how dependency injection doesn't just
 make your code more maintainable — it makes it substantially easier to verify
@@ -760,7 +758,7 @@ complexity.</p>
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="chapter_5_inject_annotations.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="chapter_5_testing_with_di.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -774,7 +772,7 @@ complexity.</p>
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="chapter_5_inject_annotations.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="chapter_5_testing_with_di.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
