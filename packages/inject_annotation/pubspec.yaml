@@ -1,8 +1,15 @@
 name: inject_annotation
-version: 1.0.0-alpha.5
 description: Compile-time constructor-based dependency injection for Dart and Flutter, similar to Dagger.
+version: 1.0.0
+documentation: https://ralph-bergmann.github.io/inject.dart/
 repository: https://github.com/ralph-bergmann/inject.dart
 issue_tracker: https://github.com/ralph-bergmann/inject.dart/issues
+topics:
+  - codegen
+  - build-runner
+  - dependency-injection
+  - code-generation
+  - generator
 
 environment:
   sdk: ^3.6.0
