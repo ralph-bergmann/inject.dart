@@ -1,20 +1,27 @@
 name: inject_generator
-version: 1.0.0-alpha.8
 description: Dev-time dependency for package:inject_annotation.
+version: 1.0.0
+documentation: https://ralph-bergmann.github.io/inject.dart/
 repository: https://github.com/ralph-bergmann/inject.dart
 issue_tracker: https://github.com/ralph-bergmann/inject.dart/issues
+topics:
+  - codegen
+  - build-runner
+  - dependency-injection
+  - code-generation
+  - generator
 
 environment:
   sdk: ^3.6.0
 resolution: workspace
 
 dependencies:
-  analyzer: ^6.11.0
+  analyzer: ^7.3.0
   build: ^2.4.2
   code_builder: ^4.10.1
   collection: ^1.19.0
   dart_style: ^3.0.1
-  inject_annotation: ^1.0.0-alpha.5
+  inject_annotation: ^1.0.0
   json_annotation: ^4.9.0
   logging: ^1.3.0
   meta: ^1.15.0
