@@ -1,6 +1,6 @@
 name: inject_generator
 description: Dev-time dependency for package:inject_annotation.
-version: 1.0.0
+version: 1.0.1
 documentation: https://ralph-bergmann.github.io/inject.dart/
 repository: https://github.com/ralph-bergmann/inject.dart
 issue_tracker: https://github.com/ralph-bergmann/inject.dart/issues

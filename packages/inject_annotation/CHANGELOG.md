@@ -1,3 +1,16 @@
+## 1.0.1
+
+- fix analyzer warnings
+  - unintended_html_in_doc_comment
+  - implementation_imports
+  - prefer_function_declarations_over_variables
+
+
+## 1.0.0
+
+- first stable release
+
+
 ## 1.0.0-alpha.5
 
 - update to Dart 3.6.0
