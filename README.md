@@ -51,9 +51,6 @@ dart pub add inject_annotation dev:inject_generator dev:build_runner
 First, create a view model that extends `ChangeNotifier`:
 
 ```dart
-import 'package:flutter/foundation.dart';
-import 'package:inject_annotation/inject_annotation.dart';
-
 @inject
 class HomePageViewModel extends ChangeNotifier {
   int count = 0;
@@ -71,11 +68,6 @@ Inject the `ViewModelFactory` into your widget to automatically handle view
 model lifecycle:
 
 ```dart
-import 'package:flutter/material.dart';
-import 'package:inject_annotation/inject_annotation.dart';
-import 'package:inject_flutter/inject_flutter.dart';
-import '../viewmodels/home_page_view_model.dart';
-
 @assistedFactory
 abstract class HomePageFactory {
   HomePage create({
@@ -93,6 +85,7 @@ class HomePage extends StatelessWidget {
   });
 
   final String title;
+
   final ViewModelFactory<HomePageViewModel> viewModelFactory;
 
   @override
@@ -127,10 +120,6 @@ class HomePage extends StatelessWidget {
 Create a component to tie everything together:
 
 ```dart
-import 'package:flutter/material.dart';
-import 'package:inject_annotation/inject_annotation.dart';
-import 'pages/home_page.dart';
-
 import 'main.inject.dart' as g;
 
 void main() {
@@ -144,7 +133,7 @@ abstract class AppComponent {
   static const create = g.AppComponent$Component.create;
 
   @inject
-  HomePageFactory get homePageFactory;
+  ExampleAppFactory get exampleAppFactory;
 }
 
 @assistedFactory
@@ -189,14 +178,9 @@ the same way:
 Add the `@inject` annotation to your classes:
 
 ```dart
-import 'package:inject_annotation/inject_annotation.dart';
-
 @inject
 class DataService {
-  Future<List<String>> fetchItems() async {
-    // Fetch data from API or local storage
-    return ['Item 1', 'Item 2', 'Item 3'];
-  }
+    // ...
 }
 ```
 
@@ -205,9 +189,6 @@ class DataService {
 For classes you don't own or need special configuration:
 
 ```dart
-import 'package:inject_annotation/inject_annotation.dart';
-import 'package:http/http.dart' as http;
-
 @module
 class ApiModule {
   @provides

@@ -8,11 +8,11 @@ environment:
 
 workspace:
   - examples/coffee
+  - examples/example
   - examples/flutter_demo
   - examples/train
   - packages/inject_annotation
   - packages/inject_flutter
-  - packages/inject_flutter/example
   - packages/inject_generator
 
 dev_dependencies:

@@ -16,7 +16,7 @@ void main() {
 @component
 abstract class AppComponent {
   /// A factory method to create a new instance of [AppComponent].
-  static const create = g.MainComponent$Component.create;
+  static const create = g.AppComponent$Component.create;
 
   /// Returns an instance of [ExampleAppFactory] to create the [ExampleApp] widget.
   @inject
@@ -52,7 +52,7 @@ class ExampleApp extends StatelessWidget {
 /// The ViewModel.
 @inject
 class HomePageViewModel extends ChangeNotifier {
-  var count = 0;
+  int count = 0;
 
   void incrementCounter() {
     count++;
@@ -70,7 +70,7 @@ abstract class HomePageFactory {
   });
 }
 
-/// The HomePage
+/// The HomePage.
 class HomePage extends StatelessWidget {
   @assistedInject
   const HomePage({
