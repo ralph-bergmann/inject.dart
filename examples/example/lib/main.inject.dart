@@ -41,7 +41,7 @@ class _ViewModelFactoryHomePageViewModel$Provider
 
   final _HomePageViewModel$Provider _homePageViewModel$Provider;
 
-  late final _i3.ViewModelFactory<_i1.HomePageViewModel> _factory = ({
+  _i4.ViewModelBuilder<_i1.HomePageViewModel> _factory({
     key,
     required builder,
     child,

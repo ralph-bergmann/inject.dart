@@ -412,6 +412,9 @@ class _ProviderBuilder {
   /// The `get()` method.
   final MethodBuilder methodBuilder = MethodBuilder();
 
+  /// Additional methods
+  final List<MethodBuilder> methods = <MethodBuilder>[];
+
   /// Fields to hold references to dependencies used by the provider.
   final List<FieldBuilder> fields = <FieldBuilder>[];
 
@@ -465,6 +468,7 @@ class _ProviderBuilder {
         ..implements.add(providerType.toProvider())
         ..constructors.add(constructor.build())
         ..fields.addAll(fields.map((b) => b.build()))
+        ..methods.addAll(methods.map((b) => b.build()))
         ..methods.add(methodBuilder.build()),
     );
   }
@@ -611,44 +615,39 @@ class _ProviderBuilder {
   bool _buildProvidedByViewModel(DependencyProvidedByViewModel dep) {
     constructor.constant = false;
 
-    fields.add(
-      FieldBuilder()
-        ..name = _factoryFieldName
-        ..late = true
-        ..modifier = FieldModifier.final$
-        ..type = _referenceForKey(libraryUri, dep.injectedType.lookupKey)
-        ..assignment = Method(
+    final factoryMethod = MethodBuilder()
+      ..name = _factoryFieldName
+      ..returns = _referenceForKey(libraryUri, dep.createdType).toViewModelBuilder()
+      ..lambda = true
+      ..optionalParameters.addAll([
+        Parameter(
           (b) => b
-            ..optionalParameters.addAll([
-              Parameter(
-                (b) => b
-                  ..named = true
-                  ..name = 'key',
-              ),
-              Parameter(
-                (b) => b
-                  ..named = true
-                  ..required = true
-                  ..name = 'builder',
-              ),
-              Parameter(
-                (b) => b
-                  ..named = true
-                  ..name = 'child',
-              ),
-            ])
-            ..body = _referenceForKey(libraryUri, dep.createdType).toViewModelBuilder().newInstance(
-              [],
-              <String, Expression>{
-                'key': refer('key'),
-                'viewModelProvider': refer(_providerClassName(dep.createdType).decapitalize()),
-                'builder': refer('builder'),
-                'child': refer('child'),
-              },
-            ).code,
-        ).closure.code,
-    );
+            ..named = true
+            ..name = 'key',
+        ),
+        Parameter(
+          (b) => b
+            ..named = true
+            ..required = true
+            ..name = 'builder',
+        ),
+        Parameter(
+          (b) => b
+            ..named = true
+            ..name = 'child',
+        ),
+      ])
+      ..body = _referenceForKey(libraryUri, dep.createdType).toViewModelBuilder().newInstance(
+        [],
+        <String, Expression>{
+          'key': refer('key'),
+          'viewModelProvider': refer(_providerClassName(dep.createdType).decapitalize()),
+          'builder': refer('builder'),
+          'child': refer('child'),
+        },
+      ).code;
 
+    methods.add(factoryMethod);
     methodBuilder.body = refer(_factoryFieldName).code;
 
     return false;
