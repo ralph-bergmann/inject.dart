@@ -210,17 +210,19 @@ class Singleton {
 /// returning the component to the application.
 ///
 /// For example:
-///     @module
-///     abstract class CarModule {
-///       @provides
-///       @asynchronous
-///       Future<Car> provideCar();
-///     }
+/// ```dart
+/// @module
+/// abstract class CarModule {
+///   @provides
+///   @asynchronous
+///   Future<Car> provideCar();
+/// }
 ///
-///     class Dealership {
-///       @inject
-///       Dealership(Car car);
-///     }
+/// class Dealership {
+///   @inject
+///   Dealership(Car car);
+/// }
+/// ```
 ///
 /// Note that in the example `Dealership` depends on `Car` rather than
 /// `Future<Car>`. This is the quintessential property of the [asynchronous]
@@ -232,16 +234,18 @@ class Singleton {
 /// the framework will not attempt to resolve it.
 ///
 /// For example:
-///     @module
-///     abstract class CarModule {
-///       @provides
-///       Future<Car> provideCar();
-///     }
+/// ```dart
+/// @module
+/// abstract class CarModule {
+///   @provides
+///   Future<Car> provideCar();
+/// }
 ///
-///     class Dealership {
-///       @inject
-///       Dealership(Future<Car> car);
-///     }
+/// class Dealership {
+///   @inject
+///   Dealership(Future<Car> car);
+/// }
+/// ```
 const asynchronous = Asynchronous._();
 
 /// **INTERNAL ONLY**: Might be exposed if we add flags or other properties.

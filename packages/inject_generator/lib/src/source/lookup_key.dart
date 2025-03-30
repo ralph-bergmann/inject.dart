@@ -31,7 +31,7 @@ class LookupKey {
   /// Example: For `List<Map<String, int>>`, this would contain a LookupKey for `Map<String, int>`
   final List<LookupKey>? typeArguments;
 
-  /// The bound for type parameters (e.g., T extends Comparable<T>)
+  /// The bound for type parameters (e.g., `T extends Comparable<T>`)
   final LookupKey? bound;
 
   const LookupKey(this.root, {this.qualifier, this.typeArguments, this.bound});
