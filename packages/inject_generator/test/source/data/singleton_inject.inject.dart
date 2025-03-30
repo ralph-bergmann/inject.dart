@@ -1,6 +1,8 @@
+// ignore_for_file: implementation_imports
 // ignore_for_file: no_leading_underscores_for_library_prefixes
-import 'singleton_inject.dart' as _i1;
 import 'package:inject_annotation/inject_annotation.dart' as _i2;
+
+import 'singleton_inject.dart' as _i1;
 
 class ComponentWithModule$Component implements _i1.ComponentWithModule {
   factory ComponentWithModule$Component.create({_i1.BarModule? barModule}) =>

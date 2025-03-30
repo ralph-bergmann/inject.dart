@@ -1,9 +1,11 @@
+// ignore_for_file: implementation_imports
 // ignore_for_file: no_leading_underscores_for_library_prefixes
-import 'locomotive.dart' as _i1;
-import 'bike.dart' as _i2;
-import 'food.dart' as _i3;
-import 'common.dart' as _i4;
 import 'package:inject_annotation/inject_annotation.dart' as _i5;
+
+import 'bike.dart' as _i2;
+import 'common.dart' as _i4;
+import 'food.dart' as _i3;
+import 'locomotive.dart' as _i1;
 
 class TrainServices$Component implements _i1.TrainServices {
   factory TrainServices$Component.create({

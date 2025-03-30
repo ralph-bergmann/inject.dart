@@ -87,10 +87,11 @@ class InjectCodegenBuilder implements Builder {
       }
     }
 
-    final emitter = DartEmitter.scoped(useNullSafetySyntax: true);
-    final content = DartFormatter(languageVersion: Version.parse('3.6.0')).format(
-      target.build().accept(emitter).toString(),
-    );
+    final emitter = DartEmitter.scoped(orderDirectives: true, useNullSafetySyntax: true);
+    final content = DartFormatter(languageVersion: Version.parse('3.6.0')).format('''
+      // ignore_for_file: implementation_imports
+      ${target.build().accept(emitter).toString()}
+      ''');
     await saveContent(
       buildStep,
       componentOutputExtension,

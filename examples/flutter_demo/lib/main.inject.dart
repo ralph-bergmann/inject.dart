@@ -1,14 +1,16 @@
+// ignore_for_file: implementation_imports
 // ignore_for_file: no_leading_underscores_for_library_prefixes
+import 'package:flutter/src/foundation/key.dart' as _i10;
+import 'package:inject_annotation/inject_annotation.dart' as _i4;
+import 'package:inject_flutter/inject_flutter.dart' as _i8;
+import 'package:inject_flutter/src/view_model_factory.dart' as _i7;
+
 import 'main.dart' as _i1;
+import 'src/data/repositories/counter_repository.dart' as _i5;
 import 'src/data/services/database.dart' as _i2;
 import 'src/features/app/my_app.dart' as _i3;
-import 'package:inject_annotation/inject_annotation.dart' as _i4;
-import 'src/data/repositories/counter_repository.dart' as _i5;
-import 'src/features/home/my_home_page_view_model.dart' as _i6;
-import 'package:inject_flutter/src/view_model_factory.dart' as _i7;
-import 'package:inject_flutter/inject_flutter.dart' as _i8;
 import 'src/features/home/my_home_page.dart' as _i9;
-import 'package:flutter/src/foundation/key.dart' as _i10;
+import 'src/features/home/my_home_page_view_model.dart' as _i6;
 
 class MainComponent$Component implements _i1.MainComponent {
   factory MainComponent$Component.create(

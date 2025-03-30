@@ -1,14 +1,16 @@
+// ignore_for_file: implementation_imports
 // ignore_for_file: no_leading_underscores_for_library_prefixes
-import 'main.dart' as _i1;
-import 'package:inject_annotation/inject_annotation.dart' as _i2;
-import 'package:inject_flutter/src/view_model_factory.dart' as _i3;
-import 'package:inject_flutter/inject_flutter.dart' as _i4;
 import 'package:flutter/src/foundation/key.dart' as _i5;
+import 'package:inject_annotation/inject_annotation.dart' as _i2;
+import 'package:inject_flutter/inject_flutter.dart' as _i4;
+import 'package:inject_flutter/src/view_model_factory.dart' as _i3;
 
-class MainComponent$Component implements _i1.AppComponent {
-  factory MainComponent$Component.create() => MainComponent$Component._();
+import 'main.dart' as _i1;
 
-  MainComponent$Component._() {
+class AppComponent$Component implements _i1.AppComponent {
+  factory AppComponent$Component.create() => AppComponent$Component._();
+
+  AppComponent$Component._() {
     final homePageViewModel$Provider = _HomePageViewModel$Provider();
     final viewModelFactoryHomePageViewModel$Provider =
         _ViewModelFactoryHomePageViewModel$Provider(homePageViewModel$Provider);

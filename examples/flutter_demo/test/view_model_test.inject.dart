@@ -1,10 +1,12 @@
+// ignore_for_file: implementation_imports
 // ignore_for_file: no_leading_underscores_for_library_prefixes
-import 'view_model_test.dart' as _i1;
+import 'package:flutter_demo/src/data/repositories/counter_repository.dart'
+    as _i4;
 import 'package:flutter_demo/src/features/home/my_home_page_view_model.dart'
     as _i2;
 import 'package:inject_annotation/inject_annotation.dart' as _i3;
-import 'package:flutter_demo/src/data/repositories/counter_repository.dart'
-    as _i4;
+
+import 'view_model_test.dart' as _i1;
 
 class ViewModelTestComponent$Component implements _i1.ViewModelTestComponent {
   factory ViewModelTestComponent$Component.create(

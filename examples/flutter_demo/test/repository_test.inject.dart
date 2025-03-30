@@ -1,9 +1,11 @@
+// ignore_for_file: implementation_imports
 // ignore_for_file: no_leading_underscores_for_library_prefixes
-import 'repository_test.dart' as _i1;
 import 'package:flutter_demo/src/data/repositories/counter_repository.dart'
     as _i2;
-import 'package:inject_annotation/inject_annotation.dart' as _i3;
 import 'package:flutter_demo/src/data/services/database.dart' as _i4;
+import 'package:inject_annotation/inject_annotation.dart' as _i3;
+
+import 'repository_test.dart' as _i1;
 
 class TestComponent$Component implements _i1.TestComponent {
   factory TestComponent$Component.create({_i1.TestModule? testModule}) =>

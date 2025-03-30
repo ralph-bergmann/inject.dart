@@ -1,13 +1,16 @@
+// ignore_for_file: implementation_imports
 // ignore_for_file: no_leading_underscores_for_library_prefixes
-import 'coffee_app.dart' as _i1;
-import 'src/drip_coffee_module.dart' as _i2;
-import 'package:inject_annotation/inject_annotation.dart' as _i3;
 import 'dart:async' as _i4;
-import 'src/thermosiphon.dart' as _i5;
+
+import 'package:inject_annotation/inject_annotation.dart' as _i3;
+
+import 'coffee_app.dart' as _i1;
 import 'src/coffee_maker.dart' as _i6;
+import 'src/drip_coffee_module.dart' as _i2;
 import 'src/electric_heater.dart' as _i7;
 import 'src/heater.dart' as _i8;
 import 'src/pump.dart' as _i9;
+import 'src/thermosiphon.dart' as _i5;
 
 class Coffee$Component implements _i1.Coffee {
   factory Coffee$Component.create({_i2.DripCoffeeModule? dripCoffeeModule}) =>
