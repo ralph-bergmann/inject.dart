@@ -466,7 +466,7 @@ class MyHomePageViewModel extends ChangeNotifier {
 <li>It's marked with <code>@inject</code> so it can be created by the DI system</li>
 <li>It extends <code>ChangeNotifier</code> to provide change notifications to the UI</li>
 <li>It depends on <code>CounterRepository</code>, which is injected through its constructor</li>
-<li>It manages state (the count variable) and provides a method to update it</li>
+<li>It manages state (the <code>count</code> variable) and provides a method to update it</li>
 <li>It calls <code>notifyListeners()</code> when the state changes to trigger UI updates</li>
 </ol>
 <p>This pattern creates a clear separation of concerns:</p>
@@ -509,9 +509,8 @@ services the view model uses.</p>
 components should expose only what their consumers need and nothing more,
 maintaining clear boundaries between different layers of the application.</p>
 <h3 id="injecting-the-view-model-with-viewmodelfactory"><a class="header" href="#injecting-the-view-model-with-viewmodelfactory">Injecting the View Model with ViewModelFactory</a></h3>
-<p>Now, let's update our MyHomePage to use this view model with the
-ViewModelFactory
-pattern:</p>
+<p>Now, let's update our <code>MyHomePage</code> to use this view model with the
+<code>ViewModelFactory</code> pattern:</p>
 <pre><code class="language-dart">import 'package:flutter/material.dart';
 import 'package:inject_annotation/inject_annotation.dart';
 import 'package:inject_flutter/inject_flutter.dart';
@@ -583,13 +582,13 @@ class MyHomePage extends StatelessWidget {
 </code></pre>
 <p>When you call this function in the build method, it:</p>
 <ol>
-<li><strong>Creates a ViewModelBuilder</strong>: This StatefulWidget handles the view model
+<li><strong>Creates a ViewModelBuilder</strong>: This <code>StatefulWidget</code> handles the view model
 lifecycle</li>
 <li><strong>Passes Your Builder Function</strong>: Your UI-building logic receives the
 view model instance</li>
 <li><strong>Manages View Model Creation</strong>: The view model is created when the
-ViewModelBuilder first builds</li>
-<li><strong>Handles View Model Disposal</strong>: When the ViewModelBuilder is disposed, it
+<code>ViewModelBuilder</code> first builds</li>
+<li><strong>Handles View Model Disposal</strong>: When the <code>ViewModelBuilder</code> is disposed, it
 disposes the view model</li>
 </ol>
 <p>The builder function pattern provides a clean way to access the view model's
@@ -597,7 +596,7 @@ state and methods inside your UI code. By using this approach:</p>
 <ol>
 <li>The UI reacts to changes in the view model automatically</li>
 <li>Business logic stays in the view model</li>
-<li>The widget remains a simple StatelessWidget</li>
+<li>The widget remains a simple <code>StatelessWidget</code></li>
 <li>Lifecycle management happens behind the scenes</li>
 </ol>
 <p>This creates a maintainable architecture where each component has a clear
@@ -740,8 +739,8 @@ demonstrates all the patterns and practices we've discussed.</p>
 architecture: testability. We'll show how to create a separate dependency
 graph for unit testing that allows us to:</p>
 <ol>
-<li>Test view models by injecting a FakeCounterRepository</li>
-<li>Test repositories with a FakeDatabase implementation</li>
+<li>Test view models by injecting a <code>FakeCounterRepository</code></li>
+<li>Test repositories with a <code>FakeDatabase</code> implementation</li>
 </ol>
 <p>This testing approach demonstrates how dependency injection doesn't just
 make your code more maintainable — it makes it substantially easier to verify

@@ -360,7 +360,7 @@ The view model has these important characteristics:
 1. It's marked with `@inject` so it can be created by the DI system
 2. It extends `ChangeNotifier` to provide change notifications to the UI
 3. It depends on `CounterRepository`, which is injected through its constructor
-4. It manages state (the count variable) and provides a method to update it
+4. It manages state (the `count` variable) and provides a method to update it
 5. It calls `notifyListeners()` when the state changes to trigger UI updates
 
 This pattern creates a clear separation of concerns:
@@ -404,9 +404,8 @@ maintaining clear boundaries between different layers of the application.
 
 ### Injecting the View Model with ViewModelFactory
 
-Now, let's update our MyHomePage to use this view model with the
-ViewModelFactory
-pattern:
+Now, let's update our `MyHomePage` to use this view model with the
+`ViewModelFactory` pattern:
 
 ```dart
 import 'package:flutter/material.dart';
@@ -485,13 +484,13 @@ typedef ViewModelFactory<T extends ChangeNotifier> = ViewModelBuilder<T> Functio
 
 When you call this function in the build method, it:
 
-1. **Creates a ViewModelBuilder**: This StatefulWidget handles the view model
+1. **Creates a ViewModelBuilder**: This `StatefulWidget` handles the view model
    lifecycle
 2. **Passes Your Builder Function**: Your UI-building logic receives the
    view model instance
 3. **Manages View Model Creation**: The view model is created when the
-   ViewModelBuilder first builds
-4. **Handles View Model Disposal**: When the ViewModelBuilder is disposed, it
+   `ViewModelBuilder` first builds
+4. **Handles View Model Disposal**: When the `ViewModelBuilder` is disposed, it
    disposes the view model
 
 The builder function pattern provides a clean way to access the view model's
@@ -499,7 +498,7 @@ state and methods inside your UI code. By using this approach:
 
 1. The UI reacts to changes in the view model automatically
 2. Business logic stays in the view model
-3. The widget remains a simple StatelessWidget
+3. The widget remains a simple `StatelessWidget`
 4. Lifecycle management happens behind the scenes
 
 This creates a maintainable architecture where each component has a clear
@@ -664,8 +663,8 @@ In the next chapter, we'll explore one of the most powerful benefits of our
 architecture: testability. We'll show how to create a separate dependency
 graph for unit testing that allows us to:
 
-1. Test view models by injecting a FakeCounterRepository
-2. Test repositories with a FakeDatabase implementation
+1. Test view models by injecting a `FakeCounterRepository`
+2. Test repositories with a `FakeDatabase` implementation
 
 This testing approach demonstrates how dependency injection doesn't just
 make your code more maintainable — it makes it substantially easier to verify
