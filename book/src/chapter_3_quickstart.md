@@ -16,7 +16,7 @@ starting point without unnecessary boilerplate
 code:
 
 ```bash
-flutter create -flutter_demo
+flutter create flutter_demo
 ```
 
 This creates a basic Flutter project structure with just the essential
