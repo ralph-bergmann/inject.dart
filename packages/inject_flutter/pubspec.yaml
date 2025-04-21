@@ -2,7 +2,7 @@ name: inject_flutter
 description: >-
   Flutter extension for inject.dart that simplifies ViewModel injection and 
   lifecycle management to promote cleaner architecture in Flutter apps.
-version: 1.0.2
+version: 2.0.0-pre1
 documentation: https://ralph-bergmann.github.io/inject.dart/
 repository: https://github.com/ralph-bergmann/inject.dart
 issue_tracker: https://github.com/ralph-bergmann/inject.dart/issues
@@ -20,8 +20,7 @@ resolution: workspace
 dependencies:
   flutter:
     sdk: flutter
-  inject_annotation: ^1.0.0
-  inject_generator: ^1.0.2
+  inject_annotation: ^2.0.0-pre1
 
 dev_dependencies:
   flutter_lints: ^5.0.0

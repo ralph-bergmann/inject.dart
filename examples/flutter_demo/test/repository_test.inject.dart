@@ -13,8 +13,9 @@ class TestComponent$Component implements _i1.TestComponent {
 
   TestComponent$Component._(_i1.TestModule testModule) {
     final database$Provider = _Database$Provider(testModule);
-    _counterRepository$Provider =
-        _CounterRepository$Provider(database$Provider);
+    _counterRepository$Provider = _CounterRepository$Provider(
+      database$Provider,
+    );
   }
 
   late final _CounterRepository$Provider _counterRepository$Provider;

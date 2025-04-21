@@ -13,21 +13,25 @@ import 'src/features/home/my_home_page.dart' as _i9;
 import 'src/features/home/my_home_page_view_model.dart' as _i6;
 
 class MainComponent$Component implements _i1.MainComponent {
-  factory MainComponent$Component.create(
-          {_i2.DataBaseModule? dataBaseModule}) =>
-      MainComponent$Component._(dataBaseModule ?? _i2.DataBaseModule());
+  factory MainComponent$Component.create({
+    _i2.DataBaseModule? dataBaseModule,
+  }) => MainComponent$Component._(dataBaseModule ?? _i2.DataBaseModule());
 
   MainComponent$Component._(_i2.DataBaseModule dataBaseModule) {
     final database$Provider = _Database$Provider(dataBaseModule);
-    final counterRepository$Provider =
-        _CounterRepository$Provider(database$Provider);
-    final myHomePageViewModel$Provider =
-        _MyHomePageViewModel$Provider(counterRepository$Provider);
+    final counterRepository$Provider = _CounterRepository$Provider(
+      database$Provider,
+    );
+    final myHomePageViewModel$Provider = _MyHomePageViewModel$Provider(
+      counterRepository$Provider,
+    );
     final viewModelFactoryMyHomePageViewModel$Provider =
         _ViewModelFactoryMyHomePageViewModel$Provider(
-            myHomePageViewModel$Provider);
+          myHomePageViewModel$Provider,
+        );
     final myHomePageFactory$Provider = _MyHomePageFactory$Provider(
-        viewModelFactoryMyHomePageViewModel$Provider);
+      viewModelFactoryMyHomePageViewModel$Provider,
+    );
     _myAppFactory$Provider = _MyAppFactory$Provider(myHomePageFactory$Provider);
   }
 
@@ -75,7 +79,8 @@ class _MyHomePageViewModel$Provider
 class _ViewModelFactoryMyHomePageViewModel$Provider
     implements _i4.Provider<_i7.ViewModelFactory<_i6.MyHomePageViewModel>> {
   _ViewModelFactoryMyHomePageViewModel$Provider(
-      this._myHomePageViewModel$Provider);
+    this._myHomePageViewModel$Provider,
+  );
 
   final _MyHomePageViewModel$Provider _myHomePageViewModel$Provider;
 
@@ -83,13 +88,12 @@ class _ViewModelFactoryMyHomePageViewModel$Provider
     key,
     required builder,
     child,
-  }) =>
-      _i8.ViewModelBuilder<_i6.MyHomePageViewModel>(
-        key: key,
-        viewModelProvider: _myHomePageViewModel$Provider,
-        builder: builder,
-        child: child,
-      );
+  }) => _i8.ViewModelBuilder<_i6.MyHomePageViewModel>(
+    key: key,
+    viewModelProvider: _myHomePageViewModel$Provider,
+    builder: builder,
+    child: child,
+  );
 
   @override
   _i7.ViewModelFactory<_i6.MyHomePageViewModel> get() => _factory;
@@ -98,13 +102,15 @@ class _ViewModelFactoryMyHomePageViewModel$Provider
 class _MyHomePageFactory$Provider
     implements _i4.Provider<_i9.MyHomePageFactory> {
   _MyHomePageFactory$Provider(
-      this._viewModelFactoryMyHomePageViewModel$Provider);
+    this._viewModelFactoryMyHomePageViewModel$Provider,
+  );
 
   final _ViewModelFactoryMyHomePageViewModel$Provider
-      _viewModelFactoryMyHomePageViewModel$Provider;
+  _viewModelFactoryMyHomePageViewModel$Provider;
 
-  late final _i9.MyHomePageFactory _factory =
-      _MyHomePageFactory$Factory(_viewModelFactoryMyHomePageViewModel$Provider);
+  late final _i9.MyHomePageFactory _factory = _MyHomePageFactory$Factory(
+    _viewModelFactoryMyHomePageViewModel$Provider,
+  );
 
   @override
   _i9.MyHomePageFactory get() => _factory;
@@ -112,16 +118,14 @@ class _MyHomePageFactory$Provider
 
 class _MyHomePageFactory$Factory implements _i9.MyHomePageFactory {
   const _MyHomePageFactory$Factory(
-      this._viewModelFactoryMyHomePageViewModel$Provider);
+    this._viewModelFactoryMyHomePageViewModel$Provider,
+  );
 
   final _ViewModelFactoryMyHomePageViewModel$Provider
-      _viewModelFactoryMyHomePageViewModel$Provider;
+  _viewModelFactoryMyHomePageViewModel$Provider;
 
   @override
-  _i9.MyHomePage create({
-    _i10.Key? key,
-    required String title,
-  }) =>
+  _i9.MyHomePage create({_i10.Key? key, required String title}) =>
       _i9.MyHomePage(
         key: key,
         title: title,
@@ -134,8 +138,9 @@ class _MyAppFactory$Provider implements _i4.Provider<_i3.MyAppFactory> {
 
   final _MyHomePageFactory$Provider _myHomePageFactory$Provider;
 
-  late final _i3.MyAppFactory _factory =
-      _MyAppFactory$Factory(_myHomePageFactory$Provider);
+  late final _i3.MyAppFactory _factory = _MyAppFactory$Factory(
+    _myHomePageFactory$Provider,
+  );
 
   @override
   _i3.MyAppFactory get() => _factory;
@@ -147,8 +152,6 @@ class _MyAppFactory$Factory implements _i3.MyAppFactory {
   final _MyHomePageFactory$Provider _myHomePageFactory$Provider;
 
   @override
-  _i3.MyApp create({_i10.Key? key}) => _i3.MyApp(
-        key: key,
-        homePageFactory: _myHomePageFactory$Provider.get(),
-      );
+  _i3.MyApp create({_i10.Key? key}) =>
+      _i3.MyApp(key: key, homePageFactory: _myHomePageFactory$Provider.get());
 }

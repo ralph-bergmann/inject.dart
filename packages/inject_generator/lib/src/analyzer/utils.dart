@@ -194,11 +194,20 @@ bool isSingletonClass(ClassElement clazz) {
   return isSingleton;
 }
 
-/// Whether [clazz] is annotated with `@Module()`.
+/// Whether [clazz] is annotated with `@component` or with `@Component()`.
+bool isComponentClass(ClassElement clazz) => hasComponentAnnotation(clazz);
+
+/// Whether [clazz] is annotated with `@module`.
 bool isModuleClass(ClassElement clazz) => _hasAnnotation(clazz, SymbolPath.module);
 
-/// Whether [clazz] is annotated with `@Component()`.
-bool isComponentClass(ClassElement clazz) => hasComponentAnnotation(clazz);
+/// Whether [clazz] is annotated with `@provisionListener`.
+bool isProvisionListenerClass(ClassElement clazz) => hasProvisionListenerAnnotation(clazz);
+
+/// Whether [e] is annotated with `@Component()`.
+bool hasComponentAnnotation(Element e) => _hasAnnotation(e, SymbolPath.component);
+
+/// Whether [e] is annotated with `@provisionListener`.
+bool hasProvisionListenerAnnotation(Element e) => _hasAnnotation(e, SymbolPath.provisionListener);
 
 /// Whether [e] is annotated with `@Inject()`.
 bool hasInjectAnnotation(Element e) => _hasAnnotation(e, SymbolPath.inject);
@@ -231,9 +240,6 @@ SymbolPath extractQualifier(Element e) {
   return SymbolPath.global(key!);
 }
 
-/// Whether [e] is annotated with `@Component()`.
-bool hasComponentAnnotation(Element e) => _hasAnnotation(e, SymbolPath.component);
-
 /// Returns the element corresponding to the `@Component()` annotation.
 ///
 /// Throws if the annotation is missing. It is assumed that the calling code
@@ -254,8 +260,10 @@ extension DartTypeExtensions on DartType {
   bool get isProvider => element?.name == providerClassName && element?.library?.source.uri == Uri.parse(providerPath);
 
   bool get isViewModelFactory =>
-      alias?.element.name == viewModelFactoryClassName &&
-      alias?.element.library.source.uri.toString() == viewModelFactoryPath;
+      alias?.element.name == viewModelFactoryClassName && alias?.element.library.source.uri.toString() == viewModelPath;
+
+  bool get isProvisionListener =>
+      element?.name == provisionListenerClassName && element?.library?.source.uri.toString() == provisionListenerPath;
 }
 
 const providerClassName = 'Provider';
@@ -266,6 +274,9 @@ const viewModelFactoryClassName = 'ViewModelFactory';
 const viewModelBuilderClassName = 'ViewModelBuilder';
 const viewModelInitializerClassName = 'ViewModelInitializer';
 const viewModelWidgetBuilderClassName = 'ViewModelWidgetBuilder';
+const viewModelPath = 'package:inject_flutter/src/view_model_factory.dart';
+const viewModelPackage = 'package:inject_flutter/inject_flutter.dart';
 
-const viewModelFactoryPath = 'package:inject_flutter/src/view_model_factory.dart';
-const viewModelFactoryPackage = 'package:inject_flutter/inject_flutter.dart';
+const provisionListenerClassName = 'ProvisionListener';
+const provisionListenerPath = 'package:inject_annotation/src/api/provision_listener.dart';
+const provisionListenerPackage = 'package:inject_annotation/inject_annotation.dart';

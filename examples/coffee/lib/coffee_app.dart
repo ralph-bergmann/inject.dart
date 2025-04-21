@@ -14,7 +14,7 @@ import 'src/thermosiphon.dart';
 /// An example component class.
 ///
 /// This component uses [DripCoffeeModule] as a source of dependency providers.
-@Component([DripCoffeeModule])
+@Component(modules: [DripCoffeeModule])
 abstract class Coffee {
   /// A generated `async` static function, which takes a [DripCoffeeModule] and
   /// asynchronously returns an instance of [Coffee].

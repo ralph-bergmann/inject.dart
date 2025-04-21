@@ -8,13 +8,16 @@ part of '../summary.dart';
 /// class pertaining to an component class.
 @JsonSerializable()
 class ComponentSummary {
-  /// Location of the analyzed class.
+  /// Location of the component this summary describes.
   final SymbolPath clazz;
 
-  /// Modules that are part of the object graph.
+  /// Modules that are assigned to this component.
   final List<SymbolPath> modules;
 
-  /// Methods that will need to be implemented by the generated class.
+  /// ProvidionListeners assigned to this component.
+  final List<SymbolPath> provisionListeners;
+
+  /// What this component provides.
   final List<ProviderSummary> providers;
 
   /// Constructor.
@@ -23,15 +26,17 @@ class ComponentSummary {
   factory ComponentSummary(
     SymbolPath clazz,
     List<SymbolPath> modules,
+    List<SymbolPath> provisionListeners,
     Iterable<ProviderSummary> providers,
   ) =>
       ComponentSummary._(
         clazz,
         List<SymbolPath>.unmodifiable(modules),
+        List<SymbolPath>.unmodifiable(provisionListeners),
         List<ProviderSummary>.unmodifiable(providers),
       );
 
-  const ComponentSummary._(this.clazz, this.modules, this.providers);
+  const ComponentSummary._(this.clazz, this.modules, this.provisionListeners, this.providers);
 
   factory ComponentSummary.fromJson(Map<String, dynamic> json) => _$ComponentSummaryFromJson(json);
 

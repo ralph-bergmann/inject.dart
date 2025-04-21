@@ -12,7 +12,7 @@ void main() {
 }
 
 /// [MainComponent] which is the root of the dependency graph.
-@Component([DataBaseModule])
+@Component(modules: [DataBaseModule])
 abstract class MainComponent {
   static const create = g.MainComponent$Component.create;
 

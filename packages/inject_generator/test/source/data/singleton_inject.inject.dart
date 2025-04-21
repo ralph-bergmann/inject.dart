@@ -11,10 +11,7 @@ class ComponentWithModule$Component implements _i1.ComponentWithModule {
   ComponentWithModule$Component._(_i1.BarModule barModule) {
     _foo$Provider = _Foo$Provider();
     _foo2$Provider = _Foo2$Provider();
-    _bar$Provider = _Bar$Provider(
-      _foo$Provider,
-      barModule,
-    );
+    _bar$Provider = _Bar$Provider(_foo$Provider, barModule);
   }
 
   late final _Foo$Provider _foo$Provider;
@@ -52,10 +49,7 @@ class _Foo2$Provider implements _i2.Provider<_i1.Foo2> {
 }
 
 class _Bar$Provider implements _i2.Provider<_i1.Bar> {
-  _Bar$Provider(
-    this._foo$Provider,
-    this._module,
-  );
+  _Bar$Provider(this._foo$Provider, this._module);
 
   final _Foo$Provider _foo$Provider;
 

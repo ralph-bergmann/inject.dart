@@ -65,7 +65,7 @@ class _TestHeater implements Heater {
 }
 
 /// Demonstrates overriding dependencies in a test by mixing in test modules.
-@Component([DripCoffeeModule, TestModule])
+@Component(modules: [DripCoffeeModule, TestModule])
 abstract class TestCoffee {
   /// Note test modules being used.
   static const create = g.TestCoffee$Component.create;

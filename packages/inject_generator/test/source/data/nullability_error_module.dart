@@ -1,6 +1,6 @@
 import 'package:inject_annotation/inject_annotation.dart';
 
-@Component([BarModule])
+@Component(modules: [BarModule])
 abstract class ComponentNullability {
   @inject
   FooBar get fooBar;

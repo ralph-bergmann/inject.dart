@@ -8,10 +8,12 @@ import 'dart:convert';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:build/build.dart';
+import 'package:collection/collection.dart';
 
 import '../analyzer/utils.dart';
 import '../analyzer/visitors.dart';
 import '../context.dart';
+import '../source/lookup_key.dart';
 import '../source/symbol_path.dart';
 import '../summary.dart';
 import 'builder_utils.dart';
@@ -57,12 +59,14 @@ class InjectSummaryBuilder implements Builder {
 
     final components = <ComponentSummary>[];
     final modules = <ModuleSummary>[];
+    final provisionListeners = <ProvisionListenerSummary>[];
     final injectables = <InjectableSummary>[];
     final assistedInjectables = <InjectableSummary>[];
     final factories = <FactorySummary>[];
     _SummaryBuilderVisitor(
       components,
       modules,
+      provisionListeners,
       injectables,
       assistedInjectables,
       factories,
@@ -79,10 +83,15 @@ class InjectSummaryBuilder implements Builder {
       );
     }
 
-    if (modules.isNotEmpty || injectables.isNotEmpty || assistedInjectables.isNotEmpty || factories.isNotEmpty) {
+    if (modules.isNotEmpty ||
+        provisionListeners.isNotEmpty ||
+        injectables.isNotEmpty ||
+        assistedInjectables.isNotEmpty ||
+        factories.isNotEmpty) {
       final librarySummary = LibrarySummary(
         SymbolPath.toAssetUri(lib.source.uri),
         modules: modules,
+        provisionListeners: provisionListeners,
         injectables: injectables,
         assistedInjectables: assistedInjectables,
         factories: factories,
@@ -113,6 +122,7 @@ extension NonCoreImports on LibraryElement {
 class _SummaryBuilderVisitor extends InjectLibraryVisitor {
   final List<ComponentSummary> _components;
   final List<ModuleSummary> _modules;
+  final List<ProvisionListenerSummary> _provisionListeners;
   final List<InjectableSummary> _injectables;
   final List<InjectableSummary> _assistedInjectables;
   final List<FactorySummary> _factories;
@@ -120,6 +130,7 @@ class _SummaryBuilderVisitor extends InjectLibraryVisitor {
   const _SummaryBuilderVisitor(
     this._components,
     this._modules,
+    this._provisionListeners,
     this._injectables,
     this._assistedInjectables,
     this._factories,
@@ -136,7 +147,7 @@ class _SummaryBuilderVisitor extends InjectLibraryVisitor {
           builderContext.buildStep.inputId,
           clazz,
           'has @inject annotation on both the class and on one of the '
-          'constructors. Please annotate one or the other,  but not both.',
+          'constructors. Please annotate one or the other, but not both.',
         ),
       );
     }
@@ -162,7 +173,7 @@ class _SummaryBuilderVisitor extends InjectLibraryVisitor {
       );
     }
 
-    ProviderSummary? constructorSummary;
+    ProviderSummary constructorSummary;
     if (annotatedConstructors.length == 1) {
       // Use the explicitly annotated constructor.
       final constructor = annotatedConstructors.single;
@@ -172,24 +183,22 @@ class _SummaryBuilderVisitor extends InjectLibraryVisitor {
         false,
         constructor.isConst,
       );
-    } else if (classIsAnnotated) {
-      if (clazz.constructors.length <= 1) {
-        // This is the case of a default or an only constructor.
-        final constructor = clazz.constructors.single;
-        constructorSummary = _createConstructorProviderSummary(
-          constructor,
-          singleton,
-          false,
-          constructor.isConst,
-        );
-      }
-    }
-
-    if (constructorSummary != null) {
-      _injectables.add(
-        InjectableSummary(getSymbolPath(clazz.thisType), constructorSummary),
+    } else {
+      // This is the case of a default or an only constructor.
+      final constructor = clazz.constructors.single;
+      constructorSummary = _createConstructorProviderSummary(
+        constructor,
+        singleton,
+        false,
+        constructor.isConst,
       );
     }
+
+    // Make provision listeners injectable.
+    // They must be in the dependecy graph to be available for the code generator.
+    _injectables.add(
+      InjectableSummary(getSymbolPath(clazz.thisType), constructorSummary),
+    );
   }
 
   @override
@@ -203,7 +212,7 @@ class _SummaryBuilderVisitor extends InjectLibraryVisitor {
           builderContext.buildStep.inputId,
           clazz,
           'has @assistedInject annotation on both the class and on one of the '
-          'constructors. Please annotate one or the other,  but not both.',
+          'constructors. Please annotate one or the other, but not both.',
         ),
       );
     }
@@ -306,7 +315,11 @@ class _SummaryBuilderVisitor extends InjectLibraryVisitor {
   }
 
   @override
-  void visitComponent(ClassElement clazz, List<SymbolPath> modules) {
+  void visitComponent(
+    ClassElement clazz,
+    List<SymbolPath> modules,
+    List<SymbolPath> provisionListeners,
+  ) {
     final visitor = _ProviderSummaryVisitor(true)..visitClass(clazz);
     if (visitor._providers.isEmpty) {
       throw StateError(
@@ -320,6 +333,7 @@ class _SummaryBuilderVisitor extends InjectLibraryVisitor {
     final summary = ComponentSummary(
       getSymbolPath(clazz.thisType),
       modules,
+      provisionListeners,
       visitor._providers,
     );
     _components.add(summary);
@@ -356,6 +370,87 @@ class _SummaryBuilderVisitor extends InjectLibraryVisitor {
       visitor._providers,
     );
     _modules.add(summary);
+  }
+
+  @override
+  void visitProvisionListener(ClassElement clazz) {
+    final classIsAnnotated = hasProvisionListenerAnnotation(clazz);
+    final annotatedConstructors = clazz.constructors.where(hasProvisionListenerAnnotation);
+
+    if (classIsAnnotated && annotatedConstructors.isNotEmpty) {
+      throw StateError(
+        constructMessage(
+          builderContext.buildStep.inputId,
+          clazz,
+          'has @provisionListener annotation on both the class and on one of the '
+          'constructors. Please annotate one or the other, but not both.',
+        ),
+      );
+    }
+
+    if (classIsAnnotated && clazz.constructors.length > 1) {
+      throw StateError(
+        constructMessage(
+          builderContext.buildStep.inputId,
+          clazz,
+          'has more than one constructor. Please annotate one of the '
+          'constructors instead of the class.',
+        ),
+      );
+    }
+
+    if (annotatedConstructors.length > 1) {
+      throw StateError(
+        constructMessage(
+          builderContext.buildStep.inputId,
+          clazz,
+          'no more than one constructor may be annotated with @provisionListener.',
+        ),
+      );
+    }
+
+    ProviderSummary constructorSummary;
+    if (annotatedConstructors.length == 1) {
+      // Use the explicitly annotated constructor.
+      final constructor = annotatedConstructors.single;
+      constructorSummary = _createConstructorProviderSummary(
+        constructor,
+        true,
+        false,
+        constructor.isConst,
+      );
+    } else {
+      // This is the case of a default or an only constructor.
+      final constructor = clazz.constructors.single;
+      constructorSummary = _createConstructorProviderSummary(
+        constructor,
+        true,
+        false,
+        constructor.isConst,
+      );
+    }
+
+    // make the provisioning listener available for injection
+    _injectables.add(
+      InjectableSummary(getSymbolPath(clazz.thisType), constructorSummary),
+    );
+
+    // find the ProvisionListener interface in the class's interfaces
+    final provisionListenerInterface = clazz.interfaces.firstWhereOrNull((interface) => interface.isProvisionListener);
+
+    // extract the type parameter from the interface
+    LookupKey? typeParameter;
+    if (provisionListenerInterface != null && provisionListenerInterface.typeArguments.isNotEmpty) {
+      typeParameter = LookupKey.fromDartType(provisionListenerInterface.typeArguments.first);
+    }
+
+    _provisionListeners.add(
+      ProvisionListenerSummary(
+        getSymbolPath(clazz.thisType),
+        typeParameter,
+        constructorSummary,
+      ),
+    );
   }
 }
 

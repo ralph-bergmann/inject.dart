@@ -2,6 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:analyzer/dart/element/element2.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:collection/collection.dart';
 import 'package:json_annotation/json_annotation.dart';
@@ -34,7 +35,20 @@ class LookupKey {
   /// The bound for type parameters (e.g., `T extends Comparable<T>`)
   final LookupKey? bound;
 
-  const LookupKey(this.root, {this.qualifier, this.typeArguments, this.bound});
+  /// Interfaces implemented by this type
+  final List<LookupKey>? interfaces;
+
+  /// Superclass that this type extends
+  final LookupKey? superclass;
+
+  const LookupKey(
+    this.root, {
+    this.qualifier,
+    this.typeArguments,
+    this.bound,
+    this.interfaces,
+    this.superclass,
+  });
 
   factory LookupKey.fromJson(Map<String, dynamic> json) => _$LookupKeyFromJson(json);
 
@@ -67,9 +81,17 @@ class LookupKey {
           'Please define a typedef for your function type and use that typedef instead.');
     }
 
+    // Initialize variables to collect data for the LookupKey
+    final rootPath = getSymbolPath(type);
+    LookupKey? bound;
+    List<LookupKey>? typeArgumentsList;
+    List<LookupKey>? interfacesList;
+    LookupKey? superclassValue;
+
+    // Process TypeParameterType to extract bound information
     if (type is TypeParameterType) {
       final boundType = type.bound;
-      LookupKey? bound;
+
       if (boundType is ParameterizedType) {
         final boundTypeArgs = extractBoundTypes(boundType);
         bound = LookupKey(
@@ -80,21 +102,43 @@ class LookupKey {
       } else {
         bound = LookupKey(getSymbolPath(boundType));
       }
-      return LookupKey(
-        getSymbolPath(type),
-        qualifier: qualifier,
-        bound: bound,
-      );
     }
 
-    if (type is ParameterizedType && type.typeArguments.isNotEmpty || type.alias != null) {
-      return LookupKey(
-        getSymbolPath(type),
-        qualifier: qualifier,
-        typeArguments: type.allTypeArguments?.map(LookupKey.fromDartType).toList(),
-      );
+    // Process ParameterizedType to extract type arguments
+    if ((type is ParameterizedType && type.typeArguments.isNotEmpty) || type.alias != null) {
+      typeArgumentsList = type.allTypeArguments?.map(LookupKey.fromDartType).toList();
     }
-    return LookupKey(getSymbolPath(type), qualifier: qualifier);
+
+    // Extract interfaces and superclass information if available.
+    // We don't do this for Dart primitive types to prevent infinite recursion.
+    // For example, a String implements Comparable<String>, which references String again,
+    // creating a circular reference that would cause the LookupKey creation to never terminate.
+    // Similarly, num implements Comparable<num>, int extends num, etc.
+    if (type.element3 is ClassElement2 && !type.isDartPrimitiveType) {
+      final classElement = type.element3 as ClassElement2;
+
+      // Get implemented interfaces
+      if (classElement.interfaces.isNotEmpty) {
+        interfacesList = classElement.interfaces.map(LookupKey.fromDartType).toList();
+      }
+
+      // Get superclass (if not Object)
+      if (classElement.supertype != null && !classElement.supertype!.isDartCoreObject) {
+        superclassValue = LookupKey.fromDartType(classElement.supertype!);
+      }
+    }
+
+    // Create the final LookupKey with all collected data
+    final result = LookupKey(
+      rootPath,
+      qualifier: qualifier,
+      bound: bound,
+      typeArguments: typeArgumentsList,
+      interfaces: interfacesList,
+      superclass: superclassValue,
+    );
+
+    return result;
   }
 
   /// A human-readable representation of the dart Symbol of this type.
@@ -103,7 +147,10 @@ class LookupKey {
     final typeArgumentsString =
         typeArguments?.isNotEmpty == true ? '<${typeArguments!.map((e) => e.toPrettyString()).join(', ')}>' : '';
     final boundString = bound != null ? ' extends ${bound!.toPrettyString()}' : '';
-    return '$qualifierString${root.symbol}$typeArgumentsString$boundString';
+    final superclassString = superclass != null ? ' extends ${superclass!.toPrettyString()}' : '';
+    final interfacesString =
+        interfaces?.isNotEmpty == true ? ' implements ${interfaces!.map((e) => e.toPrettyString()).join(', ')}' : '';
+    return '$qualifierString${root.symbol}$typeArgumentsString$boundString$superclassString$interfacesString';
   }
 
   /// A representation of the dart Symbol of this type to be used in generated code as class name.
@@ -130,6 +177,17 @@ class LookupKey {
 
   Map<String, dynamic> toJson() => _$LookupKeyToJson(this);
 
+  /// Determines if this key matches another key for injection purposes.
+  /// Only compares core type identity (root, qualifier, typeArguments, and bound),
+  /// ignoring inheritance information.
+  bool matchesForInjection(LookupKey other) =>
+      identical(this, other) ||
+      runtimeType == other.runtimeType &&
+          root == other.root &&
+          qualifier == other.qualifier &&
+          _listEquality.equals(typeArguments, other.typeArguments) &&
+          bound == other.bound;
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -138,7 +196,9 @@ class LookupKey {
           root == other.root &&
           qualifier == other.qualifier &&
           _listEquality.equals(typeArguments, other.typeArguments) &&
-          bound == other.bound;
+          bound == other.bound &&
+          _listEquality.equals(interfaces, other.interfaces) &&
+          superclass == other.superclass;
 
   @override
   int get hashCode => Object.hash(
@@ -146,11 +206,26 @@ class LookupKey {
         qualifier,
         _listEquality.hash(typeArguments),
         bound,
+        _listEquality.hash(interfaces),
+        superclass,
       );
 }
 
-extension _TypeArgumentExtension on DartType {
+extension _DartTypeExtension on DartType {
   List<DartType>? get allTypeArguments => _getTypeArguments(this);
+
+  bool get isDartCore =>
+      isDartCoreBool ||
+      isDartCoreDouble ||
+      isDartCoreInt ||
+      isDartCoreIterable ||
+      isDartCoreList ||
+      isDartCoreMap ||
+      isDartCoreNull ||
+      isDartCoreNum ||
+      isDartCoreObject ||
+      isDartCoreSet ||
+      isDartCoreString;
 }
 
 /// Gets the type arguments from a DartType, handling both regular types and typedefs

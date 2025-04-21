@@ -9,7 +9,7 @@ void main() {
   print(sum);
 }
 
-@Component([MainModule])
+@Component(modules: [MainModule])
 abstract class MainComponent {
   static const create = g.MainComponent$Component.create;
 

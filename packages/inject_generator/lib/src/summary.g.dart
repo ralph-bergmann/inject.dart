@@ -20,6 +20,11 @@ ComponentSummary _$ComponentSummaryFromJson(Map<String, dynamic> json) =>
                   .map((e) => SymbolPath.fromJson(e as Map<String, dynamic>))
                   .toList()),
           $checkedConvert(
+              'provisionListeners',
+              (v) => (v as List<dynamic>)
+                  .map((e) => SymbolPath.fromJson(e as Map<String, dynamic>))
+                  .toList()),
+          $checkedConvert(
               'providers',
               (v) => (v as List<dynamic>).map(
                   (e) => ProviderSummary.fromJson(e as Map<String, dynamic>))),
@@ -32,6 +37,7 @@ Map<String, dynamic> _$ComponentSummaryToJson(ComponentSummary instance) =>
     <String, dynamic>{
       'clazz': instance.clazz,
       'modules': instance.modules,
+      'provisionListeners': instance.provisionListeners,
       'providers': instance.providers,
     };
 
@@ -120,6 +126,14 @@ LibrarySummary _$LibrarySummaryFromJson(Map<String, dynamic> json) =>
                           ModuleSummary.fromJson(e as Map<String, dynamic>))
                       .toList() ??
                   const []),
+          provisionListeners: $checkedConvert(
+              'provisionListeners',
+              (v) =>
+                  (v as List<dynamic>?)
+                      ?.map((e) => ProvisionListenerSummary.fromJson(
+                          e as Map<String, dynamic>))
+                      .toList() ??
+                  const []),
           injectables: $checkedConvert(
               'injectables',
               (v) =>
@@ -153,6 +167,7 @@ Map<String, dynamic> _$LibrarySummaryToJson(LibrarySummary instance) =>
     <String, dynamic>{
       'assetUri': instance.assetUri.toString(),
       'modules': instance.modules,
+      'provisionListeners': instance.provisionListeners,
       'injectables': instance.injectables,
       'assistedInjectables': instance.assistedInjectables,
       'factories': instance.factories,
@@ -241,3 +256,32 @@ const _$ProviderKindEnumMap = {
   ProviderKind.method: 'method',
   ProviderKind.getter: 'getter',
 };
+
+ProvisionListenerSummary _$ProvisionListenerSummaryFromJson(
+        Map<String, dynamic> json) =>
+    $checkedCreate(
+      'ProvisionListenerSummary',
+      json,
+      ($checkedConvert) {
+        final val = ProvisionListenerSummary(
+          $checkedConvert(
+              'clazz', (v) => SymbolPath.fromJson(v as Map<String, dynamic>)),
+          $checkedConvert(
+              'typeParameter',
+              (v) => v == null
+                  ? null
+                  : LookupKey.fromJson(v as Map<String, dynamic>)),
+          $checkedConvert('constructor',
+              (v) => ProviderSummary.fromJson(v as Map<String, dynamic>)),
+        );
+        return val;
+      },
+    );
+
+Map<String, dynamic> _$ProvisionListenerSummaryToJson(
+        ProvisionListenerSummary instance) =>
+    <String, dynamic>{
+      'clazz': instance.clazz,
+      'typeParameter': instance.typeParameter,
+      'constructor': instance.constructor,
+    };

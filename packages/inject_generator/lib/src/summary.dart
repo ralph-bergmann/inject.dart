@@ -10,6 +10,7 @@ library;
 import 'package:json_annotation/json_annotation.dart';
 
 import 'source/injected_type.dart';
+import 'source/lookup_key.dart';
 import 'source/symbol_path.dart';
 
 part 'summary.g.dart';
@@ -19,3 +20,4 @@ part 'summary/injectable_summary.dart';
 part 'summary/library_summary.dart';
 part 'summary/module_summary.dart';
 part 'summary/provider_summary.dart';
+part 'summary/provision_listener_summary.dart';

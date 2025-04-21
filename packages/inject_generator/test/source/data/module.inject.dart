@@ -13,10 +13,7 @@ class MainComponent$Component implements _i1.MainComponent {
   MainComponent$Component._(_i1.MainModule mainModule) {
     _addition$Provider = _Addition$Provider(mainModule);
     _foo$Provider = _Foo$Provider(mainModule);
-    _bar$Provider = _Bar$Provider(
-      _foo$Provider,
-      mainModule,
-    );
+    _bar$Provider = _Bar$Provider(_foo$Provider, mainModule);
   }
 
   late final _Addition$Provider _addition$Provider;
@@ -56,16 +53,12 @@ class _Foo$Provider implements _i3.Provider<_i1.Foo> {
 }
 
 class _Bar$Provider implements _i3.Provider<_i2.Future<_i1.Bar>> {
-  const _Bar$Provider(
-    this._foo$Provider,
-    this._module,
-  );
+  const _Bar$Provider(this._foo$Provider, this._module);
 
   final _Foo$Provider _foo$Provider;
 
   final _i1.MainModule _module;
 
   @override
-  _i2.Future<_i1.Bar> get() async =>
-      await _module.provideBar(foo: _foo$Provider.get());
+  _i2.Future<_i1.Bar> get() async => await _module.provideBar(foo: _foo$Provider.get());
 }

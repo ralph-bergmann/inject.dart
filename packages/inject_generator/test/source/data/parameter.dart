@@ -6,7 +6,7 @@ void main() {
   ParameterComponent.create();
 }
 
-@Component([Inject2Module])
+@Component(modules: [Inject2Module])
 abstract class ParameterComponent {
   static const create = g.ParameterComponent$Component.create;
 

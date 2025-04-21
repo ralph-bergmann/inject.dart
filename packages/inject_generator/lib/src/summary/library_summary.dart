@@ -21,6 +21,9 @@ class LibrarySummary {
   /// Module classes defined in this library.
   final List<ModuleSummary> modules;
 
+  /// ProvisionListener classes
+  final List<ProvisionListenerSummary> provisionListeners;
+
   /// Injectable classes.
   final List<InjectableSummary> injectables;
 
@@ -34,6 +37,7 @@ class LibrarySummary {
   factory LibrarySummary(
     Uri assetUri, {
     List<ModuleSummary> modules = const [],
+    List<ProvisionListenerSummary> provisionListeners = const [],
     List<InjectableSummary> injectables = const [],
     List<InjectableSummary> assistedInjectables = const [],
     List<FactorySummary> factories = const [],
@@ -41,6 +45,7 @@ class LibrarySummary {
       LibrarySummary._(
         assetUri,
         modules,
+        provisionListeners,
         injectables,
         assistedInjectables,
         factories,
@@ -49,6 +54,7 @@ class LibrarySummary {
   const LibrarySummary._(
     this.assetUri,
     this.modules,
+    this.provisionListeners,
     this.injectables,
     this.assistedInjectables,
     this.factories,

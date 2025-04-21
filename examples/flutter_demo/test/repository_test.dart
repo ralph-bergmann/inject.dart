@@ -26,7 +26,7 @@ void main() {
   });
 }
 
-@Component([TestModule])
+@Component(modules: [TestModule])
 abstract class TestComponent {
   static const create = g.TestComponent$Component.create;
 

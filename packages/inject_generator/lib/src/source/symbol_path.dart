@@ -23,6 +23,10 @@ class SymbolPath implements Comparable<SymbolPath> {
   /// Path to the `@Module` annotation.
   static const SymbolPath module = SymbolPath._standard('Module');
 
+  /// Path to the `@ProvisionListener` annotation.
+  static const SymbolPath provisionListener =
+      SymbolPath('inject_annotation', 'lib/src/api/provision_listener.dart', 'ProvisionListener');
+
   /// Path to the `@Inject` annotation.
   static const SymbolPath inject = SymbolPath._standard('Inject');
 

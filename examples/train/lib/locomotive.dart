@@ -7,7 +7,7 @@ import 'locomotive.inject.dart' as g;
 
 /// The top level component that stitches together multiple app features into
 /// a complete app.
-@Component([BikeServices, FoodServices, CommonServices])
+@Component(modules: [BikeServices, FoodServices, CommonServices])
 abstract class TrainServices implements BikeServiceLocator, FoodServiceLocator {
   static TrainServices create() {
     final services = g.TrainServices$Component.create();

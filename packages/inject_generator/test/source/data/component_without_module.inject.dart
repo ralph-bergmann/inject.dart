@@ -5,16 +5,12 @@ import 'package:inject_annotation/inject_annotation.dart' as _i2;
 import 'component_without_module.dart' as _i1;
 
 class ComponentWithoutModule$Component implements _i1.ComponentWithoutModule {
-  factory ComponentWithoutModule$Component.create() =>
-      ComponentWithoutModule$Component._();
+  factory ComponentWithoutModule$Component.create() => ComponentWithoutModule$Component._();
 
   ComponentWithoutModule$Component._() {
     _bar$Provider = _Bar$Provider();
     final foo$Provider = _Foo$Provider();
-    _fooBar$Provider = _FooBar$Provider(
-      foo$Provider,
-      _bar$Provider,
-    );
+    _fooBar$Provider = _FooBar$Provider(foo$Provider, _bar$Provider);
   }
 
   late final _Bar$Provider _bar$Provider;
@@ -43,18 +39,12 @@ class _Foo$Provider implements _i2.Provider<_i1.Foo> {
 }
 
 class _FooBar$Provider implements _i2.Provider<_i1.FooBar> {
-  const _FooBar$Provider(
-    this._foo$Provider,
-    this._bar$Provider,
-  );
+  const _FooBar$Provider(this._foo$Provider, this._bar$Provider);
 
   final _Foo$Provider _foo$Provider;
 
   final _Bar$Provider _bar$Provider;
 
   @override
-  _i1.FooBar get() => _i1.FooBar(
-        _foo$Provider.get(),
-        _bar$Provider.get(),
-      );
+  _i1.FooBar get() => _i1.FooBar(_foo$Provider.get(), _bar$Provider.get());
 }

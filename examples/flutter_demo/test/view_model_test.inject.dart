@@ -9,14 +9,15 @@ import 'package:inject_annotation/inject_annotation.dart' as _i3;
 import 'view_model_test.dart' as _i1;
 
 class ViewModelTestComponent$Component implements _i1.ViewModelTestComponent {
-  factory ViewModelTestComponent$Component.create(
-          {_i1.TestModule? testModule}) =>
-      ViewModelTestComponent$Component._(testModule ?? _i1.TestModule());
+  factory ViewModelTestComponent$Component.create({
+    _i1.TestModule? testModule,
+  }) => ViewModelTestComponent$Component._(testModule ?? _i1.TestModule());
 
   ViewModelTestComponent$Component._(_i1.TestModule testModule) {
     final counterRepository$Provider = _CounterRepository$Provider(testModule);
-    _myHomePageViewModel$Provider =
-        _MyHomePageViewModel$Provider(counterRepository$Provider);
+    _myHomePageViewModel$Provider = _MyHomePageViewModel$Provider(
+      counterRepository$Provider,
+    );
   }
 
   late final _MyHomePageViewModel$Provider _myHomePageViewModel$Provider;

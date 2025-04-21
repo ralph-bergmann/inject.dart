@@ -2,7 +2,7 @@ import 'package:inject_annotation/inject_annotation.dart';
 
 import 'nullability.inject.dart' as g;
 
-@Component([BarModule])
+@Component(modules: [BarModule])
 abstract class ComponentNullability {
   static const create = g.ComponentNullability$Component.create;
 

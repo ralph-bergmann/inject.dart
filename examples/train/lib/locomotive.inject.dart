@@ -12,12 +12,11 @@ class TrainServices$Component implements _i1.TrainServices {
     _i2.BikeServices? bikeServices,
     _i3.FoodServices? foodServices,
     _i4.CommonServices? commonServices,
-  }) =>
-      TrainServices$Component._(
-        bikeServices ?? _i2.BikeServices(),
-        foodServices ?? _i3.FoodServices(),
-        commonServices ?? _i4.CommonServices(),
-      );
+  }) => TrainServices$Component._(
+    bikeServices ?? _i2.BikeServices(),
+    foodServices ?? _i3.FoodServices(),
+    commonServices ?? _i4.CommonServices(),
+  );
 
   TrainServices$Component._(
     _i2.BikeServices bikeServices,
@@ -25,14 +24,8 @@ class TrainServices$Component implements _i1.TrainServices {
     _i4.CommonServices commonServices,
   ) {
     final carMaintenance$Provider = _CarMaintenance$Provider(commonServices);
-    _bikeRack$Provider = _BikeRack$Provider(
-      carMaintenance$Provider,
-      bikeServices,
-    );
-    _kitchen$Provider = _Kitchen$Provider(
-      carMaintenance$Provider,
-      foodServices,
-    );
+    _bikeRack$Provider = _BikeRack$Provider(carMaintenance$Provider, bikeServices);
+    _kitchen$Provider = _Kitchen$Provider(carMaintenance$Provider, foodServices);
   }
 
   late final _BikeRack$Provider _bikeRack$Provider;
@@ -56,10 +49,7 @@ class _CarMaintenance$Provider implements _i5.Provider<_i4.CarMaintenance> {
 }
 
 class _BikeRack$Provider implements _i5.Provider<_i2.BikeRack> {
-  const _BikeRack$Provider(
-    this._carMaintenance$Provider,
-    this._module,
-  );
+  const _BikeRack$Provider(this._carMaintenance$Provider, this._module);
 
   final _CarMaintenance$Provider _carMaintenance$Provider;
 
@@ -70,10 +60,7 @@ class _BikeRack$Provider implements _i5.Provider<_i2.BikeRack> {
 }
 
 class _Kitchen$Provider implements _i5.Provider<_i3.Kitchen> {
-  const _Kitchen$Provider(
-    this._carMaintenance$Provider,
-    this._module,
-  );
+  const _Kitchen$Provider(this._carMaintenance$Provider, this._module);
 
   final _CarMaintenance$Provider _carMaintenance$Provider;
 

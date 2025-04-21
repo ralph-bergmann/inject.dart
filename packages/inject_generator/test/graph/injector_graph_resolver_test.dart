@@ -51,6 +51,7 @@ void main() {
         final componentSummary = ComponentSummary(
           const SymbolPath('foo', 'foo.dart', 'FooComponent'),
           [SymbolPath.parseAbsoluteUri('asset:foo/foo.dart#FooModule')],
+          [],
           [
             ProviderSummary(
               'getFoo',
@@ -87,6 +88,7 @@ void main() {
           [
             SymbolPath.parseAbsoluteUri('asset:foo/foo.dart#FooModule'),
           ],
+          [],
           [
             ProviderSummary(
               'provideName',

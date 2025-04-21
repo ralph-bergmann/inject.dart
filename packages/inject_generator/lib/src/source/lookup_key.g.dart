@@ -28,6 +28,16 @@ LookupKey _$LookupKeyFromJson(Map<String, dynamic> json) => $checkedCreate(
               (v) => v == null
                   ? null
                   : LookupKey.fromJson(v as Map<String, dynamic>)),
+          interfaces: $checkedConvert(
+              'interfaces',
+              (v) => (v as List<dynamic>?)
+                  ?.map((e) => LookupKey.fromJson(e as Map<String, dynamic>))
+                  .toList()),
+          superclass: $checkedConvert(
+              'superclass',
+              (v) => v == null
+                  ? null
+                  : LookupKey.fromJson(v as Map<String, dynamic>)),
         );
         return val;
       },
@@ -38,4 +48,6 @@ Map<String, dynamic> _$LookupKeyToJson(LookupKey instance) => <String, dynamic>{
       'qualifier': instance.qualifier,
       'typeArguments': instance.typeArguments,
       'bound': instance.bound,
+      'interfaces': instance.interfaces,
+      'superclass': instance.superclass,
     };

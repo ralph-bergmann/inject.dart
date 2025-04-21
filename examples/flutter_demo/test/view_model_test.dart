@@ -24,7 +24,7 @@ void main() {
   });
 }
 
-@Component([TestModule])
+@Component(modules: [TestModule])
 abstract class ViewModelTestComponent {
   static const create = g.ViewModelTestComponent$Component.create;
 

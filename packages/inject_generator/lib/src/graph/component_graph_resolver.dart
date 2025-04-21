@@ -10,18 +10,19 @@ part of '../graph.dart';
 ///     var graph = await resolver.resolve();
 class ComponentGraphResolver {
   final ComponentSummary _componentSummary;
-  final List<SymbolPath> _modules = <SymbolPath>[];
-  final List<ProviderSummary> _providers = <ProviderSummary>[];
+  final List<SymbolPath> _modules;
+  final List<SymbolPath> _provisionListeners;
+  final List<ProviderSummary> _providers;
   final SummaryReader _reader;
 
   /// To prevent rereading the same summaries, we cache them here.
   final Map<SymbolPath, LibrarySummary> _summaryCache = <SymbolPath, LibrarySummary>{};
 
   /// Create a new resolver that uses a [SummaryReader].
-  ComponentGraphResolver(this._reader, this._componentSummary) {
-    _componentSummary.modules.forEach(_modules.add);
-    _componentSummary.providers.forEach(_providers.add);
-  }
+  ComponentGraphResolver(this._reader, this._componentSummary)
+      : _modules = _componentSummary.modules,
+        _provisionListeners = _componentSummary.provisionListeners,
+        _providers = _componentSummary.providers;
 
   Future<LibrarySummary> _readFromPath(
     SymbolPath p, {
@@ -74,7 +75,7 @@ class ComponentGraphResolver {
   /// Return a resolved graph that can be used to generate a `$Component` class.
   Future<ComponentGraph> resolve() async {
     // For every module, load the corresponding library summary that should have
-    // already been built in the dependency tree. We then lookup the specific
+    // already been built from the [InjectSummaryBuilder]. We then lookup the specific
     // module summary from the library summary.
     final modulesToLoad = _modules.map<Future<ModuleSummary?>>((module) async {
       final moduleSummaries = (await _readFromPath(module, requestedBy: _componentSummary.clazz)).modules;
@@ -91,7 +92,27 @@ class ComponentGraphResolver {
       }
       return first;
     });
-    final allModules = (await Future.wait<ModuleSummary?>(modulesToLoad)).nonNulls.toList();
+    final allModules = (await Future.wait<ModuleSummary?>(modulesToLoad)).nonNulls;
+
+    // same for provision listeners ...
+    final provisionListenersToLoad =
+        _provisionListeners.map<Future<ProvisionListenerSummary?>>((provisionListener) async {
+      final provisionListenerSummaries =
+          (await _readFromPath(provisionListener, requestedBy: _componentSummary.clazz)).provisionListeners;
+
+      final first = provisionListenerSummaries.firstWhereOrNull(
+        (s) => s.clazz == provisionListener,
+      );
+
+      if (first == null) {
+        builderContext.rawLogger.severe(
+          'Failed to locate summary for provision listener ${provisionListener.toAbsoluteUri()} ',
+          'specified in component ${_componentSummary.clazz.symbol}.',
+        );
+      }
+      return first;
+    });
+    final allProvisionListeners = (await Future.wait<ProvisionListenerSummary?>(provisionListenersToLoad)).nonNulls;
 
     final providersByModules = <LookupKey, DependencyProvidedByModule>{};
     final providersByInjectables = <LookupKey, DependencyProvidedByInjectable>{};
@@ -103,7 +124,7 @@ class ComponentGraphResolver {
     for (final module in allModules) {
       for (final provider in module.providers) {
         final lookupKey = provider.injectedType.lookupKey;
-        providersByModules[lookupKey] = DependencyProvidedByModule._(
+        providersByModules[lookupKey] = DependencyProvidedByModule(
           provider.injectedType,
           provider.dependencies,
           module.clazz,
@@ -127,7 +148,7 @@ class ComponentGraphResolver {
         final lib = await _readFromPath(key.root, requestedBy: requestedBy);
 
         for (final injectable in lib.injectables.where((injectable) => injectable.clazz == key.root)) {
-          providersByInjectables[key] = DependencyProvidedByInjectable._(
+          providersByInjectables[key] = DependencyProvidedByInjectable(
             injectable.constructor.injectedType,
             injectable.constructor.dependencies,
           );
@@ -151,7 +172,7 @@ class ComponentGraphResolver {
             final dependencies =
                 injectableSummary.constructor.dependencies.where((dependency) => !dependency.isAssisted).toList();
 
-            providersByFactory[key] = DependencyProvidedByFactory._(
+            providersByFactory[key] = DependencyProvidedByFactory(
               InjectedType(key),
               dependencies,
               factory.clazz,
@@ -165,7 +186,7 @@ class ComponentGraphResolver {
                 // Special case for view models.
                 // Currently, view models are for Widgets, which are usually created by a factory,
                 // so I think this is the only place where we need to handle them.
-                providersByViewModel[dependency.lookupKey] = DependencyProvidedByViewModel._(
+                providersByViewModel[dependency.lookupKey] = DependencyProvidedByViewModel(
                   InjectedType(dependency.lookupKey),
                   [InjectedType(dependency.lookupKey.typeArguments!.first)],
                   dependency.name!,
@@ -212,10 +233,10 @@ class ComponentGraphResolver {
       );
     }
 
-    for (final componentProvider in _componentSummary.providers) {
+    for (final provisionListener in allProvisionListeners) {
       await addInjectableIfExists(
-        componentProvider.injectedType.lookupKey,
-        requestedBy: _componentSummary.clazz,
+        provisionListener.constructor.injectedType.lookupKey,
+        requestedBy: provisionListener.clazz,
       );
     }
 
@@ -245,12 +266,11 @@ class ComponentGraphResolver {
       List<ModuleSummary>.unmodifiable(allModules),
       List<ComponentProvider>.unmodifiable(componentProviders),
       Map<LookupKey, ResolvedDependency>.unmodifiable(mergedDependencies),
+      allProvisionListeners,
     );
   }
 
-  void _detectAndWarnAboutCycles(
-    Map<LookupKey, ResolvedDependency> mergedDependencies,
-  ) {
+  void _detectAndWarnAboutCycles(Map<LookupKey, ResolvedDependency> mergedDependencies) {
     // Symbols we already inspected as potential roots of a cycle.
     final checkedRoots = <LookupKey>{};
 

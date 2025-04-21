@@ -13,23 +13,22 @@ class AppComponent$Component implements _i1.AppComponent {
 
   AppComponent$Component._() {
     final homePageViewModel$Provider = _HomePageViewModel$Provider();
-    final viewModelFactoryHomePageViewModel$Provider =
-        _ViewModelFactoryHomePageViewModel$Provider(homePageViewModel$Provider);
-    final homePageFactory$Provider =
-        _HomePageFactory$Provider(viewModelFactoryHomePageViewModel$Provider);
-    _exampleAppFactory$Provider =
-        _ExampleAppFactory$Provider(homePageFactory$Provider);
+    final viewModelFactoryHomePageViewModel$Provider = _ViewModelFactoryHomePageViewModel$Provider(
+      homePageViewModel$Provider,
+    );
+    final homePageFactory$Provider = _HomePageFactory$Provider(
+      viewModelFactoryHomePageViewModel$Provider,
+    );
+    _exampleAppFactory$Provider = _ExampleAppFactory$Provider(homePageFactory$Provider);
   }
 
   late final _ExampleAppFactory$Provider _exampleAppFactory$Provider;
 
   @override
-  _i1.ExampleAppFactory get exampleAppFactory =>
-      _exampleAppFactory$Provider.get();
+  _i1.ExampleAppFactory get exampleAppFactory => _exampleAppFactory$Provider.get();
 }
 
-class _HomePageViewModel$Provider
-    implements _i2.Provider<_i1.HomePageViewModel> {
+class _HomePageViewModel$Provider implements _i2.Provider<_i1.HomePageViewModel> {
   const _HomePageViewModel$Provider();
 
   @override
@@ -47,14 +46,13 @@ class _ViewModelFactoryHomePageViewModel$Provider
     _i4.ViewModelInitializer<_i1.HomePageViewModel>? init,
     required _i4.ViewModelWidgetBuilder<_i1.HomePageViewModel> builder,
     _i5.Widget? child,
-  }) =>
-      _i4.ViewModelBuilder<_i1.HomePageViewModel>(
-        key: key,
-        viewModelProvider: _homePageViewModel$Provider,
-        init: init,
-        builder: builder,
-        child: child,
-      );
+  }) => _i4.ViewModelBuilder<_i1.HomePageViewModel>(
+    key: key,
+    viewModelProvider: _homePageViewModel$Provider,
+    init: init,
+    builder: builder,
+    child: child,
+  );
 
   @override
   _i3.ViewModelFactory<_i1.HomePageViewModel> get() => _factory;
@@ -63,43 +61,35 @@ class _ViewModelFactoryHomePageViewModel$Provider
 class _HomePageFactory$Provider implements _i2.Provider<_i1.HomePageFactory> {
   _HomePageFactory$Provider(this._viewModelFactoryHomePageViewModel$Provider);
 
-  final _ViewModelFactoryHomePageViewModel$Provider
-      _viewModelFactoryHomePageViewModel$Provider;
+  final _ViewModelFactoryHomePageViewModel$Provider _viewModelFactoryHomePageViewModel$Provider;
 
-  late final _i1.HomePageFactory _factory =
-      _HomePageFactory$Factory(_viewModelFactoryHomePageViewModel$Provider);
+  late final _i1.HomePageFactory _factory = _HomePageFactory$Factory(
+    _viewModelFactoryHomePageViewModel$Provider,
+  );
 
   @override
   _i1.HomePageFactory get() => _factory;
 }
 
 class _HomePageFactory$Factory implements _i1.HomePageFactory {
-  const _HomePageFactory$Factory(
-      this._viewModelFactoryHomePageViewModel$Provider);
+  const _HomePageFactory$Factory(this._viewModelFactoryHomePageViewModel$Provider);
 
-  final _ViewModelFactoryHomePageViewModel$Provider
-      _viewModelFactoryHomePageViewModel$Provider;
+  final _ViewModelFactoryHomePageViewModel$Provider _viewModelFactoryHomePageViewModel$Provider;
 
   @override
-  _i1.HomePage create({
-    _i6.Key? key,
-    required String title,
-  }) =>
-      _i1.HomePage(
-        key: key,
-        title: title,
-        viewModelFactory: _viewModelFactoryHomePageViewModel$Provider.get(),
-      );
+  _i1.HomePage create({_i6.Key? key, required String title}) => _i1.HomePage(
+    key: key,
+    title: title,
+    viewModelFactory: _viewModelFactoryHomePageViewModel$Provider.get(),
+  );
 }
 
-class _ExampleAppFactory$Provider
-    implements _i2.Provider<_i1.ExampleAppFactory> {
+class _ExampleAppFactory$Provider implements _i2.Provider<_i1.ExampleAppFactory> {
   _ExampleAppFactory$Provider(this._homePageFactory$Provider);
 
   final _HomePageFactory$Provider _homePageFactory$Provider;
 
-  late final _i1.ExampleAppFactory _factory =
-      _ExampleAppFactory$Factory(_homePageFactory$Provider);
+  late final _i1.ExampleAppFactory _factory = _ExampleAppFactory$Factory(_homePageFactory$Provider);
 
   @override
   _i1.ExampleAppFactory get() => _factory;
@@ -111,8 +101,6 @@ class _ExampleAppFactory$Factory implements _i1.ExampleAppFactory {
   final _HomePageFactory$Provider _homePageFactory$Provider;
 
   @override
-  _i1.ExampleApp create({_i6.Key? key}) => _i1.ExampleApp(
-        key: key,
-        homePageFactory: _homePageFactory$Provider.get(),
-      );
+  _i1.ExampleApp create({_i6.Key? key}) =>
+      _i1.ExampleApp(key: key, homePageFactory: _homePageFactory$Provider.get());
 }

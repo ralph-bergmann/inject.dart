@@ -11,11 +11,7 @@ class ComponentNullability$Component implements _i1.ComponentNullability {
   ComponentNullability$Component._(_i1.BarModule barModule) {
     _foo$Provider = _Foo$Provider(barModule);
     _bar$Provider = _Bar$Provider(barModule);
-    _fooBar$Provider = _FooBar$Provider(
-      _foo$Provider,
-      _bar$Provider,
-      barModule,
-    );
+    _fooBar$Provider = _FooBar$Provider(_foo$Provider, _bar$Provider, barModule);
   }
 
   late final _Foo$Provider _foo$Provider;
@@ -53,11 +49,7 @@ class _Bar$Provider implements _i2.Provider<_i1.Bar?> {
 }
 
 class _FooBar$Provider implements _i2.Provider<_i1.FooBar> {
-  const _FooBar$Provider(
-    this._foo$Provider,
-    this._bar$Provider,
-    this._module,
-  );
+  const _FooBar$Provider(this._foo$Provider, this._bar$Provider, this._module);
 
   final _Foo$Provider _foo$Provider;
 
@@ -66,8 +58,5 @@ class _FooBar$Provider implements _i2.Provider<_i1.FooBar> {
   final _i1.BarModule _module;
 
   @override
-  _i1.FooBar get() => _module.fooBar(
-        _foo$Provider.get(),
-        _bar$Provider.get(),
-      );
+  _i1.FooBar get() => _module.fooBar(_foo$Provider.get(), _bar$Provider.get());
 }

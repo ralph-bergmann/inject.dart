@@ -8,6 +8,7 @@ import 'dart:io';
 
 import 'package:build/build.dart';
 import 'package:collection/collection.dart';
+import 'package:inject_annotation/inject_annotation.dart';
 import 'package:meta/meta.dart';
 import 'package:path/path.dart' as path;
 

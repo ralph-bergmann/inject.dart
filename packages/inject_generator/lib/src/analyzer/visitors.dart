@@ -13,9 +13,11 @@ import 'utils.dart';
 ///
 /// Looks for:
 /// - [visitInjectable]: Classes or constructors annotated with `@inject`.
+/// - [visitAssistedInjectable]: Classes or constructors annotated with `@assistedInject`.
 /// - [visitAssistedFactory]: Classes or constructors annotated with `@assistedFactory`.
 /// - [visitComponent]: Classes annotated with `@component`.
 /// - [visitModule]: Classes annotated with `@module`.
+/// - [visitProvisionListener]: Classes annotated with `@provisionListener`.
 abstract class InjectLibraryVisitor {
   const InjectLibraryVisitor();
 
@@ -39,19 +41,27 @@ abstract class InjectLibraryVisitor {
   ///
   /// [modules] is the list of types supplied as modules in the annotation.
   ///
-  /// Example:
-  ///
-  ///     @Component(const [FooModule, BarModule])
-  ///     class Services {
-  ///       ...
-  ///     }
+  /// For example:
+  /// ```dart
+  ///  @Component(const [FooModule, BarModule])
+  ///  class Services {
+  ///    ...
+  ///  }
+  /// ```
   ///
   /// In this example, [modules] will contain references to `FooModule` and
   /// `BarModule` types.
-  void visitComponent(ClassElement clazz, List<SymbolPath> modules);
+  void visitComponent(
+    ClassElement clazz,
+    List<SymbolPath> modules,
+    List<SymbolPath> provisionListeners,
+  );
 
   /// Called when [clazz] is annotated with `@module`.
   void visitModule(ClassElement clazz);
+
+  /// Called when [clazz] is annotated with `@provisionListener`
+  void visitProvisionListener(ClassElement clazz);
 }
 
 class _LibraryVisitor extends RecursiveElementVisitor<void> {
@@ -64,8 +74,9 @@ class _LibraryVisitor extends RecursiveElementVisitor<void> {
     var isInjectable = false;
     var isAssistedInjectable = false;
     var isAssistedFactory = false;
-    var isModule = false;
     var isComponent = false;
+    var isModule = false;
+    var isProvisionListener = false;
 
     var count = 0;
     if (isInjectableClass(element)) {
@@ -80,21 +91,27 @@ class _LibraryVisitor extends RecursiveElementVisitor<void> {
       isAssistedFactory = true;
       count++;
     }
+    if (isComponentClass(element)) {
+      isComponent = true;
+      count++;
+    }
     if (isModuleClass(element)) {
       isModule = true;
       count++;
     }
-    if (isComponentClass(element)) {
-      isComponent = true;
+    if (isProvisionListenerClass(element)) {
+      isProvisionListener = true;
       count++;
     }
 
     if (count > 1) {
       final types = [
         isInjectable ? 'injectable' : null,
-        isAssistedFactory ? 'isAssistedFactory' : null,
-        isModule ? 'module' : null,
+        isAssistedInjectable ? 'assistedInjectable' : null,
+        isAssistedFactory ? 'assistedFactory' : null,
         isComponent ? 'component' : null,
+        isModule ? 'module' : null,
+        isProvisionListener ? 'provisionListener' : null,
       ].nonNulls;
 
       throw StateError(
@@ -116,7 +133,7 @@ class _LibraryVisitor extends RecursiveElementVisitor<void> {
           constructMessage(
             builderContext.buildStep.inputId,
             element,
-            'Classes and constructors cannot be annotated with @Asynchronous().',
+            'Injectable classes or constructors cannot be annotated with @asynchronous.',
           ),
         );
       }
@@ -124,15 +141,14 @@ class _LibraryVisitor extends RecursiveElementVisitor<void> {
         element,
         singleton,
       );
-    }
-    if (isAssistedInjectable) {
+    } else if (isAssistedInjectable) {
       final singleton = isSingletonClass(element);
       if (singleton) {
         throw StateError(
           constructMessage(
             builderContext.buildStep.inputId,
             element,
-            'Classes and constructors cannot be annotated with @Singleton().',
+            'Assisted injectable classes or constructors cannot be annotated with @singleton.',
           ),
         );
       }
@@ -142,31 +158,31 @@ class _LibraryVisitor extends RecursiveElementVisitor<void> {
           constructMessage(
             builderContext.buildStep.inputId,
             element,
-            'Classes and constructors cannot be annotated with @Asynchronous().',
+            'Assisted injetable classes or constructors cannot be annotated with @asynchronous.',
           ),
         );
       }
       _injectLibraryVisitor.visitAssistedInjectable(element);
-    }
-    if (isAssistedFactory) {
+    } else if (isAssistedFactory) {
       _injectLibraryVisitor.visitAssistedFactory(element);
-    }
-    if (isModule) {
+    } else if (isModule) {
       _injectLibraryVisitor.visitModule(element);
-    }
-    if (isComponent) {
+    } else if (isProvisionListener) {
+      _injectLibraryVisitor.visitProvisionListener(element);
+    } else if (isComponent) {
       _injectLibraryVisitor.visitComponent(
         element,
-        _extractModules(element),
+        _extractAnnotationParameter(element, parameterName: 'modules'),
+        _extractAnnotationParameter(element, parameterName: 'provisionListeners'),
       );
     }
     return;
   }
 }
 
-List<SymbolPath> _extractModules(ClassElement clazz) {
+List<SymbolPath> _extractAnnotationParameter(ClassElement clazz, {required String parameterName}) {
   final annotation = getComponentAnnotation(clazz);
-  final modules = annotation?.computeConstantValue()?.getField('modules')?.toListValue();
+  final modules = annotation?.computeConstantValue()?.getField(parameterName)?.toListValue();
   if (modules == null) {
     return const <SymbolPath>[];
   }

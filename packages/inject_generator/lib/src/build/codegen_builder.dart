@@ -10,7 +10,6 @@ import 'package:code_builder/code_builder.dart';
 import 'package:collection/collection.dart';
 import 'package:dart_style/dart_style.dart';
 import 'package:inject_annotation/inject_annotation.dart';
-import 'package:pub_semver/pub_semver.dart';
 
 import '../analyzer/utils.dart';
 import '../context.dart';
@@ -88,7 +87,7 @@ class InjectCodegenBuilder implements Builder {
     }
 
     final emitter = DartEmitter.scoped(orderDirectives: true, useNullSafetySyntax: true);
-    final content = DartFormatter(languageVersion: Version.parse('3.6.0')).format('''
+    final content = DartFormatter(languageVersion: DartFormatter.latestLanguageVersion, pageWidth: 100).format('''
       // ignore_for_file: implementation_imports
       ${target.build().accept(emitter).toString()}
       ''');
@@ -324,7 +323,7 @@ class _ComponentBuilder {
   void _generateComponentProviders() {
     for (final provider in graph.providers) {
       final resolved = _orderedDependencies.firstWhereOrNull(
-        (element) => element.injectedType.lookupKey == provider.injectedType.lookupKey,
+        (element) => element.injectedType.lookupKey.matchesForInjection(provider.injectedType.lookupKey),
       );
       if (resolved == null) {
         throw _UnresolvedDependencyForComponentError(
@@ -375,6 +374,11 @@ class _ComponentBuilder {
       return;
     }
 
+    // First collect provision listeners for this dependency
+    // This ensures listeners are processed before the dependencies they listen for
+    _collectProvisionListenersFor(dep);
+
+    // Then collect dependencies of this dependency
     for (final depDep in dep.dependencies) {
       _collectDependencies(graph.mergedDependencies[depDep.lookupKey]);
     }
@@ -382,10 +386,59 @@ class _ComponentBuilder {
     _orderedDependencies.add(dep);
   }
 
+  // Collects provision listeners for a specific dependency
+  void _collectProvisionListenersFor(ResolvedDependency dep) {
+    // Get all provision listeners that apply to this dependency
+    final applicableListeners = graph.provisionListeners.where((listener) {
+      final listenerType = listener.typeParameter;
+
+      // If typeParameter is null or dynamic, the listener applies to all dependencies
+      if (listenerType == null || listenerType.root.symbol == 'dynamic') {
+        return true;
+      }
+
+      // Exact match
+      if (listenerType == dep.injectedType.lookupKey) {
+        return true;
+      }
+
+      // Check if listenerType matches the superclass of depType
+      if (dep.injectedType.lookupKey.superclass != null && listenerType == dep.injectedType.lookupKey.superclass) {
+        return true;
+      }
+
+      // Check if listenerType matches any of the interfaces implemented by depType
+      if (dep.injectedType.lookupKey.interfaces != null &&
+          dep.injectedType.lookupKey.interfaces!.any((interface) => listenerType == interface)) {
+        return true;
+      }
+
+      return false;
+    });
+
+    // Process each applicable listener
+    for (final listener in applicableListeners) {
+      final listenerDep = graph.mergedDependencies[listener.constructor.injectedType.lookupKey];
+      if (listenerDep != null) {
+        // Process the listener's dependencies first
+        for (final listenerDepDep in listenerDep.dependencies) {
+          _collectDependencies(graph.mergedDependencies[listenerDepDep.lookupKey]);
+        }
+
+        // Then add the listener itself
+        if (!_orderedDependencies.contains(listenerDep)) {
+          _orderedDependencies.add(listenerDep);
+        }
+      }
+    }
+  }
+
   // Returns true if the dependency is provided by this component.
   // Means when the component itself has a @inject annotation on a field with the same type.
   bool _isProvidedByComponent(InjectedType injectedType) =>
-      graph.providers.firstWhereOrNull((element) => element.injectedType.lookupKey == injectedType.lookupKey) != null;
+      graph.providers
+          .firstWhereOrNull((element) => element.injectedType.lookupKey.matchesForInjection(injectedType.lookupKey)) !=
+      null;
 }
 
 /// Generates code for a [Provider] class for the [dependency].
@@ -479,7 +532,7 @@ class _ProviderBuilder {
     final seen = <LookupKey>[];
     for (final injected in dependency.dependencies.where((dep) => !dep.isAssisted)) {
       final resolved = dependencies.firstWhereOrNull(
-        (element) => element.injectedType.lookupKey == injected.lookupKey,
+        (element) => element.injectedType.lookupKey.matchesForInjection(injected.lookupKey),
       );
       if (resolved == null) {
         throw _UnresolvedDependencyForProviderError(
@@ -703,7 +756,8 @@ class _ProviderBuilder {
 
   /// check whether the nullability of the injected and resolved types match
   void _checkForNullabilityMismatch(InjectedType injected, SymbolPath requestedBy) {
-    final resolved = dependencies.firstWhere((dep) => dep.injectedType.lookupKey == injected.lookupKey);
+    final resolved =
+        dependencies.firstWhere((dep) => dep.injectedType.lookupKey.matchesForInjection(injected.lookupKey));
     final resolvedIsNullable = resolved.injectedType.isNullable;
     final injectedIsNullable = injected.isNullable;
     if (!injectedIsNullable && resolvedIsNullable) {
@@ -800,7 +854,7 @@ class _FactoryBuilder {
 
       if (!isSeen && !isAssisted) {
         final resolved = dependencies.firstWhereOrNull(
-          (element) => element.injectedType.lookupKey == injected.lookupKey,
+          (element) => element.injectedType.lookupKey.matchesForInjection(injected.lookupKey),
         );
         if (resolved == null) {
           throw _UnresolvedDependencyForFactoryError(
@@ -955,7 +1009,7 @@ extension _ResolvedDependencyExtension on ResolvedDependency {
         .where((dep) => !dep.isAssisted)
         .map(
           (dep) => knownDependencies.firstWhereOrNull(
-            (element) => dep.lookupKey == element.injectedType.lookupKey,
+            (element) => dep.lookupKey.matchesForInjection(element.injectedType.lookupKey),
           ),
         )
         .any((dep) => dep?.asynchronous(knownDependencies) ?? false);
@@ -1002,7 +1056,7 @@ extension _TypeReferenceExtension on TypeReference {
   }
 
   TypeReference _toViewModelBuilder({bool isNullable = false}) {
-    if (symbol == viewModelBuilderClassName && url == viewModelFactoryPackage) {
+    if (symbol == viewModelBuilderClassName && url == viewModelPackage) {
       return this;
     }
 
@@ -1010,7 +1064,7 @@ extension _TypeReferenceExtension on TypeReference {
   }
 
   TypeReference _toViewModelInitializer({bool isNullable = false}) {
-    if (symbol == viewModelBuilderClassName && url == viewModelFactoryPackage) {
+    if (symbol == viewModelBuilderClassName && url == viewModelPackage) {
       return this;
     }
 
@@ -1018,7 +1072,7 @@ extension _TypeReferenceExtension on TypeReference {
   }
 
   TypeReference _toViewModelWidgetBuilder({bool isNullable = false}) {
-    if (symbol == viewModelBuilderClassName && url == viewModelFactoryPackage) {
+    if (symbol == viewModelBuilderClassName && url == viewModelPackage) {
       return this;
     }
 
@@ -1026,14 +1080,14 @@ extension _TypeReferenceExtension on TypeReference {
   }
 
   TypeReference _toViewModelPackageType(String symbol, {bool isNullable = false}) {
-    if (this.symbol == symbol && url == viewModelFactoryPackage) {
+    if (this.symbol == symbol && url == viewModelPackage) {
       return this;
     }
 
     return TypeReference(
       (b) => b
         ..symbol = symbol
-        ..url = viewModelFactoryPackage
+        ..url = viewModelPackage
         ..types.add(this)
         ..isNullable = isNullable,
     );
