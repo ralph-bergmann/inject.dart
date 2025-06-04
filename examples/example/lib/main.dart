@@ -54,6 +54,11 @@ class ExampleApp extends StatelessWidget {
 class HomePageViewModel extends ChangeNotifier {
   int count = 0;
 
+  void init() {
+    count = 5;
+    notifyListeners();
+  }
+
   void incrementCounter() {
     count++;
     notifyListeners();
@@ -87,26 +92,33 @@ class HomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return viewModelFactory(builder: (context, viewModel, _) {
-      return Scaffold(
-        appBar: AppBar(title: Text(title)),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              const Text('You have pushed the button this many times:'),
-              Text(
-                '${viewModel.count}',
-                style: Theme.of(context).textTheme.headlineMedium,
-              ),
-            ],
+    return viewModelFactory(
+      init: (viewModel) {
+        // simulate view model initialization
+        // counter should start with 
+        viewModel.init();
+      },
+      builder: (context, viewModel, _) {
+        return Scaffold(
+          appBar: AppBar(title: Text(title)),
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                const Text('You have pushed the button this many times:'),
+                Text(
+                  '${viewModel.count}',
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
+              ],
+            ),
           ),
-        ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: viewModel.incrementCounter,
-          child: const Icon(Icons.add),
-        ),
-      );
-    });
+          floatingActionButton: FloatingActionButton(
+            onPressed: viewModel.incrementCounter,
+            child: const Icon(Icons.add),
+          ),
+        );
+      },
+    );
   }
 }

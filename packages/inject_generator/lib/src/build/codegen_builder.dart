@@ -617,31 +617,51 @@ class _ProviderBuilder {
 
     final factoryMethod = MethodBuilder()
       ..name = _factoryFieldName
-      ..returns = _referenceForKey(libraryUri, dep.createdType).toViewModelBuilder()
+      ..returns = _referenceForKey(libraryUri, dep.createdType)._toViewModelBuilder()
       ..lambda = true
       ..optionalParameters.addAll([
         Parameter(
           (b) => b
             ..named = true
-            ..name = 'key',
+            ..name = 'key'
+            ..type = TypeReference(
+              (b) => b
+                ..symbol = 'Key'
+                ..url = 'package:flutter/widgets.dart'
+                ..isNullable = true,
+            ),
+        ),
+        Parameter(
+          (b) => b
+            ..named = true
+            ..name = 'init'
+            ..type = _referenceForKey(libraryUri, dep.createdType)._toViewModelInitializer(isNullable: true),
         ),
         Parameter(
           (b) => b
             ..named = true
             ..required = true
-            ..name = 'builder',
+            ..name = 'builder'
+            ..type = _referenceForKey(libraryUri, dep.createdType)._toViewModelWidgetBuilder(),
         ),
         Parameter(
           (b) => b
             ..named = true
-            ..name = 'child',
+            ..name = 'child'
+            ..type = TypeReference(
+              (b) => b
+                ..symbol = 'Widget'
+                ..url = 'package:flutter/widgets.dart'
+                ..isNullable = true,
+            ),
         ),
       ])
-      ..body = _referenceForKey(libraryUri, dep.createdType).toViewModelBuilder().newInstance(
+      ..body = _referenceForKey(libraryUri, dep.createdType)._toViewModelBuilder().newInstance(
         [],
         <String, Expression>{
           'key': refer('key'),
           'viewModelProvider': refer(_providerClassName(dep.createdType).decapitalize()),
+          'init': refer('init'),
           'builder': refer('builder'),
           'child': refer('child'),
         },
@@ -981,16 +1001,41 @@ extension _TypeReferenceExtension on TypeReference {
     );
   }
 
-  TypeReference toViewModelBuilder() {
-    if (symbol == viewModelBuilderClassName && url == viewModelBuilderPackage) {
+  TypeReference _toViewModelBuilder({bool isNullable = false}) {
+    if (symbol == viewModelBuilderClassName && url == viewModelFactoryPackage) {
+      return this;
+    }
+
+    return _toViewModelPackageType(viewModelBuilderClassName, isNullable: isNullable);
+  }
+
+  TypeReference _toViewModelInitializer({bool isNullable = false}) {
+    if (symbol == viewModelBuilderClassName && url == viewModelFactoryPackage) {
+      return this;
+    }
+
+    return _toViewModelPackageType(viewModelInitializerClassName, isNullable: isNullable);
+  }
+
+  TypeReference _toViewModelWidgetBuilder({bool isNullable = false}) {
+    if (symbol == viewModelBuilderClassName && url == viewModelFactoryPackage) {
+      return this;
+    }
+
+    return _toViewModelPackageType(viewModelWidgetBuilderClassName, isNullable: isNullable);
+  }
+
+  TypeReference _toViewModelPackageType(String symbol, {bool isNullable = false}) {
+    if (this.symbol == symbol && url == viewModelFactoryPackage) {
       return this;
     }
 
     return TypeReference(
       (b) => b
-        ..symbol = viewModelBuilderClassName
-        ..url = viewModelBuilderPackage
-        ..types.add(this),
+        ..symbol = symbol
+        ..url = viewModelFactoryPackage
+        ..types.add(this)
+        ..isNullable = isNullable,
     );
   }
 }

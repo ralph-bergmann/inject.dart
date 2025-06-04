@@ -35,6 +35,10 @@ import 'package:inject_annotation/inject_annotation.dart';
 ///   @override
 ///   Widget build(BuildContext context) {
 ///     return viewModelFactory(
+///       // Initialize the ViewModel when it's created
+///       init: (viewModel) {
+///         viewModel.loadSomething();
+///       },
 ///       builder: (context, viewModel, _) {
 ///         return Scaffold(
 ///           appBar: AppBar(title: Text(viewModel.title)),
@@ -51,9 +55,16 @@ import 'package:inject_annotation/inject_annotation.dart';
 /// ```
 typedef ViewModelFactory<T extends ChangeNotifier> = ViewModelBuilder<T> Function({
   Key? key,
+  ViewModelInitializer<T>? init,
   required ViewModelWidgetBuilder<T> builder,
   Widget? child,
 });
+
+/// Signature for initializing a ViewModel.
+///
+/// This callback is invoked once when the ViewModel is created,
+/// providing a good place to trigger data loading or other setup.
+typedef ViewModelInitializer<T extends ChangeNotifier> = void Function(T viewModel);
 
 /// Signature for the builder callback used by [ViewModelBuilder].
 ///
@@ -80,17 +91,22 @@ class ViewModelBuilder<T extends ChangeNotifier> extends StatefulWidget {
   ///
   /// The [viewModelProvider] is used to obtain the ViewModel instance.
   /// The [builder] function rebuilds the widget whenever the ViewModel changes.
+  /// The optional [init] function is called once when the ViewModel is created.
   /// The optional [child] widget is passed to the [builder] and can be used for
   /// optimization when parts of the widget subtree don't depend on the ViewModel.
   const ViewModelBuilder({
     super.key,
     required this.viewModelProvider,
+    this.init,
     required this.builder,
     this.child,
   });
 
   /// Provider that creates and returns the ViewModel instance.
   final Provider<T> viewModelProvider;
+
+  /// Optional initializer function called once when the ViewModel is created.
+  final ViewModelInitializer<T>? init;
 
   /// Builder function that constructs the widget tree based on the ViewModel.
   final ViewModelWidgetBuilder<T> builder;
@@ -109,6 +125,7 @@ class _ViewModelBuilderState<T extends ChangeNotifier> extends State<ViewModelBu
   void initState() {
     super.initState();
     _viewModel = widget.viewModelProvider.get();
+    widget.init?.call(_viewModel);
   }
 
   @override

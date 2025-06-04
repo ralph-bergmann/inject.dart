@@ -263,9 +263,9 @@ const providerPath = 'package:inject_annotation/src/api/provider.dart';
 const providerPackage = 'package:inject_annotation/inject_annotation.dart';
 
 const viewModelFactoryClassName = 'ViewModelFactory';
+const viewModelBuilderClassName = 'ViewModelBuilder';
+const viewModelInitializerClassName = 'ViewModelInitializer';
+const viewModelWidgetBuilderClassName = 'ViewModelWidgetBuilder';
+
 const viewModelFactoryPath = 'package:inject_flutter/src/view_model_factory.dart';
 const viewModelFactoryPackage = 'package:inject_flutter/inject_flutter.dart';
-
-const viewModelBuilderClassName = 'ViewModelBuilder';
-const viewModelBuilderPath = 'package:inject_flutter/src/view_model_factory.dart';
-const viewModelBuilderPackage = 'package:inject_flutter/inject_flutter.dart';

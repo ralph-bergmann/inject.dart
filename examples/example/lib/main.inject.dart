@@ -1,6 +1,7 @@
 // ignore_for_file: implementation_imports
 // ignore_for_file: no_leading_underscores_for_library_prefixes
-import 'package:flutter/src/foundation/key.dart' as _i5;
+import 'package:flutter/src/foundation/key.dart' as _i6;
+import 'package:flutter/widgets.dart' as _i5;
 import 'package:inject_annotation/inject_annotation.dart' as _i2;
 import 'package:inject_flutter/inject_flutter.dart' as _i4;
 import 'package:inject_flutter/src/view_model_factory.dart' as _i3;
@@ -42,13 +43,15 @@ class _ViewModelFactoryHomePageViewModel$Provider
   final _HomePageViewModel$Provider _homePageViewModel$Provider;
 
   _i4.ViewModelBuilder<_i1.HomePageViewModel> _factory({
-    key,
-    required builder,
-    child,
+    _i5.Key? key,
+    _i4.ViewModelInitializer<_i1.HomePageViewModel>? init,
+    required _i4.ViewModelWidgetBuilder<_i1.HomePageViewModel> builder,
+    _i5.Widget? child,
   }) =>
       _i4.ViewModelBuilder<_i1.HomePageViewModel>(
         key: key,
         viewModelProvider: _homePageViewModel$Provider,
+        init: init,
         builder: builder,
         child: child,
       );
@@ -79,7 +82,7 @@ class _HomePageFactory$Factory implements _i1.HomePageFactory {
 
   @override
   _i1.HomePage create({
-    _i5.Key? key,
+    _i6.Key? key,
     required String title,
   }) =>
       _i1.HomePage(
@@ -108,7 +111,7 @@ class _ExampleAppFactory$Factory implements _i1.ExampleAppFactory {
   final _HomePageFactory$Provider _homePageFactory$Provider;
 
   @override
-  _i1.ExampleApp create({_i5.Key? key}) => _i1.ExampleApp(
+  _i1.ExampleApp create({_i6.Key? key}) => _i1.ExampleApp(
         key: key,
         homePageFactory: _homePageFactory$Provider.get(),
       );
