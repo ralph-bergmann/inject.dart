@@ -1,0 +1,12 @@
+targets:
+  $default:
+    builders:
+      inject_generator|inject_builder:
+        options:
+          # Print the dependency graph to the build log after every build.
+          # Singletons are marked (@singleton), async nodes (@async), and
+          # shared nodes (≥2 dependents) are marked accordingly.
+          #
+          # This option is opt-in and disabled by default in your own projects.
+          # To disable it: set debug_graph to false, or remove the option.
+          debug_graph: true

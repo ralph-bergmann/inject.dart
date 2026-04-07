@@ -1,79 +1,96 @@
 # Installation
 
-Setting up inject.dart in your project involves adding the necessary
-dependencies and configuring the build runner. This chapter will guide you
-through the process step by step.
+Setting up inject.dart involves adding three packages and running the code
+generator. This chapter walks through each step.
+
+## Packages
+
+| Package             | Role                                                          | Dependency type |
+|---------------------|---------------------------------------------------------------|-----------------|
+| `inject_annotation` | Annotations your code uses (`@inject`, `@provides`, …)       | regular         |
+| `inject_generator`  | Code generator — reads annotations, emits `.inject.dart`     | **dev**         |
+| `build_runner`      | Dart's standard build system; runs the generator             | **dev**         |
+| `inject_flutter`    | `ViewModelFactory<T>` and `ViewModelBuilder<T>` for Flutter  | regular         |
+
+`inject_annotation` is the only package that ships with your app.
+`inject_generator` and `build_runner` are dev dependencies — they are not
+included in the production build.
+
+`inject_flutter` is optional; add it only in Flutter projects that use the
+`ViewModelFactory<T>` pattern.
 
 ## Adding Dependencies
 
-To use inject.dart in your Dart or Flutter project, you need to add two
-dependencies:
+### Flutter projects
 
-1. `inject_annotation` - Contains the annotations you'll use in your code
-2. `inject_generator` - Handles the code generation based on your
-   annotations
+```bash
+flutter pub add inject_annotation inject_flutter
+flutter pub add --dev inject_generator build_runner
+```
 
-You'll also need the `build_runner` package, which is the standard Dart
-tool for generating code.
+Or in a single command:
 
-### For Dart Projects
+```bash
+flutter pub add inject_annotation inject_flutter dev:inject_generator dev:build_runner
+```
+
+### Dart-only projects (no Flutter integration)
 
 ```bash
 dart pub add inject_annotation dev:inject_generator dev:build_runner
 ```
 
-### For Flutter Projects
-
-```bash
-flutter pub add inject_annotation dev:inject_generator dev:build_runner
-```
-
-Note that `inject_generator` and `build_runner` are added as dev
-dependencies since they're only needed during development and not at
-runtime.
-
 ## Running the Code Generator
 
-After adding the dependencies and writing code with the appropriate
-annotations (which we'll cover in subsequent chapters), you need to run the
-build_runner to generate the necessary code:
+After annotating your classes, generate the wiring code:
 
 ```bash
 dart run build_runner build
 ```
 
-## Using the Watch Command
+This processes every file with inject.dart annotations. It writes a
+`.inject.dart` library next to each `@Component`, and a `.factory.dart` part
+next to each file that declares an `@assistedInject` (or `@assistedFactory`)
+constructor.
 
-The build_runner tool offers a `watch` command that automatically
-regenerates code when it detects changes:
+If output files from a previous run conflict, add `--delete-conflicting-outputs`:
+
+```bash
+dart run build_runner build --delete-conflicting-outputs
+```
+
+## Watch Mode
+
+`build_runner` can watch for file changes and regenerate automatically:
 
 ```bash
 dart run build_runner watch
 ```
 
-### A Note on Watch Mode
+Watch mode is convenient during development, but keep in mind:
 
-While the watch command can be convenient for smaller projects, there are
-some considerations to keep in mind:
+- It holds a background process that can use significant CPU/memory in large
+  projects.
+- Many developers prefer explicit rebuilds — run `build_runner build` once when
+  a batch of changes is complete.
+- IDEs with Flutter/Dart tooling often provide a UI button that runs the build
+  command for you.
 
-- **Resource Usage**: The watch command keeps a process running in the
-  background, which consumes system resources. In larger projects, this can
-  potentially impact development machine performance.
+## Verifying the Setup
 
-- **Change Detection**: In large projects with many files, the
-  file-watching mechanism may cause unnecessary rebuilds or occasionally
-  miss changes, requiring manual intervention.
+After the first successful build you will see files like:
 
-- **IDE Integration**: Many IDEs now have built-in support for running
-  build_runner commands, which can provide a more controlled alternative to
-  continuous watching.
+```
+lib/main.inject.dart
+lib/src/features/home/home_page.factory.dart
+lib/src/features/app/my_app.factory.dart
+```
 
-- **Build Efficiency**: It often makes more sense to rebuild the code
-  manually when all changes are done instead of regenerating it for each
-  tiny change. This approach can save considerable time and resources,
-  especially when making multiple related changes to your dependency
-  structure.
+These are **generated** — never edit them by hand. They are typically
+git-ignored at the package level (add `*.inject.dart` and `*.factory.dart` to
+`.gitignore`), with the documented exception of the pub.dev example where they
+are committed so the snapshot is self-contained.
 
-Many developers prefer to explicitly run the build command when needed,
-especially in larger projects. This gives you more control over when code
-generation happens and can lead to a smoother development experience.
+If you see an error such as `Bad state: component class must declare at least
+one @inject-annotated provider`, see the Quickstart chapter's Troubleshooting
+section.

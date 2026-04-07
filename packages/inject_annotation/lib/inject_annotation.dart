@@ -2,14 +2,26 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-/// A DI framework for Dart
+/// Annotations for the inject.dart dependency injection framework.
+///
+/// This package contains only the annotations and runtime contracts used to
+/// declare the dependency graph. Add `inject_generator` as a `dev_dependency`
+/// to generate the wiring from these annotations.
 library;
 
 export 'src/api/annotations.dart'
     show
+        Assisted,
+        AssistedFactory,
+        AssistedInject,
+        Asynchronous,
         Component,
+        Inject,
+        Module,
         Provides,
+        ProvisionListenerAnnotation,
         Qualifier,
+        Singleton,
         assisted,
         assistedFactory,
         assistedInject,
@@ -18,5 +30,7 @@ export 'src/api/annotations.dart'
         inject,
         module,
         provides,
+        provisionListener,
         singleton;
 export 'src/api/provider.dart';
+export 'src/api/provision_listener.dart';

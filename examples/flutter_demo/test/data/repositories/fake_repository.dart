@@ -1,13 +1,13 @@
 import 'package:flutter_demo/src/data/repositories/counter_repository.dart';
+import 'package:flutter_demo/src/domain/models/counter.dart';
 
+/// In-memory replacement for [CounterRepository] used in tests.
 class FakeCounterRepository implements CounterRepository {
   int _count = 0;
 
   @override
-  Future<int> get count => Future.value(_count);
+  Future<Counter> get counter => Future.value(Counter(value: _count));
 
   @override
-  Future<void> increaseCount() async {
-    _count += 1;
-  }
+  Future<void> increment() async => _count++;
 }

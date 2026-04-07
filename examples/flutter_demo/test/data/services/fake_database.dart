@@ -1,15 +1,14 @@
 import 'package:flutter_demo/src/data/services/database.dart';
 
-class FakeDatabase implements Database {
-  int _count = 0;
+/// In-memory replacement for [Database] used in tests.
+class FakeDatabase extends Database {
+  FakeDatabase() : super(path: 'fake', name: 'test_db');
+
+  int _fakeCount = 0;
 
   @override
-  Future<void> updateCount(int count) async {
-    _count = count;
-  }
+  Future<void> updateCount(int count) async => _fakeCount = count;
 
   @override
-  Future<int> selectCount() {
-    return Future.value(_count);
-  }
+  Future<int> selectCount() => Future.value(_fakeCount);
 }

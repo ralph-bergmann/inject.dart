@@ -1,5 +1,0 @@
-name: inject_dart
-
-packages:
-  - packages/**
-  - examples/**

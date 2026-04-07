@@ -1,44 +1,73 @@
 import 'package:inject_annotation/inject_annotation.dart';
 
-/// Module to provide the database instance.
-/// Modules are used to provide instances of classes from 3rd party libraries
-/// that can't be annotated with [inject].
+/// Qualifier for the file-system path of the database.
+///
+/// Two-line form: declare a const top-level variable, then use it as an
+/// annotation. This keeps the qualifier symbol in one place and avoids
+/// repeating the literal.
+///
+/// Both [databasePath] and [databaseName] annotate bindings with the same
+/// Dart type ([String]). Type alone cannot distinguish them — the qualifier
+/// is the second axis of binding identity: (type, qualifier).
+const databasePath = Qualifier(#databasePath);
+
+/// Qualifier for the logical name of the database — a distinct [String]
+/// binding alongside [@databasePath].
+const databaseName = Qualifier(#databaseName);
+
+/// Provides [Database] and its two qualified [String] configuration values.
+///
+/// [Database] is a simulated third-party type — it cannot carry [@inject],
+/// so a [@module] is required to bind it. This is the standard pattern for
+/// wrapping library types you do not control.
 @module
-class DataBaseModule {
+class DatabaseModule {
+  /// Provides the file-system path of the database.
+  ///
+  /// [@databasePath] makes this a distinct binding from [@databaseName],
+  /// even though both have the same Dart type ([String]).
+  @provides
+  @databasePath
+  String provideDatabasePath() => '/data/counter.db';
+
+  /// Provides the logical database name.
+  ///
+  /// [@databaseName] is a second qualifier for the same [String] type.
+  /// Together, the two bindings prove that type alone cannot identify a
+  /// binding — you need (type, qualifier).
+  @provides
+  @databaseName
+  String provideDatabaseName() => 'counter_db';
+
+  /// Opens the [Database] using both qualified config strings.
+  ///
+  /// The generator routes [@databasePath String] and [@databaseName String]
+  /// to the correct parameters, proving that two same-type bindings
+  /// differentiated by qualifier reach the right arguments.
+  ///
+  /// [@singleton] ensures one shared [Database] instance for the lifetime
+  /// of the component.
   @provides
   @singleton
-  Database provideDatabase() => Database();
+  Database provideDatabase(
+    @databasePath String path,
+    @databaseName String name,
+  ) => Database(path: path, name: name);
 }
 
-/// Simulates a 3rd party database library for demonstration purposes.
+/// Simulates a third-party database library (e.g., Drift, Hive, Isar).
 ///
-/// This class mimics what you might find in an actual database package
-/// like Drift, Isar, or Hive, but with simplified functionality to focus
-/// on dependency injection concepts. In a real app, you would replace this
-/// with an actual database implementation.
-///
-/// Usage example:
-/// ```dart
-/// final db = Database();
-/// await db.updateCount(5);
-/// final value = await db.selectCount(); // Returns 5
-/// ```
+/// In a real app you would replace this with the actual package type. Because
+/// it comes from a third party, it cannot be annotated with [@inject], which
+/// is exactly why [DatabaseModule] is needed.
 class Database {
-  /// In-memory storage for the counter value.
-  /// In a real database, this would be persisted to disk.
+  Database({required this.path, required this.name});
+
+  final String path;
+  final String name;
   int _count = 0;
 
-  /// Simulates updating a record in the database.
-  ///
-  /// In a real database, this would write to persistent storage.
-  Future<void> updateCount(int count) async {
-    _count = count;
-  }
+  Future<void> updateCount(int count) async => _count = count;
 
-  /// Simulates reading a record from the database.
-  ///
-  /// In a real database, this would fetch data from persistent storage.
-  Future<int> selectCount() {
-    return Future.value(_count);
-  }
+  Future<int> selectCount() => Future.value(_count);
 }

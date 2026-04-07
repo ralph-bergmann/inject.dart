@@ -1,5 +1,6 @@
 import 'package:flutter_demo/src/data/repositories/counter_repository.dart';
-import 'package:flutter_demo/src/features/home/my_home_page_view_model.dart';
+import 'package:flutter_demo/src/domain/models/counter.dart';
+import 'package:flutter_demo/src/features/home/counter_view_model.dart';
 import 'package:inject_annotation/inject_annotation.dart';
 import 'package:test/test.dart';
 
@@ -7,34 +8,53 @@ import 'data/repositories/fake_repository.dart';
 import 'view_model_test.inject.dart' as g;
 
 void main() {
-  group('MyHomePageViewModel Test', () {
-    late final MyHomePageViewModel viewModel;
+  group('CounterViewModel', () {
+    late CounterViewModel viewModel;
 
-    setUp(() {
-      final component = ViewModelTestComponent.create();
-      viewModel = component.homeViewModel;
+    setUp(() async {
+      final component = TestViewModelComponent.create();
+      viewModel = component.counterViewModel;
+      // Resolve the Future<int> initial count (as CounterViewModel.init does).
+      await viewModel.init();
     });
 
-    test('increaseCount updates state from repository', () async {
-      expect(viewModel.count, 0);
+    test('initial counter value is zero', () {
+      expect(viewModel.counter, const Counter(value: 0));
+    });
 
-      await viewModel.increaseCount();
-      expect(viewModel.count, 1);
+    test('increment updates counter via use case', () async {
+      await viewModel.increment();
+      expect(viewModel.counter.value, 1);
+    });
+
+    test('multiple increments accumulate', () async {
+      await viewModel.increment();
+      await viewModel.increment();
+      expect(viewModel.counter.value, 2);
     });
   });
 }
 
-@Component([TestModule])
-abstract class ViewModelTestComponent {
-  static const create = g.ViewModelTestComponent$Component.create;
+/// Test component for [CounterViewModel].
+///
+/// [TestViewModelModule] provides a fake [CounterRepository] and a fixed
+/// initial count. [IncrementCounterUseCase] is wired automatically by
+/// the generator since it is [@inject] and its [CounterRepository] dep is
+/// satisfied by the module.
+@Component([TestViewModelModule])
+abstract class TestViewModelComponent {
+  static const create = g.TestViewModelComponent$Component.create;
 
   @inject
-  MyHomePageViewModel get homeViewModel;
+  CounterViewModel get counterViewModel;
 }
 
 @module
-class TestModule {
+class TestViewModelModule {
   @provides
   @singleton
   CounterRepository provideCounterRepository() => FakeCounterRepository();
+
+  @provides
+  Future<int> provideInitialCount() => Future.value(0);
 }

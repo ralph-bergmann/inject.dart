@@ -1,3 +1,7 @@
+## 1.1.0
+
+- Full rewrite of the generator: new Analysis → Validation → Codegen pipeline.
+
 ## 1.0.2
 
 * Added support for ViewModel initialization via an optional `init` callback in `ViewModelFactory`

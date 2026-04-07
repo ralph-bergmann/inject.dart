@@ -15,6 +15,7 @@ include: package:lints/recommended.yaml
 
 formatter:
   page_width: 120
+  trailing_commas: preserve
 
 
 # Uncomment the following section to specify additional rules.
@@ -23,41 +24,103 @@ linter:
   rules:
     - always_declare_return_types # Declare method return types.
     - always_put_control_body_on_new_line # Separate the control structure expression from its statement.
+    - always_put_required_named_parameters_first # Put required named parameters first.
+    - avoid_bool_literals_in_conditional_expressions # Avoid bool literals in conditional expressions.
+    - avoid_catching_errors # Don't explicitly catch Error or types that implement it.
+#    - avoid_classes_with_only_static_members # Avoid defining a class that contains only static members.
+    - avoid_double_and_int_checks # Avoid double and int checks.
+    - avoid_dynamic_calls # Avoid method calls or property accesses on a dynamic target.
+    - avoid_equals_and_hash_code_on_mutable_classes # Avoid overloading operator == and hashCode on classes not marked @immutable.
+    - avoid_field_initializers_in_const_classes # Avoid field initializers in const classes.
+    - avoid_final_parameters # Avoid final for parameter declarations.
+    - avoid_futureor_void # Avoid using 'FutureOr' as the type of a result.
+    - avoid_implementing_value_types # Don't implement classes that override ==.
+    - avoid_multiple_declarations_per_line # Don't declare multiple variables on a single line.
+    - avoid_positional_boolean_parameters # Avoid positional boolean parameters.
+    - avoid_private_typedef_functions # Avoid private typedef functions.
+    - avoid_redundant_argument_values # Avoid redundant argument values.
+    - avoid_returning_this # Avoid returning this from methods just to enable a fluent interface.
+    - avoid_setters_without_getters # Avoid setters without getters.
+    - avoid_slow_async_io # Avoid slow asynchronous dart:io methods.
+    - avoid_type_to_string # Avoid .toString() in production code since results may be minified.
     - avoid_types_on_closure_parameters # Avoid annotating types for function expression parameters.
     - avoid_unused_constructor_parameters # Avoid defining unused parameters in constructors.
+    - avoid_void_async # Avoid async functions that return void.
+    - cancel_subscriptions # Cancel instances of dart:async StreamSubscription.
     - cascade_invocations # Cascade consecutive method invocations on the same reference.
+    - cast_nullable_to_non_nullable # Don't cast a nullable value to a non nullable type.
+    - close_sinks # Close instances of dart:core Sink.
     - combinators_ordering # Sort combinator names alphabetically.
     - comment_references # Only reference in scope identifiers in doc comments.
+    - conditional_uri_does_not_exist # Missing conditional import.
+    - deprecated_consistency # Missing deprecated annotation.
+    - deprecated_member_use_from_same_package # Avoid using deprecated elements from within the package in which they are declared.
     - directives_ordering # Adhere to Effective Dart Guide directives sorting conventions.
-    - discarded_futures # Don’t invoke asynchronous functions in non-async blocks.
+    - discarded_futures # There should be no Future-returning calls in synchronous functions unless they are assigned or returned.
     - eol_at_end_of_file # Put a single newline at end of file.
+    - join_return_with_assignment # Join return statement with assignment when possible.
+    - leading_newlines_in_multiline_strings # Start multiline strings with a newline.
+    - library_names # Name libraries using lowercase_with_underscores.
+    - literal_only_boolean_expressions # Boolean expression composed only with literals.
     - matching_super_parameters # Use matching super parameter names.
-    - omit_local_variable_types # Omit type annotations for local variables.
+    - missing_code_block_language_in_doc_comment # A code block is missing a specified language.
+    - missing_whitespace_between_adjacent_strings # Missing whitespace between adjacent strings.
+    - no_adjacent_strings_in_list # Don't use adjacent strings in list.
+    - no_default_cases # No default cases.
+    - no_literal_bool_comparisons # Don't compare boolean expressions to boolean literals.
+    - no_runtimetype_tostring # Avoid calling toString() on runtimeType.
+    - noop_primitive_operations # Noop primitive operations.
+    - omit_obvious_local_variable_types # Omit obvious type annotations for local variables.
+    - omit_obvious_property_types # Omit obvious type annotations for top-level and static variables.
+    - parameter_assignments # Don't reassign references to parameters of functions or methods.
+    - prefer_asserts_in_initializer_lists # Prefer putting asserts in initializer lists.
     - prefer_const_constructors # Prefer const with constant constructors.
     - prefer_const_constructors_in_immutables # Prefer declaring const constructors on @immutable classes.
     - prefer_const_declarations # Prefer const over final for declarations.
+    - prefer_const_literals_to_create_immutables # Prefer const literals as parameters of constructors on @immutable classes.
+    - prefer_constructors_over_static_methods # Prefer defining constructors instead of static methods to create instances.
     - prefer_expression_function_bodies # Use => for short members whose body is a single return statement.
     - prefer_final_in_for_each # Prefer final in for-each loop variable if reference is not reassigned.
     - prefer_final_locals # Prefer final for variable declarations if they are not reassigned.
     - prefer_foreach # Use forEach to only apply a function to all the elements.
+    - prefer_if_elements_to_conditional_expressions # Prefer if elements to conditional expressions where possible.
     - prefer_int_literals # Prefer int literals over double literals.
+    - prefer_mixin # Prefer using mixins.
     - prefer_null_aware_method_calls # Prefer null aware method calls.
     - prefer_relative_imports # Prefer relative imports for files in lib/.
     - prefer_single_quotes # Only use double quotes for strings containing single quotes.
     - require_trailing_commas # Use trailing commas for all function calls and declarations.
+    - simple_directive_paths # Use simple directive paths.
+    - simplify_variable_pattern # Avoid unnecessary member names in variable patterns.
+    - sized_box_shrink_expand # Use SizedBox shrink and expand named constructors.
+    - sort_constructors_first # Sort constructor declarations before other members.
+    - sort_pub_dependencies # Sort pub dependencies alphabetically.
+    - sort_unnamed_constructors_first # Sort unnamed constructor declarations first.
+    - specify_nonobvious_local_variable_types # Specify non-obvious type annotations for local variables.
+    - specify_nonobvious_property_types # Specify non-obvious type annotations for top-level and static variables.
+    - switch_on_type # Avoid switch statements on a 'Type'.
     - test_types_in_equals # Test type arguments in operator ==(Object other).
     - throw_in_finally # Avoid throw in finally block.
+    - tighten_type_of_initializing_formals # Tighten type of initializing formal.
     - unawaited_futures # Future results in async function bodies must be awaited or marked unawaited using dart:async.
     - unnecessary_await_in_return # Unnecessary await keyword in return.
-    - unnecessary_breaks # Don’t use explicit breaks when a break is implied.
-    - unnecessary_lambdas # Don’t create a lambda when a tear-off will do.
+    - unnecessary_breaks # Don't use explicit breaks when a break is implied.
+    #    - unnecessary_const_in_enum_constructor # Don't use an explicit const in a generative enum constructor.
+    - unnecessary_ignore # Don't ignore a diagnostic code that is not produced.
+    - unnecessary_lambdas # Don't create a lambda when a tear-off will do.
+    - unnecessary_null_checks # Unnecessary null checks.
+    - unnecessary_unawaited # Unnecessary use of 'unawaited'.
+    - unreachable_from_main # Unreachable top-level members in executable libraries.
+    - use_enums # Use enums rather than classes that behave like enums.
+    - use_is_even_rather_than_modulo # Prefer intValue.isOdd/isEven instead of checking the result of % 2.
+    - use_late_for_private_fields_and_variables # Use late for private members with a non-nullable type.
+    - use_named_constants # Use predefined named constants.
+    - use_setters_to_change_properties # Use a setter for operations that conceptually change a property.
+    - use_string_buffers # Use string buffers to compose strings.
     - use_super_parameters # Use super-initializer parameters where possible.
+    - use_test_throws_matchers # Use throwsA matcher instead of fail().
+    - use_to_and_as_if_applicable # Start the name of the method with to/_to or as/_as if applicable.
 
-
-analyzer:
-  exclude:
-    - "**/*.g.dart"
-    - "**/*.inject.dart"
 
 # For more information about the core and recommended set of lints, see
 # https://dart.dev/go/core-lints

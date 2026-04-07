@@ -1,294 +1,403 @@
-# Quickstart Guide
+# Quickstart
 
-This chapter provides a hands-on introduction to using inject.dart in a
-real Flutter project. We'll build a simple application from scratch to
-demonstrate how dependency injection works in practice.
+This chapter builds a counter app the way [`flutter_demo`][flutter-demo] does —
+a small, layered Flutter app that follows [Flutter's recommended
+architecture][flutter-arch]. Every snippet is taken from that example; open the
+linked files alongside this chapter for the complete, running source.
 
-By the end of this chapter, you'll understand how to:
+By the end you will know how to:
 
-- Set up a Flutter project with inject.dart
-- Define injectable classes and providers
-- Create and use a component
-- Access your dependencies throughout the application
+- add inject.dart to a Flutter project
+- annotate classes and provide third-party types with a module
+- expose runtime-parameterised widgets with `@assistedInject`
+- declare a component and run the generator
+- use the wired-up component in `main()`
 
-Let's begin by creating a new Flutter project which provides a minimal
-starting point without unnecessary boilerplate
-code:
-
-```bash
-flutter create flutter_demo
-```
-
-This creates a basic Flutter project structure with just the essential
-files. Next, let's navigate into the project directory:
+## Create the project
 
 ```bash
-cd flutter_demo
+flutter create counter_app
+cd counter_app
+flutter pub add inject_annotation inject_flutter dev:inject_generator dev:build_runner
 ```
 
-Now we're ready to start implementing dependency injection with
-inject.dart!
+(Chapter 2 covers the packages and their roles in detail.)
 
-## Adding Dependencies
+## The concepts
 
-First, we need to add inject.dart and related packages to our project:
+inject.dart wires dependencies through a handful of annotations:
 
-```bash
-flutter pub add inject_annotation dev:inject_generator dev:build_runner
+| Concept     | Annotation            | What it means                                            |
+|-------------|-----------------------|----------------------------------------------------------|
+| Injectable  | `@inject`             | The generator constructs this class via its constructor  |
+| Module      | `@module`/`@provides` | Provides types you don't own (third-party, interfaces)   |
+| Singleton   | `@singleton`          | One shared instance for the component's lifetime         |
+| Assisted    | `@assistedInject`     | Mixes graph-injected and runtime parameters              |
+| Component   | `@Component`          | Root of the graph; exposes entry points                  |
+
+Everything starts from a `@Component`. The generator traces the graph from its
+entry points and resolves every dependency transitively — at build time.
+
+## The files
+
+The app is split by layer, mirroring `flutter_demo`:
+
+```
+lib/
+├── main.dart                                           @Component root (MainComponent)
+└── src/
+    ├── app_module.dart                                 AppModule (initial count, …)
+    ├── domain/
+    │   ├── models/counter.dart                         Counter (immutable domain model)
+    │   └── use_cases/increment_counter_use_case.dart   IncrementCounterUseCase
+    ├── data/
+    │   ├── services/database.dart                      Database + DatabaseModule
+    │   └── repositories/counter_repository.dart        CounterRepository
+    └── features/
+        ├── app/my_app.dart                             MyApp (@assistedInject)
+        └── home/
+            ├── home_page.dart                          HomePage (@assistedInject)
+            └── counter_view_model.dart                 CounterViewModel
 ```
 
-This command adds three important packages:
+## Step 1 — Provide a third-party type with a module
 
-- `inject_annotation`: The core package that provides annotations like
-  `@inject`, `@provides`, and `@singleton`
-- `inject_generator`: The code generation package that processes the
-  annotations and generates the dependency injection code
-- `build_runner`: Dart's standard build system that runs the code
-  generators
-
-The `dev:` prefix indicates that inject_generator and build_runner are
-development dependencies, which means they're only used during development
-and won't be included in your production app.
-
-After running this command, you should see the dependencies added to your
-`pubspec.yaml` file. The next step is to create our first injectable
-classes!
-
-## Creating the Component
-
-After adding dependencies, our first step is to create the root component
-that will serve as the entry point for our dependency graph.
-
-In dependency injection, a component acts as a container that knows how to
-create and provide the objects in your application. Let's create our
-`MainComponent` in the main.dart file:
+`Database` stands in for a third-party library (Drift, Hive, Isar, …). It can't
+carry `@inject`, so a `@module` binds it. The module also shows the two-line
+`@Qualifier` form to distinguish two `String` config values of the same Dart
+type ([more in Core Concepts](./chapter_4_core_concepts.md#named-bindings----qualifier)):
 
 ```dart
+// lib/src/data/services/database.dart
+import 'package:inject_annotation/inject_annotation.dart';
+
+const databasePath = Qualifier(#databasePath);
+const databaseName = Qualifier(#databaseName);
+
+@module
+class DatabaseModule {
+  @provides
+  @databasePath
+  String provideDatabasePath() => '/data/counter.db';
+
+  @provides
+  @databaseName
+  String provideDatabaseName() => 'counter_db';
+
+  @provides
+  @singleton
+  Database provideDatabase(
+    @databasePath String path,
+    @databaseName String name,
+  ) => Database(path: path, name: name);
+}
+
+class Database {
+  Database({required this.path, required this.name});
+
+  final String path;
+  final String name;
+  int _count = 0;
+
+  Future<void> updateCount(int count) async => _count = count;
+  Future<int> selectCount() => Future.value(_count);
+}
+```
+
+`@provides` tells the generator how to build a `Database`; `@singleton` shares
+one instance across the graph. Full source: [`database.dart`][db].
+
+## Step 2 — Annotate your own classes with `@inject`
+
+`Counter` is a plain immutable domain model — no annotation needed:
+
+```dart
+// lib/src/domain/models/counter.dart
+class Counter {
+  const Counter({this.value = 0});
+
+  final int value;
+
+  Counter copyWith({int? value}) => Counter(value: value ?? this.value);
+}
+```
+
+The repository wraps the service and returns domain models; the use case
+encapsulates one operation. Both are stateless, so both are `@singleton`:
+
+```dart
+// lib/src/data/repositories/counter_repository.dart
+@inject
+@singleton
+class CounterRepository {
+  const CounterRepository({required this._database});
+
+  final Database _database;
+
+  Future<Counter> get counter async =>
+      Counter(value: await _database.selectCount());
+
+  Future<void> increment() async {
+    final current = await _database.selectCount();
+    await _database.updateCount(current + 1);
+  }
+}
+```
+
+```dart
+// lib/src/domain/use_cases/increment_counter_use_case.dart
+@inject
+@singleton
+class IncrementCounterUseCase {
+  const IncrementCounterUseCase({required this._repository});
+
+  final CounterRepository _repository;
+
+  Future<Counter> execute() async {
+    await _repository.increment();
+    return _repository.counter;
+  }
+}
+```
+
+`@inject` tells the generator to construct the class via its constructor,
+resolving each parameter from the graph. Full source:
+[`counter_repository.dart`][repo], [`increment_counter_use_case.dart`][usecase].
+
+## Step 3 — The ViewModel
+
+The ViewModel holds the mutable UI state and extends `ChangeNotifier`. It is
+**not** a singleton — each screen gets its own:
+
+```dart
+// lib/src/features/home/counter_view_model.dart
+@inject
+class CounterViewModel extends ChangeNotifier {
+  CounterViewModel({
+    required this._incrementUseCase,
+    required this._initialCount,
+  });
+
+  final IncrementCounterUseCase _incrementUseCase;
+  final Future<int> _initialCount;
+
+  Counter _counter = const Counter();
+  Counter get counter => _counter;
+
+  Future<void> init() async {
+    _counter = Counter(value: await _initialCount);
+    notifyListeners();
+  }
+
+  Future<void> increment() async {
+    _counter = await _incrementUseCase.execute();
+    notifyListeners();
+  }
+}
+```
+
+`_initialCount` is a raw `Future<int>` binding (no `@asynchronous`) — the
+ViewModel awaits it itself in `init()`. This keeps the ViewModel's dependency
+chain synchronous, which `ViewModelFactory` requires ([the two async patterns
+are explained in Core Concepts](./chapter_4_core_concepts.md#asynchronous-providers----asynchronous)).
+Full source: [`counter_view_model.dart`][vm].
+
+## Step 4 — Widgets with `@assistedInject`
+
+A widget needs DI-managed dependencies (a `ViewModelFactory`) *and* runtime
+parameters (`key`, `title`). `@assistedInject` mixes the two. **Each file that
+declares an `@assistedInject` constructor needs its own
+`part '<file>.factory.dart';` directive** so the factory builder can write the
+generated factory next to it:
+
+```dart
+// lib/src/features/home/home_page.dart
+import 'package:flutter/material.dart';
+import 'package:inject_annotation/inject_annotation.dart';
+import 'package:inject_flutter/inject_flutter.dart';
+
+import 'counter_view_model.dart';
+
+part 'home_page.factory.dart';
+
+class HomePage extends StatelessWidget {
+  @assistedInject
+  const HomePage({
+    @assisted super.key,
+    @assisted required this.title,
+    required this.viewModelFactory,
+  });
+
+  final String title;
+  final ViewModelFactory<CounterViewModel> viewModelFactory;
+
+  @override
+  Widget build(BuildContext context) {
+    return viewModelFactory(
+      init: (vm) => vm.init(),
+      loading: const Center(child: CircularProgressIndicator()),
+      builder: (context, vm, _) => Scaffold(
+        appBar: AppBar(title: Text(title)),
+        body: Center(child: Text('${vm.counter.value}')),
+        floatingActionButton: FloatingActionButton(
+          onPressed: vm.increment,
+          child: const Icon(Icons.add),
+        ),
+      ),
+    );
+  }
+}
+```
+
+- `@assisted` parameters (`key`, `title`) come from the caller at runtime.
+- Parameters without `@assisted` (`viewModelFactory`) come from the graph.
+- The generator synthesises a `HomePageFactory` into `home_page.factory.dart` —
+  you never write it.
+- `ViewModelFactory<CounterViewModel>` (from `inject_flutter`) creates the VM in
+  `initState`, runs the `init:` callback you pass once (awaiting it when async
+  and showing `loading:` meanwhile), rebuilds the subtree on `notifyListeners()`,
+  and disposes the VM in `dispose`. Passing `init: (vm) => vm.init()` is what
+  runs `init()` — the factory does not call it automatically.
+
+The root `MyApp` widget follows the same pattern — its own file, its own `part`
+directive, injecting the synthesised `HomePageFactory`:
+
+```dart
+// lib/src/features/app/my_app.dart
 import 'package:flutter/material.dart';
 import 'package:inject_annotation/inject_annotation.dart';
 
-void main() {
-  // We'll update this later to use our component
-  // For now, keep the default main method
-  runApp(const MyApp());
-}
+import '../home/home_page.dart';
 
-@component
-abstract class MainComponent {
-  @inject
-  MyAppFactory get myAppFactory;
-}
-```
-
-This `MainComponent` is the root of our dependency graph. The `@component`
-annotation tells inject.dart that this class will be our dependency
-container. Inside the component, we define methods that return the types we
-want to inject, like `MyAppFactory`.
-
-## Creating a Factory for MyApp
-
-Next, we need to create a factory for our main application widget. Add the
-`MyAppFactory` class above the `MyApp` widget and add the `@assistedInject`
-and `@assisted` annotations to the `MyApp` class:
-
-```dart
-@assistedFactory
-abstract class MyAppFactory {
-  MyApp create({Key? key});
-}
+part 'my_app.factory.dart';
 
 class MyApp extends StatelessWidget {
   @assistedInject
-  const MyApp({@assisted super.key});
+  const MyApp({@assisted super.key, required this.homePageFactory});
 
-// the rest remains unchanged for now
+  final HomePageFactory homePageFactory;
+
+  @override
+  Widget build(BuildContext context) => MaterialApp(
+        home: homePageFactory.create(title: 'Flutter Counter Demo'),
+      );
 }
 ```
 
-These annotations tell inject.dart how to create instances of `MyApp`:
+Full source: [`home_page.dart`][home], [`my_app.dart`][myapp].
 
-- `@assistedFactory` creates a factory interface that will instantiate
-  `MyApp` with its dependencies
-- `@assistedInject` marks the constructor as the injection point
-- `@assisted` indicates parameters that are provided at runtime rather than
-  from the dependency graph
+## Step 5 — A module for the initial count
 
-Here, we're using `@assistedInject` to create a factory for our `MyApp`
-widget. This special annotation generates a factory that can create `MyApp`
-instances with both injected dependencies (which we'll add later) and
-runtime parameters (like `key`).
+`CounterViewModel` needs a `Future<int>` for its initial value. A small
+`AppModule` provides it:
 
-The `MyAppFactory` will allow us to create `MyApp` instances with all
-necessary dependencies automatically injected, while still allowing us to
-pass in runtime values like the optional `key` parameter.
+```dart
+// lib/src/app_module.dart
+@module
+class AppModule {
+  @provides
+  @singleton
+  Future<int> provideInitialCount() => Future.value(0);
+}
+```
 
-## Generating the Code
+> In `flutter_demo`, `AppModule` also wires app metadata (an `@asynchronous`
+> `AppInfo`), a `@welcome` message, and a `@provisionListener` — see
+> [`app_module.dart`][appmod] and [Core Concepts](./chapter_4_core_concepts.md).
 
-Now that we've set up our component and factory, it's time to generate the
-actual dependency injection code:
+## Step 6 — Declare the component
+
+The component is the graph root. It lists its modules and exposes entry points.
+`main.dart` holds **only** the `@Component` — it has no `@assistedInject`
+constructor, so it takes **no** `part` directive; it imports the generated
+component library instead:
+
+```dart
+// lib/main.dart
+import 'main.inject.dart' as g;
+
+@Component([AppModule, DatabaseModule])
+abstract class MainComponent {
+  static const create = g.MainComponent$Component.create;
+
+  @inject
+  MyAppFactory get myAppFactory;
+  // flutter_demo also exposes welcomeMessage, counterRepositoryProvider,
+  // and creationLogListener — see main.dart.
+}
+```
+
+- `import 'main.inject.dart' as g;` — the generated component class lives here;
+  the `as g` prefix keeps generated names out of your namespace.
+- Module order matters: a later module overrides an earlier one for the same
+  `(type, qualifier)` key.
+
+## Step 7 — Run the generator
 
 ```bash
 dart run build_runner build
 ```
 
-This command processes our annotations and generates the necessary
-implementation code. If successful, you'll see output indicating that files
-were generated, including `main.inject.dart`.
+The generator writes, next to each source file:
 
-Once the generation is complete, we need to import the generated code and
-add a convenience factory method to our component:
+- `lib/main.inject.dart` — the component implementation (next to `main.dart`).
+- `lib/src/features/home/home_page.factory.dart` — `HomePageFactory`.
+- `lib/src/features/app/my_app.factory.dart` — `MyAppFactory`.
 
-```dart
-import 'package:flutter/material.dart';
-import 'package:inject_annotation/inject_annotation.dart';
+A `.factory.dart` is emitted **only** for files that declare `@assistedInject`
+(or `@assistedFactory`). `main.dart` has neither, so there is no
+`main.factory.dart`.
 
-// Import the generated code with a prefix
-import 'main.inject.dart' as g;
-
-void main() {
-  // We'll update this later to use our component
-  // For now, keep the default main method
-  runApp(const MyApp());
-}
-
-@component
-abstract class MainComponent {
-  // Add a static factory method that references the generated code
-  static const create = g.MainComponent$Component.create;
-
-  @inject
-  MyAppFactory get myAppFactory;
-}
-```
-
-The `g.MainComponent$Component.create` reference points to the actual
-component implementation generated by inject.dart. By adding this static
-factory method, we make it easy to instantiate our component elsewhere in
-the code without needing to directly reference the generated file.
-
-This pattern gives us a clean API while keeping the implementation details
-hidden in the generated code. The `g` prefix helps distinguish between our
-code and the generated code.
-
-## Troubleshooting the Code Generation
-
-### Bad state
-
-When running the code generator, you might encounter this error:
-
-```
-Bad state: package:flutter_demo/main.dart:
-   component class must declare at least one @inject-annotated provider
-```
-
-This happens because a component must provide at least one injectable type.
-To fix this, make sure you've added the `@inject` annotation to at least
-one getter in your component:
-
-```dart
-@component
-abstract class MainComponent {
-  static const create = g.MainComponent$Component.create;
-
-  @inject
-  MyAppFactory get myAppFactory;
-}
-```
-
-The `@inject` annotation tells inject.dart that this getter should be
-treated as a provider method. Every component needs at least one provider
-to be valid, as a component without providers wouldn't serve any purpose in
-a dependency injection system.
-
-### Could not find a way to provide
-
-Another possible error you might encounter is:
-
-```
-Could not find a way to provide "MyAppFactory" for component "MainComponent".
-```
-
-This error occurs when inject.dart can't figure out how to create an
-instance of the type your component is trying to provide. In this specific
-case, it happens because the `@assistedInject` annotation is missing from
-the `MyApp` constructor.
-
-`MainComponent` is trying to provide `MyAppFactory`, but inject.dart
-doesn't know how to create it because there's no constructor marked with
-`@assistedInject` that matches the factory's creation method signature.
-
-Remember that for assisted injection to work properly:
-
-1. The abstract factory must be annotated with `@assistedFactory`
-2. The class constructor must be annotated with `@assistedInject`
-3. Runtime parameters must be annotated with `@assisted`
-
-All three parts need to be present for the code generator to successfully
-create the implementation.
-
-## Using the Component
-
-With our dependency injection setup complete and code generated, we can now
-use the component to create an instance of our app:
+## Step 8 — Use the component in `main()`
 
 ```dart
 void main() {
-  final mainComponent = MainComponent.create();
-  final app = mainComponent.myAppFactory.create();
-  runApp(app);
+  final component = MainComponent.create();
+  runApp(component.myAppFactory.create());
 }
 ```
 
-This three-line implementation achieves several important things:
+`MainComponent.create()` returns the wired component; `myAppFactory.create()`
+produces a `MyApp` with every injected dependency already in place.
 
-1. It initializes our dependency graph by creating the `MainComponent`
-2. It uses the component to get the `MyAppFactory` and create our app
-   instance
-3. It ensures all dependencies are properly injected throughout the
-   application
+## Troubleshooting
 
-This approach provides a clear entry point for our dependency injection
-system. The component acts as the "source of truth" for all dependencies,
-and by using it to create our app, we establish a clean architectural
-boundary that makes our code more maintainable and testable.
+### "component class must declare at least one @inject-annotated provider"
 
-As we add more dependencies to our application, they'll automatically be
-injected without any changes needed to this initialization code. This is
-the power of using a well-structured dependency injection system — the
-application startup remains clean while the dependency graph can grow more
-complex beneath the surface.
+A `@Component` must expose at least one entry point via an `@inject` getter
+(here, `myAppFactory`). Add one if your component has none.
 
-## Conclusion
+### "Could not find a way to provide X"
 
-In this chapter, we've covered the fundamentals of setting up inject.dart
-in a Flutter application. You've learned how to:
+The generator has no binding for a dependency. Common causes:
 
-1. Set up a new Flutter project with the necessary dependencies
-2. Create a component to serve as the root of your dependency graph
-3. Define injectable factories and classes
-4. Generate the dependency injection code
-5. Use the component to create and inject dependencies
+- the class is missing `@inject`;
+- it's a third-party type with no `@module` + `@provides`;
+- the module is not listed in `@Component([...])`;
+- a `@Qualifier` on the consumer matches no provider.
 
-## Complete Example
+### Missing `part '<file>.factory.dart';` directive
 
-You can find the complete source code for this quickstart guide in the
-[`examples/flutter_demo`](https://github.com/ralph-bergmann/inject.dart/tree/master/examples/flutter_demo)
-folder of the inject.dart repository.
-This example contains all the code we've discussed
-in this chapter, properly structured and ready to run.
+A file with an `@assistedInject` (or `@assistedFactory`) constructor needs a
+`part '<file>.factory.dart';` directive **in that same file** — for example
+`part 'home_page.factory.dart';` in `home_page.dart`. It is *not* added to the
+component file unless the component file itself declares an assisted
+constructor.
 
-Reviewing the complete example may help solidify your understanding of how
-all the pieces fit together in a working application.
+## Complete example
 
-### Coming Next: Managing Application State
+The full, running source is in [`flutter_demo`][flutter-demo]. For a single-file
+variant, see [`examples/example/lib/main.dart`][example-main]. The deeper
+architecture walkthrough is in
+[State Management and Application Architecture](./chapter_5_state_management.md).
 
-In the next chapter, we'll build on these fundamentals by exploring how to
-manage application state through dependency injection. We'll refactor our
-application to follow best practices for state management, introducing
-repositories, view models, and services that work together through injected
-dependencies.
-
-This more advanced implementation will demonstrate how dependency injection
-facilitates clean architecture by separating concerns and making
-dependencies explicit, resulting in code that's more maintainable,
-testable, and scalable.
+[flutter-arch]: https://docs.flutter.dev/app-architecture
+[flutter-demo]: https://github.com/ralph-bergmann/inject.dart/tree/master/examples/flutter_demo
+[example-main]: https://github.com/ralph-bergmann/inject.dart/blob/master/examples/example/lib/main.dart
+[db]: https://github.com/ralph-bergmann/inject.dart/blob/master/examples/flutter_demo/lib/src/data/services/database.dart
+[repo]: https://github.com/ralph-bergmann/inject.dart/blob/master/examples/flutter_demo/lib/src/data/repositories/counter_repository.dart
+[usecase]: https://github.com/ralph-bergmann/inject.dart/blob/master/examples/flutter_demo/lib/src/domain/use_cases/increment_counter_use_case.dart
+[vm]: https://github.com/ralph-bergmann/inject.dart/blob/master/examples/flutter_demo/lib/src/features/home/counter_view_model.dart
+[home]: https://github.com/ralph-bergmann/inject.dart/blob/master/examples/flutter_demo/lib/src/features/home/home_page.dart
+[myapp]: https://github.com/ralph-bergmann/inject.dart/blob/master/examples/flutter_demo/lib/src/features/app/my_app.dart
+[appmod]: https://github.com/ralph-bergmann/inject.dart/blob/master/examples/flutter_demo/lib/src/app_module.dart

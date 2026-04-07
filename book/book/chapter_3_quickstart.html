@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Quick Start - inject.dart Documentation</title>
+        <title>Quickstart - inject.dart Documentation</title>
 
 
         <!-- Custom HTML head -->
@@ -12,39 +12,49 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff">
 
-        <link rel="icon" href="favicon.svg">
-        <link rel="shortcut icon" href="favicon.png">
-        <link rel="stylesheet" href="css/variables.css">
-        <link rel="stylesheet" href="css/general.css">
-        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-0392ca55.css">
+        <link rel="stylesheet" href="css/chrome-fc474251.css">
 
         <!-- Fonts -->
-        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
-        <link rel="stylesheet" href="fonts/fonts.css">
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
 
         <!-- Highlight.js Stylesheets -->
-        <link rel="stylesheet" id="highlight-css" href="highlight.css">
-        <link rel="stylesheet" id="tomorrow-night-css" href="tomorrow-night.css">
-        <link rel="stylesheet" id="ayu-highlight-css" href="ayu-highlight.css">
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
 
         <!-- Custom theme stylesheets -->
 
 
-        <!-- Provide site root to javascript -->
+        <!-- Provide site root and default themes to javascript -->
         <script>
-            var path_to_root = "";
-            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "ayu" : "light";
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "ayu";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc.js"></script>
+        <script src="toc-aa1c9d3a.js"></script>
     </head>
     <body>
-    <div id="body-container">
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
         <script>
             try {
-                var theme = localStorage.getItem('mdbook-theme');
-                var sidebar = localStorage.getItem('mdbook-sidebar');
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
 
                 if (theme.startsWith('"') && theme.endsWith('"')) {
                     localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
@@ -58,7 +68,8 @@
 
         <!-- Set the theme before any content is loaded, prevents flash -->
         <script>
-            var theme;
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
             try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
             if (theme === null || theme === undefined) { theme = default_theme; }
             const html = document.documentElement;
@@ -67,52 +78,56 @@
             html.classList.add("js");
         </script>
 
-        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
 
         <!-- Hide / unhide sidebar before it is displayed -->
         <script>
-            var sidebar = null;
-            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
             if (document.body.clientWidth >= 1080) {
                 try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
                 sidebar = sidebar || 'visible';
             } else {
                 sidebar = 'hidden';
+                sidebar_toggle.checked = false;
             }
-            sidebar_toggle.checked = sidebar === 'visible';
-            html.classList.remove('sidebar-visible');
-            html.classList.add("sidebar-" + sidebar);
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
         </script>
 
-        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
             <!-- populated by js -->
             <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
             <noscript>
                 <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
             </noscript>
-            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
             </div>
         </nav>
 
-        <div id="page-wrapper" class="page-wrapper">
+        <div id="mdbook-page-wrapper" class="page-wrapper">
 
             <div class="page">
-                <div id="menu-bar-hover-placeholder"></div>
-                <div id="menu-bar" class="menu-bar sticky">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
                     <div class="left-buttons">
-                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
-                            <i class="fa fa-bars"></i>
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
                         </label>
-                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
-                            <i class="fa fa-paint-brush"></i>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
                         </button>
-                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
-                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
-                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
-                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
-                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
-                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
                         </ul>
                     </div>
 
@@ -120,7 +135,7 @@
 
                     <div class="right-buttons">
                         <a href="https://github.com/ralph-bergmann/inject.dart" title="Git repository" aria-label="Git repository">
-                            <i id="git-repository-button" class="fa fa-github"></i>
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
                         </a>
 
                     </div>
@@ -129,255 +144,363 @@
 
                 <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
                 <script>
-                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
-                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
-                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
                         link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
                     });
                 </script>
 
-                <div id="content" class="content">
+                <div id="mdbook-content" class="content">
                     <main>
-                        <h1 id="quickstart-guide"><a class="header" href="#quickstart-guide">Quickstart Guide</a></h1>
-<p>This chapter provides a hands-on introduction to using inject.dart in a
-real Flutter project. We'll build a simple application from scratch to
-demonstrate how dependency injection works in practice.</p>
-<p>By the end of this chapter, you'll understand how to:</p>
+                        <h1 id="quickstart"><a class="header" href="#quickstart">Quickstart</a></h1>
+<p>This chapter builds a counter app the way <a href="https://github.com/ralph-bergmann/inject.dart/tree/master/examples/flutter_demo"><code>flutter_demo</code></a> does —
+a small, layered Flutter app that follows <a href="https://docs.flutter.dev/app-architecture">Flutter’s recommended
+architecture</a>. Every snippet is taken from that example; open the
+linked files alongside this chapter for the complete, running source.</p>
+<p>By the end you will know how to:</p>
 <ul>
-<li>Set up a Flutter project with inject.dart</li>
-<li>Define injectable classes and providers</li>
-<li>Create and use a component</li>
-<li>Access your dependencies throughout the application</li>
+<li>add inject.dart to a Flutter project</li>
+<li>annotate classes and provide third-party types with a module</li>
+<li>expose runtime-parameterised widgets with <code>@assistedInject</code></li>
+<li>declare a component and run the generator</li>
+<li>use the wired-up component in <code>main()</code></li>
 </ul>
-<p>Let's begin by creating a new Flutter project which provides a minimal
-starting point without unnecessary boilerplate
-code:</p>
-<pre><code class="language-bash">flutter create flutter_demo
+<h2 id="create-the-project"><a class="header" href="#create-the-project">Create the project</a></h2>
+<pre><code class="language-bash">flutter create counter_app
+cd counter_app
+flutter pub add inject_annotation inject_flutter dev:inject_generator dev:build_runner
 </code></pre>
-<p>This creates a basic Flutter project structure with just the essential
-files. Next, let's navigate into the project directory:</p>
-<pre><code class="language-bash">cd flutter_demo
+<p>(Chapter 2 covers the packages and their roles in detail.)</p>
+<h2 id="the-concepts"><a class="header" href="#the-concepts">The concepts</a></h2>
+<p>inject.dart wires dependencies through a handful of annotations:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Concept</th><th>Annotation</th><th>What it means</th></tr>
+</thead>
+<tbody>
+<tr><td>Injectable</td><td><code>@inject</code></td><td>The generator constructs this class via its constructor</td></tr>
+<tr><td>Module</td><td><code>@module</code>/<code>@provides</code></td><td>Provides types you don’t own (third-party, interfaces)</td></tr>
+<tr><td>Singleton</td><td><code>@singleton</code></td><td>One shared instance for the component’s lifetime</td></tr>
+<tr><td>Assisted</td><td><code>@assistedInject</code></td><td>Mixes graph-injected and runtime parameters</td></tr>
+<tr><td>Component</td><td><code>@Component</code></td><td>Root of the graph; exposes entry points</td></tr>
+</tbody>
+</table>
+</div>
+<p>Everything starts from a <code>@Component</code>. The generator traces the graph from its
+entry points and resolves every dependency transitively — at build time.</p>
+<h2 id="the-files"><a class="header" href="#the-files">The files</a></h2>
+<p>The app is split by layer, mirroring <code>flutter_demo</code>:</p>
+<pre><code>lib/
+├── main.dart                                           @Component root (MainComponent)
+└── src/
+    ├── app_module.dart                                 AppModule (initial count, …)
+    ├── domain/
+    │   ├── models/counter.dart                         Counter (immutable domain model)
+    │   └── use_cases/increment_counter_use_case.dart   IncrementCounterUseCase
+    ├── data/
+    │   ├── services/database.dart                      Database + DatabaseModule
+    │   └── repositories/counter_repository.dart        CounterRepository
+    └── features/
+        ├── app/my_app.dart                             MyApp (@assistedInject)
+        └── home/
+            ├── home_page.dart                          HomePage (@assistedInject)
+            └── counter_view_model.dart                 CounterViewModel
 </code></pre>
-<p>Now we're ready to start implementing dependency injection with
-inject.dart!</p>
-<h2 id="adding-dependencies"><a class="header" href="#adding-dependencies">Adding Dependencies</a></h2>
-<p>First, we need to add inject.dart and related packages to our project:</p>
-<pre><code class="language-bash">flutter pub add inject_annotation dev:inject_generator dev:build_runner
-</code></pre>
-<p>This command adds three important packages:</p>
-<ul>
-<li><code>inject_annotation</code>: The core package that provides annotations like
-<code>@inject</code>, <code>@provides</code>, and <code>@singleton</code></li>
-<li><code>inject_generator</code>: The code generation package that processes the
-annotations and generates the dependency injection code</li>
-<li><code>build_runner</code>: Dart's standard build system that runs the code
-generators</li>
-</ul>
-<p>The <code>dev:</code> prefix indicates that inject_generator and build_runner are
-development dependencies, which means they're only used during development
-and won't be included in your production app.</p>
-<p>After running this command, you should see the dependencies added to your
-<code>pubspec.yaml</code> file. The next step is to create our first injectable
-classes!</p>
-<h2 id="creating-the-component"><a class="header" href="#creating-the-component">Creating the Component</a></h2>
-<p>After adding dependencies, our first step is to create the root component
-that will serve as the entry point for our dependency graph.</p>
-<p>In dependency injection, a component acts as a container that knows how to
-create and provide the objects in your application. Let's create our
-<code>MainComponent</code> in the main.dart file:</p>
-<pre><code class="language-dart">import 'package:flutter/material.dart';
+<h2 id="step-1--provide-a-third-party-type-with-a-module"><a class="header" href="#step-1--provide-a-third-party-type-with-a-module">Step 1 — Provide a third-party type with a module</a></h2>
+<p><code>Database</code> stands in for a third-party library (Drift, Hive, Isar, …). It can’t
+carry <code>@inject</code>, so a <code>@module</code> binds it. The module also shows the two-line
+<code>@Qualifier</code> form to distinguish two <code>String</code> config values of the same Dart
+type (<a href="./chapter_4_core_concepts.html#named-bindings----qualifier">more in Core Concepts</a>):</p>
+<pre><code class="language-dart">// lib/src/data/services/database.dart
 import 'package:inject_annotation/inject_annotation.dart';
 
-void main() {
-  // We'll update this later to use our component
-  // For now, keep the default main method
-  runApp(const MyApp());
+const databasePath = Qualifier(#databasePath);
+const databaseName = Qualifier(#databaseName);
+
+@module
+class DatabaseModule {
+  @provides
+  @databasePath
+  String provideDatabasePath() =&gt; '/data/counter.db';
+
+  @provides
+  @databaseName
+  String provideDatabaseName() =&gt; 'counter_db';
+
+  @provides
+  @singleton
+  Database provideDatabase(
+    @databasePath String path,
+    @databaseName String name,
+  ) =&gt; Database(path: path, name: name);
 }
 
-@component
-abstract class MainComponent {
-  @inject
-  MyAppFactory get myAppFactory;
+class Database {
+  Database({required this.path, required this.name});
+
+  final String path;
+  final String name;
+  int _count = 0;
+
+  Future&lt;void&gt; updateCount(int count) async =&gt; _count = count;
+  Future&lt;int&gt; selectCount() =&gt; Future.value(_count);
 }
 </code></pre>
-<p>This <code>MainComponent</code> is the root of our dependency graph. The <code>@component</code>
-annotation tells inject.dart that this class will be our dependency
-container. Inside the component, we define methods that return the types we
-want to inject, like <code>MyAppFactory</code>.</p>
-<h2 id="creating-a-factory-for-myapp"><a class="header" href="#creating-a-factory-for-myapp">Creating a Factory for MyApp</a></h2>
-<p>Next, we need to create a factory for our main application widget. Add the
-<code>MyAppFactory</code> class above the <code>MyApp</code> widget and add the <code>@assistedInject</code>
-and <code>@assisted</code> annotations to the <code>MyApp</code> class:</p>
-<pre><code class="language-dart">@assistedFactory
-abstract class MyAppFactory {
-  MyApp create({Key? key});
+<p><code>@provides</code> tells the generator how to build a <code>Database</code>; <code>@singleton</code> shares
+one instance across the graph. Full source: <a href="https://github.com/ralph-bergmann/inject.dart/blob/master/examples/flutter_demo/lib/src/data/services/database.dart"><code>database.dart</code></a>.</p>
+<h2 id="step-2--annotate-your-own-classes-with-inject"><a class="header" href="#step-2--annotate-your-own-classes-with-inject">Step 2 — Annotate your own classes with <code>@inject</code></a></h2>
+<p><code>Counter</code> is a plain immutable domain model — no annotation needed:</p>
+<pre><code class="language-dart">// lib/src/domain/models/counter.dart
+class Counter {
+  const Counter({this.value = 0});
+
+  final int value;
+
+  Counter copyWith({int? value}) =&gt; Counter(value: value ?? this.value);
 }
+</code></pre>
+<p>The repository wraps the service and returns domain models; the use case
+encapsulates one operation. Both are stateless, so both are <code>@singleton</code>:</p>
+<pre><code class="language-dart">// lib/src/data/repositories/counter_repository.dart
+@inject
+@singleton
+class CounterRepository {
+  const CounterRepository({required this._database});
+
+  final Database _database;
+
+  Future&lt;Counter&gt; get counter async =&gt;
+      Counter(value: await _database.selectCount());
+
+  Future&lt;void&gt; increment() async {
+    final current = await _database.selectCount();
+    await _database.updateCount(current + 1);
+  }
+}
+</code></pre>
+<pre><code class="language-dart">// lib/src/domain/use_cases/increment_counter_use_case.dart
+@inject
+@singleton
+class IncrementCounterUseCase {
+  const IncrementCounterUseCase({required this._repository});
+
+  final CounterRepository _repository;
+
+  Future&lt;Counter&gt; execute() async {
+    await _repository.increment();
+    return _repository.counter;
+  }
+}
+</code></pre>
+<p><code>@inject</code> tells the generator to construct the class via its constructor,
+resolving each parameter from the graph. Full source:
+<a href="https://github.com/ralph-bergmann/inject.dart/blob/master/examples/flutter_demo/lib/src/data/repositories/counter_repository.dart"><code>counter_repository.dart</code></a>, <a href="https://github.com/ralph-bergmann/inject.dart/blob/master/examples/flutter_demo/lib/src/domain/use_cases/increment_counter_use_case.dart"><code>increment_counter_use_case.dart</code></a>.</p>
+<h2 id="step-3--the-viewmodel"><a class="header" href="#step-3--the-viewmodel">Step 3 — The ViewModel</a></h2>
+<p>The ViewModel holds the mutable UI state and extends <code>ChangeNotifier</code>. It is
+<strong>not</strong> a singleton — each screen gets its own:</p>
+<pre><code class="language-dart">// lib/src/features/home/counter_view_model.dart
+@inject
+class CounterViewModel extends ChangeNotifier {
+  CounterViewModel({
+    required this._incrementUseCase,
+    required this._initialCount,
+  });
+
+  final IncrementCounterUseCase _incrementUseCase;
+  final Future&lt;int&gt; _initialCount;
+
+  Counter _counter = const Counter();
+  Counter get counter =&gt; _counter;
+
+  Future&lt;void&gt; init() async {
+    _counter = Counter(value: await _initialCount);
+    notifyListeners();
+  }
+
+  Future&lt;void&gt; increment() async {
+    _counter = await _incrementUseCase.execute();
+    notifyListeners();
+  }
+}
+</code></pre>
+<p><code>_initialCount</code> is a raw <code>Future&lt;int&gt;</code> binding (no <code>@asynchronous</code>) — the
+ViewModel awaits it itself in <code>init()</code>. This keeps the ViewModel’s dependency
+chain synchronous, which <code>ViewModelFactory</code> requires (<a href="./chapter_4_core_concepts.html#asynchronous-providers----asynchronous">the two async patterns
+are explained in Core Concepts</a>).
+Full source: <a href="https://github.com/ralph-bergmann/inject.dart/blob/master/examples/flutter_demo/lib/src/features/home/counter_view_model.dart"><code>counter_view_model.dart</code></a>.</p>
+<h2 id="step-4--widgets-with-assistedinject"><a class="header" href="#step-4--widgets-with-assistedinject">Step 4 — Widgets with <code>@assistedInject</code></a></h2>
+<p>A widget needs DI-managed dependencies (a <code>ViewModelFactory</code>) <em>and</em> runtime
+parameters (<code>key</code>, <code>title</code>). <code>@assistedInject</code> mixes the two. <strong>Each file that
+declares an <code>@assistedInject</code> constructor needs its own
+<code>part '&lt;file&gt;.factory.dart';</code> directive</strong> so the factory builder can write the
+generated factory next to it:</p>
+<pre><code class="language-dart">// lib/src/features/home/home_page.dart
+import 'package:flutter/material.dart';
+import 'package:inject_annotation/inject_annotation.dart';
+import 'package:inject_flutter/inject_flutter.dart';
+
+import 'counter_view_model.dart';
+
+part 'home_page.factory.dart';
+
+class HomePage extends StatelessWidget {
+  @assistedInject
+  const HomePage({
+    @assisted super.key,
+    @assisted required this.title,
+    required this.viewModelFactory,
+  });
+
+  final String title;
+  final ViewModelFactory&lt;CounterViewModel&gt; viewModelFactory;
+
+  @override
+  Widget build(BuildContext context) {
+    return viewModelFactory(
+      init: (vm) =&gt; vm.init(),
+      loading: const Center(child: CircularProgressIndicator()),
+      builder: (context, vm, _) =&gt; Scaffold(
+        appBar: AppBar(title: Text(title)),
+        body: Center(child: Text('${vm.counter.value}')),
+        floatingActionButton: FloatingActionButton(
+          onPressed: vm.increment,
+          child: const Icon(Icons.add),
+        ),
+      ),
+    );
+  }
+}
+</code></pre>
+<ul>
+<li><code>@assisted</code> parameters (<code>key</code>, <code>title</code>) come from the caller at runtime.</li>
+<li>Parameters without <code>@assisted</code> (<code>viewModelFactory</code>) come from the graph.</li>
+<li>The generator synthesises a <code>HomePageFactory</code> into <code>home_page.factory.dart</code> —
+you never write it.</li>
+<li><code>ViewModelFactory&lt;CounterViewModel&gt;</code> (from <code>inject_flutter</code>) creates the VM in
+<code>initState</code>, runs the <code>init:</code> callback you pass once (awaiting it when async
+and showing <code>loading:</code> meanwhile), rebuilds the subtree on <code>notifyListeners()</code>,
+and disposes the VM in <code>dispose</code>. Passing <code>init: (vm) =&gt; vm.init()</code> is what
+runs <code>init()</code> — the factory does not call it automatically.</li>
+</ul>
+<p>The root <code>MyApp</code> widget follows the same pattern — its own file, its own <code>part</code>
+directive, injecting the synthesised <code>HomePageFactory</code>:</p>
+<pre><code class="language-dart">// lib/src/features/app/my_app.dart
+import 'package:flutter/material.dart';
+import 'package:inject_annotation/inject_annotation.dart';
+
+import '../home/home_page.dart';
+
+part 'my_app.factory.dart';
 
 class MyApp extends StatelessWidget {
   @assistedInject
-  const MyApp({@assisted super.key});
+  const MyApp({@assisted super.key, required this.homePageFactory});
 
-// the rest remains unchanged for now
+  final HomePageFactory homePageFactory;
+
+  @override
+  Widget build(BuildContext context) =&gt; MaterialApp(
+        home: homePageFactory.create(title: 'Flutter Counter Demo'),
+      );
 }
 </code></pre>
-<p>These annotations tell inject.dart how to create instances of <code>MyApp</code>:</p>
-<ul>
-<li><code>@assistedFactory</code> creates a factory interface that will instantiate
-<code>MyApp</code> with its dependencies</li>
-<li><code>@assistedInject</code> marks the constructor as the injection point</li>
-<li><code>@assisted</code> indicates parameters that are provided at runtime rather than
-from the dependency graph</li>
-</ul>
-<p>Here, we're using <code>@assistedInject</code> to create a factory for our <code>MyApp</code>
-widget. This special annotation generates a factory that can create <code>MyApp</code>
-instances with both injected dependencies (which we'll add later) and
-runtime parameters (like <code>key</code>).</p>
-<p>The <code>MyAppFactory</code> will allow us to create <code>MyApp</code> instances with all
-necessary dependencies automatically injected, while still allowing us to
-pass in runtime values like the optional <code>key</code> parameter.</p>
-<h2 id="generating-the-code"><a class="header" href="#generating-the-code">Generating the Code</a></h2>
-<p>Now that we've set up our component and factory, it's time to generate the
-actual dependency injection code:</p>
-<pre><code class="language-bash">dart run build_runner build
+<p>Full source: <a href="https://github.com/ralph-bergmann/inject.dart/blob/master/examples/flutter_demo/lib/src/features/home/home_page.dart"><code>home_page.dart</code></a>, <a href="https://github.com/ralph-bergmann/inject.dart/blob/master/examples/flutter_demo/lib/src/features/app/my_app.dart"><code>my_app.dart</code></a>.</p>
+<h2 id="step-5--a-module-for-the-initial-count"><a class="header" href="#step-5--a-module-for-the-initial-count">Step 5 — A module for the initial count</a></h2>
+<p><code>CounterViewModel</code> needs a <code>Future&lt;int&gt;</code> for its initial value. A small
+<code>AppModule</code> provides it:</p>
+<pre><code class="language-dart">// lib/src/app_module.dart
+@module
+class AppModule {
+  @provides
+  @singleton
+  Future&lt;int&gt; provideInitialCount() =&gt; Future.value(0);
+}
 </code></pre>
-<p>This command processes our annotations and generates the necessary
-implementation code. If successful, you'll see output indicating that files
-were generated, including <code>main.inject.dart</code>.</p>
-<p>Once the generation is complete, we need to import the generated code and
-add a convenience factory method to our component:</p>
-<pre><code class="language-dart">import 'package:flutter/material.dart';
-import 'package:inject_annotation/inject_annotation.dart';
-
-// Import the generated code with a prefix
+<blockquote>
+<p>In <code>flutter_demo</code>, <code>AppModule</code> also wires app metadata (an <code>@asynchronous</code>
+<code>AppInfo</code>), a <code>@welcome</code> message, and a <code>@provisionListener</code> — see
+<a href="https://github.com/ralph-bergmann/inject.dart/blob/master/examples/flutter_demo/lib/src/app_module.dart"><code>app_module.dart</code></a> and <a href="./chapter_4_core_concepts.html">Core Concepts</a>.</p>
+</blockquote>
+<h2 id="step-6--declare-the-component"><a class="header" href="#step-6--declare-the-component">Step 6 — Declare the component</a></h2>
+<p>The component is the graph root. It lists its modules and exposes entry points.
+<code>main.dart</code> holds <strong>only</strong> the <code>@Component</code> — it has no <code>@assistedInject</code>
+constructor, so it takes <strong>no</strong> <code>part</code> directive; it imports the generated
+component library instead:</p>
+<pre><code class="language-dart">// lib/main.dart
 import 'main.inject.dart' as g;
 
-void main() {
-  // We'll update this later to use our component
-  // For now, keep the default main method
-  runApp(const MyApp());
-}
-
-@component
-abstract class MainComponent {
-  // Add a static factory method that references the generated code
-  static const create = g.MainComponent$Component.create;
-
-  @inject
-  MyAppFactory get myAppFactory;
-}
-</code></pre>
-<p>The <code>g.MainComponent$Component.create</code> reference points to the actual
-component implementation generated by inject.dart. By adding this static
-factory method, we make it easy to instantiate our component elsewhere in
-the code without needing to directly reference the generated file.</p>
-<p>This pattern gives us a clean API while keeping the implementation details
-hidden in the generated code. The <code>g</code> prefix helps distinguish between our
-code and the generated code.</p>
-<h2 id="troubleshooting-the-code-generation"><a class="header" href="#troubleshooting-the-code-generation">Troubleshooting the Code Generation</a></h2>
-<h3 id="bad-state"><a class="header" href="#bad-state">Bad state</a></h3>
-<p>When running the code generator, you might encounter this error:</p>
-<pre><code>Bad state: package:flutter_demo/main.dart:
-   component class must declare at least one @inject-annotated provider
-</code></pre>
-<p>This happens because a component must provide at least one injectable type.
-To fix this, make sure you've added the <code>@inject</code> annotation to at least
-one getter in your component:</p>
-<pre><code class="language-dart">@component
+@Component([AppModule, DatabaseModule])
 abstract class MainComponent {
   static const create = g.MainComponent$Component.create;
 
   @inject
   MyAppFactory get myAppFactory;
+  // flutter_demo also exposes welcomeMessage, counterRepositoryProvider,
+  // and creationLogListener — see main.dart.
 }
 </code></pre>
-<p>The <code>@inject</code> annotation tells inject.dart that this getter should be
-treated as a provider method. Every component needs at least one provider
-to be valid, as a component without providers wouldn't serve any purpose in
-a dependency injection system.</p>
-<h3 id="could-not-find-a-way-to-provide"><a class="header" href="#could-not-find-a-way-to-provide">Could not find a way to provide</a></h3>
-<p>Another possible error you might encounter is:</p>
-<pre><code>Could not find a way to provide "MyAppFactory" for component "MainComponent".
+<ul>
+<li><code>import 'main.inject.dart' as g;</code> — the generated component class lives here;
+the <code>as g</code> prefix keeps generated names out of your namespace.</li>
+<li>Module order matters: a later module overrides an earlier one for the same
+<code>(type, qualifier)</code> key.</li>
+</ul>
+<h2 id="step-7--run-the-generator"><a class="header" href="#step-7--run-the-generator">Step 7 — Run the generator</a></h2>
+<pre><code class="language-bash">dart run build_runner build
 </code></pre>
-<p>This error occurs when inject.dart can't figure out how to create an
-instance of the type your component is trying to provide. In this specific
-case, it happens because the <code>@assistedInject</code> annotation is missing from
-the <code>MyApp</code> constructor.</p>
-<p><code>MainComponent</code> is trying to provide <code>MyAppFactory</code>, but inject.dart
-doesn't know how to create it because there's no constructor marked with
-<code>@assistedInject</code> that matches the factory's creation method signature.</p>
-<p>Remember that for assisted injection to work properly:</p>
-<ol>
-<li>The abstract factory must be annotated with <code>@assistedFactory</code></li>
-<li>The class constructor must be annotated with <code>@assistedInject</code></li>
-<li>Runtime parameters must be annotated with <code>@assisted</code></li>
-</ol>
-<p>All three parts need to be present for the code generator to successfully
-create the implementation.</p>
-<h2 id="using-the-component"><a class="header" href="#using-the-component">Using the Component</a></h2>
-<p>With our dependency injection setup complete and code generated, we can now
-use the component to create an instance of our app:</p>
+<p>The generator writes, next to each source file:</p>
+<ul>
+<li><code>lib/main.inject.dart</code> — the component implementation (next to <code>main.dart</code>).</li>
+<li><code>lib/src/features/home/home_page.factory.dart</code> — <code>HomePageFactory</code>.</li>
+<li><code>lib/src/features/app/my_app.factory.dart</code> — <code>MyAppFactory</code>.</li>
+</ul>
+<p>A <code>.factory.dart</code> is emitted <strong>only</strong> for files that declare <code>@assistedInject</code>
+(or <code>@assistedFactory</code>). <code>main.dart</code> has neither, so there is no
+<code>main.factory.dart</code>.</p>
+<h2 id="step-8--use-the-component-in-main"><a class="header" href="#step-8--use-the-component-in-main">Step 8 — Use the component in <code>main()</code></a></h2>
 <pre><code class="language-dart">void main() {
-  final mainComponent = MainComponent.create();
-  final app = mainComponent.myAppFactory.create();
-  runApp(app);
+  final component = MainComponent.create();
+  runApp(component.myAppFactory.create());
 }
 </code></pre>
-<p>This three-line implementation achieves several important things:</p>
-<ol>
-<li>It initializes our dependency graph by creating the <code>MainComponent</code></li>
-<li>It uses the component to get the <code>MyAppFactory</code> and create our app
-instance</li>
-<li>It ensures all dependencies are properly injected throughout the
-application</li>
-</ol>
-<p>This approach provides a clear entry point for our dependency injection
-system. The component acts as the "source of truth" for all dependencies,
-and by using it to create our app, we establish a clean architectural
-boundary that makes our code more maintainable and testable.</p>
-<p>As we add more dependencies to our application, they'll automatically be
-injected without any changes needed to this initialization code. This is
-the power of using a well-structured dependency injection system — the
-application startup remains clean while the dependency graph can grow more
-complex beneath the surface.</p>
-<h2 id="conclusion"><a class="header" href="#conclusion">Conclusion</a></h2>
-<p>In this chapter, we've covered the fundamentals of setting up inject.dart
-in a Flutter application. You've learned how to:</p>
-<ol>
-<li>Set up a new Flutter project with the necessary dependencies</li>
-<li>Create a component to serve as the root of your dependency graph</li>
-<li>Define injectable factories and classes</li>
-<li>Generate the dependency injection code</li>
-<li>Use the component to create and inject dependencies</li>
-</ol>
-<h2 id="complete-example"><a class="header" href="#complete-example">Complete Example</a></h2>
-<p>You can find the complete source code for this quickstart guide in the
-<a href="https://github.com/ralph-bergmann/inject.dart/tree/master/examples/flutter_demo"><code>examples/flutter_demo</code></a>
-folder of the inject.dart repository.
-This example contains all the code we've discussed
-in this chapter, properly structured and ready to run.</p>
-<p>Reviewing the complete example may help solidify your understanding of how
-all the pieces fit together in a working application.</p>
-<h3 id="coming-next-managing-application-state"><a class="header" href="#coming-next-managing-application-state">Coming Next: Managing Application State</a></h3>
-<p>In the next chapter, we'll build on these fundamentals by exploring how to
-manage application state through dependency injection. We'll refactor our
-application to follow best practices for state management, introducing
-repositories, view models, and services that work together through injected
-dependencies.</p>
-<p>This more advanced implementation will demonstrate how dependency injection
-facilitates clean architecture by separating concerns and making
-dependencies explicit, resulting in code that's more maintainable,
-testable, and scalable.</p>
+<p><code>MainComponent.create()</code> returns the wired component; <code>myAppFactory.create()</code>
+produces a <code>MyApp</code> with every injected dependency already in place.</p>
+<h2 id="troubleshooting"><a class="header" href="#troubleshooting">Troubleshooting</a></h2>
+<h3 id="component-class-must-declare-at-least-one-inject-annotated-provider"><a class="header" href="#component-class-must-declare-at-least-one-inject-annotated-provider">“component class must declare at least one @inject-annotated provider”</a></h3>
+<p>A <code>@Component</code> must expose at least one entry point via an <code>@inject</code> getter
+(here, <code>myAppFactory</code>). Add one if your component has none.</p>
+<h3 id="could-not-find-a-way-to-provide-x"><a class="header" href="#could-not-find-a-way-to-provide-x">“Could not find a way to provide X”</a></h3>
+<p>The generator has no binding for a dependency. Common causes:</p>
+<ul>
+<li>the class is missing <code>@inject</code>;</li>
+<li>it’s a third-party type with no <code>@module</code> + <code>@provides</code>;</li>
+<li>the module is not listed in <code>@Component([...])</code>;</li>
+<li>a <code>@Qualifier</code> on the consumer matches no provider.</li>
+</ul>
+<h3 id="missing-part-filefactorydart-directive"><a class="header" href="#missing-part-filefactorydart-directive">Missing <code>part '&lt;file&gt;.factory.dart';</code> directive</a></h3>
+<p>A file with an <code>@assistedInject</code> (or <code>@assistedFactory</code>) constructor needs a
+<code>part '&lt;file&gt;.factory.dart';</code> directive <strong>in that same file</strong> — for example
+<code>part 'home_page.factory.dart';</code> in <code>home_page.dart</code>. It is <em>not</em> added to the
+component file unless the component file itself declares an assisted
+constructor.</p>
+<h2 id="complete-example"><a class="header" href="#complete-example">Complete example</a></h2>
+<p>The full, running source is in <a href="https://github.com/ralph-bergmann/inject.dart/tree/master/examples/flutter_demo"><code>flutter_demo</code></a>. For a single-file
+variant, see <a href="https://github.com/ralph-bergmann/inject.dart/blob/master/examples/example/lib/main.dart"><code>examples/example/lib/main.dart</code></a>. The deeper
+architecture walkthrough is in
+<a href="./chapter_5_state_management.html">State Management and Application Architecture</a>.</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
                             <a rel="prev" href="chapter_2_installation.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
-                                <i class="fa fa-angle-left"></i>
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
-                            <a rel="next prefetch" href="chapter_4_managing_application_state_through_di.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                                <i class="fa fa-angle-right"></i>
+                            <a rel="next prefetch" href="chapter_4_core_concepts.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                             </a>
 
                         <div style="clear: both"></div>
@@ -387,16 +510,21 @@ testable, and scalable.</p>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
                     <a rel="prev" href="chapter_2_installation.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
-                        <i class="fa fa-angle-left"></i>
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
-                    <a rel="next prefetch" href="chapter_4_managing_application_state_through_di.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                        <i class="fa fa-angle-right"></i>
+                    <a rel="next prefetch" href="chapter_4_core_concepts.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                     </a>
             </nav>
 
         </div>
 
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
 
 
 
@@ -406,11 +534,12 @@ testable, and scalable.</p>
 
 
 
-        <script src="clipboard.min.js"></script>
-        <script src="highlight.js"></script>
-        <script src="book.js"></script>
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-8df1eaa7.js"></script>
+        <script src="book-c22b7243.js"></script>
 
         <!-- Custom JS scripts -->
+
 
 
     </div>

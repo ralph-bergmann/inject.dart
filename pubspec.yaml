@@ -4,54 +4,52 @@ repository: https://github.com/ralph-bergmann/inject.dart
 issue_tracker: https://github.com/ralph-bergmann/inject.dart/issues
 
 environment:
-  sdk: ^3.6.0
+  sdk: ^3.12.0
 
 workspace:
-  - examples/coffee
   - examples/example
   - examples/flutter_demo
-  - examples/train
   - packages/inject_annotation
   - packages/inject_flutter
   - packages/inject_generator
 
 dev_dependencies:
-  melos: ^7.0.0-dev.7
+  melos: ^7.7.0
 
 melos:
   ide:
     intellij:
-      enabled: false
+      enabled: true
   scripts:
     analyze:
-      exec: fvm dart analyze .
+      exec: dart analyze .
 
     fix:
-      exec: fvm dart fix --apply
+      exec: dart fix --apply
 
     format:
-      exec: fvm dart format -l 120 .
+      exec: dart format -l 120 .
 
     pubupgrade:
       run: melos run pubupgrade:dart && melos run pubupgrade:flutter
     pubupgrade:dart:
-      run: melos exec -c 1 --fail-fast -- "fvm dart pub upgrade"
+      run: melos exec -c 1 --fail-fast -- "dart pub upgrade"
       packageFilters:
         flutter: false
     pubupgrade:flutter:
-      run: melos exec -c 1 --fail-fast -- "fvm flutter pub upgrade"
+      run: melos exec -c 1 --fail-fast -- "flutter pub upgrade"
       packageFilters:
         flutter: true
 
     build:
       run: melos run build:dart && melos run build:flutter
     build:dart:
-      run: melos exec -c 1 --fail-fast -- "fvm dart run build_runner clean && fvm dart run build_runner build -d"
+      run: melos exec -c 1 --fail-fast -- "dart run build_runner clean && dart run build_runner build -d"
       packageFilters:
         dependsOn: build_runner
         flutter: false
     build:flutter:
-      run: melos exec -c 1 --fail-fast -- "fvm flutter pub run build_runner clean && fvm flutter pub run build_runner build -d"
+      run: melos exec -c 1 --fail-fast -- "flutter pub run build_runner clean && flutter pub run build_runner build -d"
       packageFilters:
         dependsOn: build_runner
         flutter: true
@@ -59,20 +57,32 @@ melos:
     test:
       run: melos run test:plain --no-select && melos run test:build-runner-dart --no-select && melos run test:build-runner-flutter --no-select
     test:plain:
-      run: melos exec -c 1 --fail-fast -- "fvm dart test"
+      run: melos exec -c 1 --fail-fast -- "dart test"
       packageFilters:
         noDependsOn: build_runner
         dirExists: test
         flutter: false
     test:build-runner-dart:
-      run: melos exec -c 1 --fail-fast -- "fvm dart run build_runner clean && fvm dart run build_runner test -d"
+      run: melos exec -c 1 --fail-fast -- "dart run build_runner clean && dart run build_runner test -d"
       packageFilters:
         dependsOn: build_runner
         dirExists: test
         flutter: false
     test:build-runner-flutter:
-      run: melos exec -c 1 --fail-fast -- "fvm dart run build_runner clean && fvm dart run build_runner build -d && fvm flutter test"
+      run: melos exec -c 1 --fail-fast -- "dart run build_runner clean && dart run build_runner build -d &&  flutter test"
       packageFilters:
         dependsOn: build_runner
         dirExists: test
         flutter: true
+
+    # End-to-end smoke for every example package: pub get, regenerate code,
+    # then dart analyze. Split into three stages so a failure points at the
+    # offending stage (pub vs. build vs. analyze) instead of one opaque step.
+    analyze:examples:
+      run: melos run analyze:examples:get --no-select && melos run analyze:examples:build --no-select && melos run analyze:examples:analyze --no-select
+    analyze:examples:get:
+      run: melos exec -c 1 --fail-fast --scope="example,flutter_demo" -- "dart pub get"
+    analyze:examples:build:
+      run: melos exec -c 1 --fail-fast --scope="example,flutter_demo" -- "dart run build_runner build --delete-conflicting-outputs"
+    analyze:examples:analyze:
+      run: melos exec -c 1 --fail-fast --scope="example,flutter_demo" -- "dart analyze"
