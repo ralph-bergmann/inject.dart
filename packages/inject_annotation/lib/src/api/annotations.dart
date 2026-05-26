@@ -4,47 +4,54 @@
 
 import 'package:meta/meta.dart';
 
-/// Annotates an abstract class used as a blueprint to generate an [Component].
+import 'provision_listener.dart';
+
+/// Annotates an abstract class used as a blueprint to generate a component.
 ///
 /// Example:
-///     import 'coffee_shop.inject.dart';
+/// ```dart
+/// import 'coffee_shop.inject.dart' as g;
 ///
-///     @Component(const [DripCoffeeModule])
-///     abstract class CoffeeShop {
-///       static final create = CoffeeShop$Component.create;
+/// @Component([DripCoffeeModule])
+/// abstract class CoffeeShop {
+///   static const create = g.CoffeeShop$Component.create;
 ///
-///       CoffeeMaker get coffeeMaker;
-///     }
+///   CoffeeMaker get coffeeMaker;
+/// }
 ///
-///     main() async {
-///       var coffeeShop = await CoffeeShop.create(new DripCoffeeModule());
-///       print(coffeeShop.coffeeMaker.brewCoffee());
-///     }
+/// void main() {
+///   final coffeeShop = CoffeeShop.create();
+///   print(coffeeShop.coffeeMaker.brewCoffee());
+/// }
+/// ```
 ///
-/// In the example, we define an component class `CoffeeShop`, which provides a
-/// `CoffeeMaker`. It uses `DripCoffeeModule` as a source of dependency
-/// providers for the component.
+/// The example defines a `CoffeeShop` component that provides a `CoffeeMaker`.
+/// `DripCoffeeModule` supplies the dependency providers for the component.
 ///
-/// The framework generates a concrete class `CoffeeShop$Component` that has a
-/// static asynchronous function named `create`, which takes `DripCoffeeModule`
-/// as an argument and returns a `Future<CoffeeShop>`.
+/// The framework generates `CoffeeShop$Component` with a **synchronous** static
+/// `create` factory. Asynchronous resolution does not change `create`; instead a
+/// getter whose dependency chain is `@asynchronous` is exposed as `Future<T>`
+/// (or `Provider<T>`) and awaited at that entry point.
 ///
-/// `CoffeeShop` defines `static final create` as a convenience accessor to
-/// `CoffeeShop$Component.create`. This is not strictly necessary, but useful to
-/// hide the generated code from the call sites.
+/// `CoffeeShop` declares `static const create` as a convenience accessor to
+/// `CoffeeShop$Component.create` — not strictly necessary, but useful to
+/// keep generated names out of call sites.
 class Component {
-  /// Modules supplying providers for the component.
-  ///
-  /// Each [Type] must be a `class` definition annotated with [module].
-  final List<Type> modules;
-
-  // ignore: public_member_api_docs
   const factory Component([List<Type> modules]) = Component._;
 
   const Component._([this.modules = const <Type>[]]);
+
+  /// Modules supplying providers for the component.
+  ///
+  /// Each [Type] must be a `class` definition annotated with [module].
+  ///
+  /// **Order matters:** later modules override earlier ones for shared
+  /// provider keys (same type + same qualifier). See README "Module Override
+  /// Semantics" for the test-mock-injection pattern.
+  final List<Type> modules;
 }
 
-/// An annotation to mark something as an [Component] with no included modules.
+/// Convenience [Component] annotation with no included modules.
 const component = Component();
 
 /// Annotates a class as a collection of providers for dependency injection.
@@ -55,41 +62,37 @@ const component = Component();
 /// parameters that are in the object graph and will be invoked with the objects
 /// created from the [Component] the module is installed on.
 ///
-/// An example:
+/// Example:
+/// ```dart
+/// @module
+/// class CarModule {
+///   @provides
+///   Car provideCar(Manufacturer manufacturer) =>
+///       Car(manufacturer: manufacturer, year: 2019);
+/// }
+/// ```
 ///
-///     @module
-///     class CarModule {
-///       @provides
-///       Car provideCar(Manufacturer manufacturer) =>
-///           Car(manufacturer: manufacturer, year: 2019);
-///     }
-///
-/// In this instance, an component that includes `CarModule` will know how to
-/// provide an instance of `Car`, given that all parameters of `provideCar` are
-/// satisfied in the final object graph.
+/// A component that includes `CarModule` knows how to provide an instance of
+/// `Car`, given that all parameters of `provideCar` are satisfied in the object graph.
 const module = Module._();
 
-/// **INTERNAL ONLY**: Might be exposed if we add flags or other properties.
-@visibleForTesting
 class Module {
   const Module._();
 }
 
-/// Annotation for a method (in an [Component]), class, or
+/// Annotation for a method (in a [Component]), class, or
 /// constructor that provides an instance.
 ///
 /// - If the annotation is on a class or constructor, the class is entered into
 ///   the dependency graph and its constructor's arguments are injected when the
 ///   class is injected.
-/// - If the annotation is on an [Component], this indicates that the component
+/// - If the annotation is on a [Component], this indicates that the component
 ///   should provide instances of the type when the method is called.
 ///
 /// The type provided by this annotation can be further specified by including a
 /// [Qualifier] annotation.
 const inject = Inject._();
 
-/// **INTERNAL ONLY**: Might be exposed if we add flags or other properties.
-@visibleForTesting
 class Inject {
   const Inject._();
 }
@@ -98,8 +101,6 @@ class Inject {
 /// assisted injection.
 const assistedInject = AssistedInject._();
 
-/// **INTERNAL ONLY**: Might be exposed if we add flags or other properties.
-@visibleForTesting
 class AssistedInject {
   const AssistedInject._();
 }
@@ -114,91 +115,87 @@ class AssistedInject {
 /// and creating the object.
 const assisted = Assisted._();
 
-/// **INTERNAL ONLY**: Might be exposed if we add flags or other properties.
-@visibleForTesting
 class Assisted {
   const Assisted._();
 }
 
-/// Annotates an abstract class used to create an instance of a type via an
-/// [AssistedInject] constructor.
+/// Annotates an abstract class that serves as a factory for [AssistedInject]-annotated types.
 ///
-/// - The type must be an abstract class.
-/// - Return type must exactly match the type of the [AssistedInject] type
-/// - Parameters must match the exact list of [Assisted] parameters in the
-///   [AssistedInject] type's constructor
+/// - The annotated class must be abstract.
+/// - Its `create` method's return type must exactly match the [AssistedInject]-annotated type.
+/// - Its `create` method's parameters must match the [Assisted]-annotated parameters
+///   of the [AssistedInject] constructor.
 const assistedFactory = AssistedFactory._();
 
-/// **INTERNAL ONLY**: Might be exposed if we add flags or other properties.
-@visibleForTesting
 class AssistedFactory {
   const AssistedFactory._();
 }
 
-/// Annotation for a method (in an [module]).
+/// Annotation for a method in a [module].
 ///
-/// The return type is entered into the dependency graph. The method will be
-/// executed with injected arguments when the return type is injected.
+/// The return type is entered into the dependency graph. The method is
+/// executed with injected arguments when the return type is requested.
 ///
 /// The type provided by this annotation can be further specified by including a
 /// [Qualifier] annotation.
 const provides = Provides._();
 
-/// **INTERNAL ONLY**: Might be exposed if we add flags or other properties.
-@visibleForTesting
 class Provides {
   const Provides._();
 }
 
-/// A reserved name that can be used alongside a [provides] annotation to further
-/// specify the key.
+/// A named qualifier used alongside [provides] to distinguish bindings of the same type.
 ///
-/// [Qualifier] must be placed at the same level as a `@provides` annotation. It
+/// [Qualifier] must be placed at the same level as the `@provides` annotation. It
 /// is **illegal** to have more than one [Qualifier] for a given provider.
 ///
-/// # Example
-///     const baseUri = const Qualifier(#baseUri);
+/// Example:
+/// ```dart
+/// const baseUri = Qualifier(#baseUri);
 ///
-///     abstract class RpcModule {
-///       @provides
-///       @baseUri
-///       String provideBaseUri() => 'https://foo.bar/service/v2';
-///     }
+/// @module
+/// abstract class RpcModule {
+///   @provides
+///   @baseUri
+///   String provideBaseUri() => 'https://foo.bar/service/v2';
+/// }
+/// ```
 ///
-/// The symbol `#baseUri` AND `String` are used to form the key in the
-/// dependency tree.
+/// The symbol `#baseUri` and `String` together form the key in the dependency graph.
 class Qualifier {
-  /// Unique name of the identifier.
-  final Symbol name;
-
   /// Create a named provider qualifier from [name].
   @literal
   const factory Qualifier(Symbol name) = Qualifier._;
 
   const Qualifier._(this.name);
+
+  /// Unique name of the identifier.
+  final Symbol name;
 }
 
 /// An injectable class or module provider that provides a single instance.
 ///
-/// A dependency annotated with [singleton] will only be instantiated once. The
-/// same instance will be used to satisfy all dependencies.
+/// A dependency annotated with [singleton] is instantiated only once. The
+/// same instance satisfies all dependencies.
 ///
-/// For example:
-///     @inject
-///     @singleton
-///     class Foo {}
+/// Example:
+/// ```dart
+/// import 'foo_maker.inject.dart' as g;
 ///
-///     @component
-///     abstract class FooMaker {
-///       static final create = FooMaker$Component.create;
+/// @inject
+/// @singleton
+/// class Foo {}
 ///
-///       // identical(getFoo(), getFoo()) is guaranteed to be true.
-///       Foo getFoo();
-///     }
+/// @component
+/// abstract class FooMaker {
+///   static const create = g.FooMaker$Component.create;
+///
+///   // identical(getFoo(), getFoo()) is guaranteed to be true.
+///   Foo getFoo();
+/// }
+/// ```
 const singleton = Singleton._();
 
-/// **INTERNAL ONLY**: Might be exposed if we add flags or other properties.
-@visibleForTesting
 class Singleton {
   const Singleton._();
 }
@@ -248,8 +245,29 @@ class Singleton {
 /// ```
 const asynchronous = Asynchronous._();
 
-/// **INTERNAL ONLY**: Might be exposed if we add flags or other properties.
-@visibleForTesting
 class Asynchronous {
   const Asynchronous._();
+}
+
+/// Annotates a `@provides` method in a `@module` to indicate that the
+/// returned value is a [ProvisionListener].
+///
+/// The listener will be invoked after each dependency provisioning.
+/// ProvisionListeners should typically also be annotated with `@singleton`
+/// as they are reused across all provisions.
+///
+/// Example:
+/// ```dart
+/// @module
+/// class AppModule {
+///   @provides
+///   @singleton
+///   @provisionListener
+///   ProvisionListener provideListener() => MyListener();
+/// }
+/// ```
+const provisionListener = ProvisionListenerAnnotation._();
+
+class ProvisionListenerAnnotation {
+  const ProvisionListenerAnnotation._();
 }

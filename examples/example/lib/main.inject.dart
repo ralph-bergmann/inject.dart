@@ -1,118 +1,161 @@
-// ignore_for_file: implementation_imports
+// GENERATED CODE - DO NOT MODIFY BY HAND
+// dart format width=80
+
+// **************************************************************************
+// Generator: inject.dart
+// https://pub.dev/packages/inject_annotation
+// **************************************************************************
+
+// ignore_for_file: type=lint, type=warning
 // ignore_for_file: no_leading_underscores_for_library_prefixes
-import 'package:flutter/src/foundation/key.dart' as _i6;
-import 'package:flutter/widgets.dart' as _i5;
+import 'package:flutter/src/foundation/key.dart' as _i3;
+import 'package:flutter/src/widgets/framework.dart' as _i5;
 import 'package:inject_annotation/inject_annotation.dart' as _i2;
-import 'package:inject_flutter/inject_flutter.dart' as _i4;
-import 'package:inject_flutter/src/view_model_factory.dart' as _i3;
+import 'package:inject_flutter/src/view_model_factory.dart' as _i4;
 
 import 'main.dart' as _i1;
 
-class AppComponent$Component implements _i1.AppComponent {
-  factory AppComponent$Component.create() => AppComponent$Component._();
+class MainComponent$Component implements _i1.MainComponent {
+  factory MainComponent$Component.create({_i1.AppModule? appModule}) =>
+      MainComponent$Component._(appModule ?? _i1.AppModule());
 
-  AppComponent$Component._() {
-    final homePageViewModel$Provider = _HomePageViewModel$Provider();
-    final viewModelFactoryHomePageViewModel$Provider =
-        _ViewModelFactoryHomePageViewModel$Provider(homePageViewModel$Provider);
-    final homePageFactory$Provider =
-        _HomePageFactory$Provider(viewModelFactoryHomePageViewModel$Provider);
-    _exampleAppFactory$Provider =
-        _ExampleAppFactory$Provider(homePageFactory$Provider);
+  MainComponent$Component._(_i1.AppModule appModule) {
+    final database$Provider = _Database$Provider(appModule);
+    final counterRepository$Provider = _CounterRepository$Provider(
+      database$Provider,
+    );
+    final counterViewModel$Provider = _CounterViewModel$Provider(
+      counterRepository$Provider,
+    );
+    final viewModelFactoryOfCounterViewModel$Provider =
+        _ViewModelFactoryOfCounterViewModel$Provider(counterViewModel$Provider);
+    final homePageFactory$Provider = _HomePageFactory$Provider(
+      viewModelFactoryOfCounterViewModel$Provider,
+    );
+    _myAppFactory$Provider = _MyAppFactory$Provider(homePageFactory$Provider);
   }
 
-  late final _ExampleAppFactory$Provider _exampleAppFactory$Provider;
+  late final _MyAppFactory$Provider _myAppFactory$Provider;
 
   @override
-  _i1.ExampleAppFactory get exampleAppFactory =>
-      _exampleAppFactory$Provider.get();
+  _i1.MyAppFactory get myAppFactory => _myAppFactory$Provider.get();
 }
 
-class _HomePageViewModel$Provider
-    implements _i2.Provider<_i1.HomePageViewModel> {
-  const _HomePageViewModel$Provider();
+class _CounterRepository$Provider
+    implements _i2.Provider<_i1.CounterRepository> {
+  _CounterRepository$Provider(this._database$Provider);
+
+  final _Database$Provider _database$Provider;
+
+  late final _i1.CounterRepository _singleton = _create();
+
+  _i1.CounterRepository _create() =>
+      _i1.CounterRepository(database: _database$Provider.get());
 
   @override
-  _i1.HomePageViewModel get() => _i1.HomePageViewModel();
+  _i1.CounterRepository get() => _singleton;
 }
 
-class _ViewModelFactoryHomePageViewModel$Provider
-    implements _i2.Provider<_i3.ViewModelFactory<_i1.HomePageViewModel>> {
-  _ViewModelFactoryHomePageViewModel$Provider(this._homePageViewModel$Provider);
+class _CounterViewModel$Provider implements _i2.Provider<_i1.CounterViewModel> {
+  const _CounterViewModel$Provider(this._counterRepository$Provider);
 
-  final _HomePageViewModel$Provider _homePageViewModel$Provider;
-
-  _i4.ViewModelBuilder<_i1.HomePageViewModel> _factory({
-    _i5.Key? key,
-    _i4.ViewModelInitializer<_i1.HomePageViewModel>? init,
-    required _i4.ViewModelWidgetBuilder<_i1.HomePageViewModel> builder,
-    _i5.Widget? child,
-  }) =>
-      _i4.ViewModelBuilder<_i1.HomePageViewModel>(
-        key: key,
-        viewModelProvider: _homePageViewModel$Provider,
-        init: init,
-        builder: builder,
-        child: child,
-      );
+  final _CounterRepository$Provider _counterRepository$Provider;
 
   @override
-  _i3.ViewModelFactory<_i1.HomePageViewModel> get() => _factory;
+  _i1.CounterViewModel get() =>
+      _i1.CounterViewModel(repository: _counterRepository$Provider.get());
+}
+
+class _Database$Provider implements _i2.Provider<_i1.Database> {
+  _Database$Provider(this._module);
+
+  final _i1.AppModule _module;
+
+  late final _i1.Database _singleton = _create();
+
+  _i1.Database _create() => _module.provideDatabase();
+
+  @override
+  _i1.Database get() => _singleton;
+}
+
+class _HomePageFactory$Factory implements _i1.HomePageFactory {
+  const _HomePageFactory$Factory(
+    this._viewModelFactoryOfCounterViewModel$Provider,
+  );
+
+  final _ViewModelFactoryOfCounterViewModel$Provider
+  _viewModelFactoryOfCounterViewModel$Provider;
+
+  @override
+  _i1.HomePage create({_i3.Key? key, required String title}) => _i1.HomePage(
+    key: key,
+    title: title,
+    viewModelFactory: _viewModelFactoryOfCounterViewModel$Provider.get(),
+  );
 }
 
 class _HomePageFactory$Provider implements _i2.Provider<_i1.HomePageFactory> {
-  _HomePageFactory$Provider(this._viewModelFactoryHomePageViewModel$Provider);
+  _HomePageFactory$Provider(this._viewModelFactoryOfCounterViewModel$Provider);
 
-  final _ViewModelFactoryHomePageViewModel$Provider
-      _viewModelFactoryHomePageViewModel$Provider;
+  final _ViewModelFactoryOfCounterViewModel$Provider
+  _viewModelFactoryOfCounterViewModel$Provider;
 
-  late final _i1.HomePageFactory _factory =
-      _HomePageFactory$Factory(_viewModelFactoryHomePageViewModel$Provider);
+  late final _i1.HomePageFactory _factory = _HomePageFactory$Factory(
+    _viewModelFactoryOfCounterViewModel$Provider,
+  );
 
   @override
   _i1.HomePageFactory get() => _factory;
 }
 
-class _HomePageFactory$Factory implements _i1.HomePageFactory {
-  const _HomePageFactory$Factory(
-      this._viewModelFactoryHomePageViewModel$Provider);
-
-  final _ViewModelFactoryHomePageViewModel$Provider
-      _viewModelFactoryHomePageViewModel$Provider;
-
-  @override
-  _i1.HomePage create({
-    _i6.Key? key,
-    required String title,
-  }) =>
-      _i1.HomePage(
-        key: key,
-        title: title,
-        viewModelFactory: _viewModelFactoryHomePageViewModel$Provider.get(),
-      );
-}
-
-class _ExampleAppFactory$Provider
-    implements _i2.Provider<_i1.ExampleAppFactory> {
-  _ExampleAppFactory$Provider(this._homePageFactory$Provider);
-
-  final _HomePageFactory$Provider _homePageFactory$Provider;
-
-  late final _i1.ExampleAppFactory _factory =
-      _ExampleAppFactory$Factory(_homePageFactory$Provider);
-
-  @override
-  _i1.ExampleAppFactory get() => _factory;
-}
-
-class _ExampleAppFactory$Factory implements _i1.ExampleAppFactory {
-  const _ExampleAppFactory$Factory(this._homePageFactory$Provider);
+class _MyAppFactory$Factory implements _i1.MyAppFactory {
+  const _MyAppFactory$Factory(this._homePageFactory$Provider);
 
   final _HomePageFactory$Provider _homePageFactory$Provider;
 
   @override
-  _i1.ExampleApp create({_i6.Key? key}) => _i1.ExampleApp(
+  _i1.MyApp create({_i3.Key? key}) =>
+      _i1.MyApp(key: key, homePageFactory: _homePageFactory$Provider.get());
+}
+
+class _MyAppFactory$Provider implements _i2.Provider<_i1.MyAppFactory> {
+  _MyAppFactory$Provider(this._homePageFactory$Provider);
+
+  final _HomePageFactory$Provider _homePageFactory$Provider;
+
+  late final _i1.MyAppFactory _factory = _MyAppFactory$Factory(
+    _homePageFactory$Provider,
+  );
+
+  @override
+  _i1.MyAppFactory get() => _factory;
+}
+
+class _ViewModelFactoryOfCounterViewModel$Provider
+    implements _i2.Provider<_i4.ViewModelFactory<_i1.CounterViewModel>> {
+  const _ViewModelFactoryOfCounterViewModel$Provider(
+    this._counterViewModel$Provider,
+  );
+
+  final _CounterViewModel$Provider _counterViewModel$Provider;
+
+  @override
+  _i4.ViewModelFactory<_i1.CounterViewModel> get() =>
+      ({
+        required _i4.ViewModelWidgetBuilder<_i1.CounterViewModel> builder,
+        _i5.Widget? child,
+        _i4.ViewModelErrorBuilder? error,
+        _i4.ViewModelInitializer<_i1.CounterViewModel>? init,
+        _i3.Key? key,
+        _i5.Widget? loading,
+      }) => _i4.ViewModelBuilder<_i1.CounterViewModel>(
         key: key,
-        homePageFactory: _homePageFactory$Provider.get(),
+        viewModelProvider: _counterViewModel$Provider,
+        init: init,
+        loading: loading,
+        error: error,
+        builder: builder,
+        child: child,
       );
 }

@@ -1,0 +1,42 @@
+{
+  "$schema": "https://context7.com/schema/context7.json",
+  "projectTitle": "inject.dart",
+  "description": "Compile-time dependency injection for Dart and Flutter. Validates the entire dependency graph at build time — missing bindings, circular dependencies, and qualifier conflicts are build errors, not runtime crashes.",
+  "folders": [
+    "book/src",
+    "packages/inject_annotation/lib",
+    "packages/inject_flutter/lib",
+    "examples",
+    "rules",
+    "skills"
+  ],
+  "excludeFolders": [
+    "_bmad",
+    "_bmad-output",
+    "docs",
+    "book/book",
+    "packages/inject_generator",
+    "build",
+    ".dart_tool"
+  ],
+  "excludeFiles": [
+    "CHANGELOG.md",
+    "pubspec.lock"
+  ],
+  "rules": [
+    "Use constructor injection exclusively — never service locator patterns like GetIt or manual lookup",
+    "Place @inject on the class (idiomatic) or on a specific constructor — named and factory constructors are allowed; multiple @inject constructors each need a distinct @Qualifier",
+    "Component classes must be abstract; expose entry points as abstract getters — @inject on them is optional (abstract getters are recognized either way) but conventional in the examples",
+    "Always import generated files with the 'g' prefix: import 'main.inject.dart' as g",
+    "Annotate module providers returning Future<T> with @asynchronous — dependents then receive the resolved T, not Future<T>",
+    "A component's create() is synchronous; async resolution surfaces at the entry point — a getter whose chain is @asynchronous must be declared Future<T> (or Provider<T>) and awaited. Never expect create() to return a Future<Component>",
+    "Use @singleton for services that should be shared; async singletons cache at the Future<T> layer",
+    "For dependencies mixing injected and runtime parameters, use @assistedInject + @assisted + @assistedFactory",
+    "Inject Provider<T> instead of T to defer construction to call time or to get multiple independent instances of a non-singleton",
+    "Register cross-cutting observers with a @provisionListener @provides method whose return type implements ProvisionListener<T> (concrete class or interface); @singleton is optional since listeners are treated as singletons automatically",
+    "Run 'dart run build_runner build --delete-conflicting-outputs' after every annotation change",
+    "ViewModelFactory<T> in inject_flutter is only valid for T extends ChangeNotifier whose construction chain is fully synchronous; inject the factory and call it (factory(builder: (context, vm, child) => ...)), never construct ViewModelBuilder by hand",
+    "ViewModelBuilder init may be sync or async (FutureOr<void>); an async init is awaited, showing the 'loading' widget while it runs and 'error' (ViewModelErrorBuilder) if it throws",
+    "The static 'create' field on a component must point to the generated implementation: static const create = g.AppComponent$Component.create"
+  ]
+}

@@ -1,34 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:inject_annotation/inject_annotation.dart';
 
-import '../home/my_home_page.dart';
+import '../home/home_page.dart';
 
-/// Factory to create the [MyApp] widget with the [MyHomePageFactory] injected.
-@assistedFactory
-abstract class MyAppFactory {
-  MyApp create({Key? key});
-}
+part 'my_app.factory.dart';
 
-/// The root widget of the application.
-/// The [MyHomePageFactory] is injected into the widget at compile-time.
+/// Root widget of the application.
+///
+/// [@assistedInject] supplies [homePageFactory] from the DI graph at build
+/// time; [key] is provided by the caller at runtime.
 class MyApp extends StatelessWidget {
   @assistedInject
-  const MyApp({
-    @assisted super.key,
-    required this.homePageFactory,
-  });
+  const MyApp({@assisted super.key, required this.homePageFactory});
 
-  final MyHomePageFactory homePageFactory;
+  final HomePageFactory homePageFactory;
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Counter App',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: homePageFactory.create(title: 'Flutter Demo Home Page'),
+      home: homePageFactory.create(title: 'Flutter Counter Demo'),
     );
   }
 }

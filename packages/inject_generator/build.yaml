@@ -1,24 +1,14 @@
-# Read about `build.yaml` at https://pub.dartlang.org/packages/build_config
 builders:
-  summarize_builder:
+  factory_builder:
     import: "package:inject_generator/inject_generator.dart"
-    builder_factories: [ "summarizeBuilder" ]
-    build_extensions: { ".dart": [ ".inject_summary.json", ".inject_component.json" ] }
-    auto_apply: dependents
-    build_to: cache
-  generate_builder:
-    import: "package:inject_generator/inject_generator.dart"
-    builder_factories: [ "generateBuilder" ]
-    required_inputs: [".inject_component.json"]
-    build_extensions: { ".inject_component.json": [ ".inject.dart" ] }
+    builder_factories: ["factoryBuilder"]
+    build_extensions: {".dart": [".factory.dart"]}
     auto_apply: dependents
     build_to: source
-
-# build step to regenerate json serializable code
-# also enable package inports in pubspec.yaml 
-#targets:
-#  $default:
-#    builders:
-#      json_serializable:
-#        options:
-#          checked: true
+    runs_before: ["inject_generator|inject_builder"]
+  inject_builder:
+    import: "package:inject_generator/inject_generator.dart"
+    builder_factories: ["injectBuilder"]
+    build_extensions: {".dart": [".inject.dart"]}
+    auto_apply: dependents
+    build_to: source

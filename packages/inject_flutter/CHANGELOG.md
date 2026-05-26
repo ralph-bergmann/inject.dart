@@ -1,3 +1,17 @@
+## 1.1.0
+
+* `ViewModelInitializer` now accepts an **asynchronous** `init` callback (its type widened from `void Function(T)` to `FutureOr<void> Function(T)`). An asynchronous `init` is awaited via a `FutureBuilder`, so a long-running `init` no longer races the first frame. Synchronous `init` callbacks keep working unchanged.
+* Added optional `loading` and `error` widgets to `ViewModelFactory` / `ViewModelBuilder`: `loading` is shown while an asynchronous `init` runs and `error` (a `ViewModelErrorBuilder`) when it fails. Without an `error` builder, an init failure is reported through `FlutterError.reportError` instead of being silently dropped. Both are ignored for a synchronous `init`.
+
+```dart
+viewModelFactory(
+  init: (viewModel) => viewModel.load(), // may be sync or async
+  loading: const Center(child: CircularProgressIndicator()),
+  error: (context, error, _) => Center(child: Text('$error')),
+  builder: (context, viewModel, _) => /* widget */,
+);
+```
+
 ## 1.0.2
 
 * Added support for ViewModel initialization via an optional `init` callback in `ViewModelFactory`

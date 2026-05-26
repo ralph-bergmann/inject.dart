@@ -7,36 +7,66 @@ import 'data/services/fake_database.dart';
 import 'repository_test.inject.dart' as g;
 
 void main() {
-  group('CounterRepository Test', () {
-    late final CounterRepository repository;
+  group('CounterRepository', () {
+    late CounterRepository repository;
 
     setUp(() {
-      final component = TestComponent.create();
+      // [TestRepositoryComponent] uses [DatabaseModule, TestDatabaseModule].
+      // [TestDatabaseModule] appears AFTER [DatabaseModule] in the list —
+      // the later module wins, so its [Database] binding (backed by
+      // [FakeDatabase]) overrides [DatabaseModule.provideDatabase].
+      // This is the module-override semantics: list order is meaningful.
+      final component = TestRepositoryComponent.create();
       repository = component.counterRepository;
     });
 
-    test('test counter repository', () async {
-      var count = await repository.count;
-      expect(count, 0);
+    test('initial count is zero', () async {
+      final counter = await repository.counter;
+      expect(counter.value, 0);
+    });
 
-      await repository.increaseCount();
-      count = await repository.count;
-      expect(count, 1);
+    test('increment increases count by one', () async {
+      await repository.increment();
+      final counter = await repository.counter;
+      expect(counter.value, 1);
+    });
+
+    test('multiple increments accumulate', () async {
+      await repository.increment();
+      await repository.increment();
+      await repository.increment();
+      final counter = await repository.counter;
+      expect(counter.value, 3);
     });
   });
 }
 
-@Component([TestModule])
-abstract class TestComponent {
-  static const create = g.TestComponent$Component.create;
+/// Test component demonstrating module override.
+///
+/// [DatabaseModule] is listed first (real config + real [Database] binding).
+/// [TestDatabaseModule] is listed second — its [Database] binding overrides
+/// the one from [DatabaseModule] because later modules win.
+///
+/// This means [CounterRepository] receives a [FakeDatabase] in tests, even
+/// though [DatabaseModule] would normally provide the real [Database].
+@Component([DatabaseModule, TestDatabaseModule])
+abstract class TestRepositoryComponent {
+  static const create = g.TestRepositoryComponent$Component.create;
 
   @inject
   CounterRepository get counterRepository;
 }
 
+/// Overrides [DatabaseModule.provideDatabase] with an in-memory fake.
+///
+/// The binding key is ([Database], null) — same as in [DatabaseModule].
+/// Because this module appears later in [@Component(...)], it wins.
 @module
-class TestModule {
+class TestDatabaseModule {
   @provides
   @singleton
-  Database provideDatabase() => FakeDatabase();
+  Database provideDatabase(
+    @databasePath String path,
+    @databaseName String name,
+  ) => FakeDatabase();
 }

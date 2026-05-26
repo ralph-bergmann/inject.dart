@@ -1,3 +1,9 @@
+## 1.1.0
+
+- Add provision listeners: the `@provisionListener` annotation and the `ProvisionListener` interface.
+- Export the annotation classes (`Inject`, `Module`, `Singleton`, `Asynchronous`, `Assisted`, `AssistedInject`, `AssistedFactory`) alongside the existing `const` instances.
+- Works with the fully rewritten `inject_generator`.
+
 ## 1.0.1
 
 - fix analyzer warnings

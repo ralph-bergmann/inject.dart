@@ -1,0 +1,671 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Core Concepts - inject.dart Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Compile time dependency injection for Dart and Flutter">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-0392ca55.css">
+        <link rel="stylesheet" href="css/chrome-fc474251.css">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "ayu";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-aa1c9d3a.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                    </div>
+
+                    <h1 class="menu-title">inject.dart Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="https://github.com/ralph-bergmann/inject.dart" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="core-concepts"><a class="header" href="#core-concepts">Core Concepts</a></h1>
+<p>This chapter is the complete annotation reference. Every concept maps to real
+code in the <a href="https://github.com/ralph-bergmann/inject.dart/tree/master/examples/flutter_demo"><code>flutter_demo</code></a> example; the table below links each
+annotation to the file that demonstrates it.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Concept</th><th>Annotation</th><th>Demonstrated in <code>flutter_demo</code></th></tr>
+</thead>
+<tbody>
+<tr><td>Constructor injection</td><td><code>@inject</code></td><td><a href="https://github.com/ralph-bergmann/inject.dart/blob/master/examples/flutter_demo/lib/src/data/repositories/counter_repository.dart"><code>counter_repository.dart</code></a></td></tr>
+<tr><td>Modules &amp; providers</td><td><code>@module</code>, <code>@provides</code></td><td><a href="https://github.com/ralph-bergmann/inject.dart/blob/master/examples/flutter_demo/lib/src/data/services/database.dart"><code>database.dart</code></a>, <a href="https://github.com/ralph-bergmann/inject.dart/blob/master/examples/flutter_demo/lib/src/app_module.dart"><code>app_module.dart</code></a></td></tr>
+<tr><td>Shared instance</td><td><code>@singleton</code></td><td><a href="https://github.com/ralph-bergmann/inject.dart/blob/master/examples/flutter_demo/lib/src/data/repositories/counter_repository.dart"><code>counter_repository.dart</code></a></td></tr>
+<tr><td>Named binding</td><td><code>@Qualifier</code></td><td><a href="https://github.com/ralph-bergmann/inject.dart/blob/master/examples/flutter_demo/lib/src/data/services/database.dart"><code>database.dart</code></a></td></tr>
+<tr><td>Async provider</td><td><code>@asynchronous</code></td><td><a href="https://github.com/ralph-bergmann/inject.dart/blob/master/examples/flutter_demo/lib/src/app_module.dart"><code>app_module.dart</code></a></td></tr>
+<tr><td>Lazy / on-demand</td><td><code>Provider&lt;T&gt;</code></td><td><a href="https://github.com/ralph-bergmann/inject.dart/blob/master/examples/flutter_demo/lib/main.dart"><code>main.dart</code></a></td></tr>
+<tr><td>Runtime parameters</td><td><code>@assistedInject</code></td><td><a href="https://github.com/ralph-bergmann/inject.dart/blob/master/examples/flutter_demo/lib/src/features/home/home_page.dart"><code>home_page.dart</code></a>, <a href="https://github.com/ralph-bergmann/inject.dart/blob/master/examples/flutter_demo/lib/src/features/app/my_app.dart"><code>my_app.dart</code></a></td></tr>
+<tr><td>Provision hook</td><td><code>@provisionListener</code></td><td><a href="https://github.com/ralph-bergmann/inject.dart/blob/master/examples/flutter_demo/lib/src/app_module.dart"><code>app_module.dart</code></a></td></tr>
+<tr><td>Use case</td><td><code>@inject @singleton</code></td><td><a href="https://github.com/ralph-bergmann/inject.dart/blob/master/examples/flutter_demo/lib/src/domain/use_cases/increment_counter_use_case.dart"><code>increment_counter_use_case.dart</code></a></td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="constructor-injection--inject"><a class="header" href="#constructor-injection--inject">Constructor injection — <code>@inject</code></a></h2>
+<p>Annotate a class (or a specific constructor) and the generator wires it
+wherever the type is needed:</p>
+<pre><code class="language-dart">import 'package:inject_annotation/inject_annotation.dart';
+
+@inject
+class CounterRepository {
+  const CounterRepository({required this._database});
+  final Database _database;
+  // ...
+}
+</code></pre>
+<p>All constructor parameters become dependencies. The generator resolves them
+recursively — <code>CounterRepository</code> depends on <code>Database</code>, which is provided by a
+module (see below). You never call <code>CounterRepository(database: ...)</code> by hand.</p>
+<p><strong>Multiple constructors:</strong> a class may have more than one <code>@inject</code> constructor
+(named or factory) — but each must carry a unique <code>@Qualifier</code> so the generator
+can tell the resulting bindings apart:</p>
+<pre><code class="language-dart">const prod = Qualifier(#prod);
+const fake = Qualifier(#fake);
+
+class Service {
+  @inject
+  @prod
+  Service.forProduction(this._client);
+
+  @inject
+  @fake
+  Service.forTesting(this._mock);
+}
+</code></pre>
+<p>Each qualified constructor becomes its own <code>(Service, qualifier)</code> binding;
+consumers request the one they want with the matching <code>@Qualifier</code>.</p>
+<h2 id="modules-and-provides"><a class="header" href="#modules-and-provides">Modules and <code>@provides</code></a></h2>
+<p>For types you do not own — third-party classes, abstract interfaces, or types
+that need custom construction logic — declare a <code>@module</code> with <code>@provides</code>
+methods:</p>
+<pre><code class="language-dart">@module
+class DatabaseModule {
+  @provides
+  @singleton
+  Database provideDatabase(
+    @databasePath String path,
+    @databaseName String name,
+  ) =&gt; Database(path: path, name: name);
+}
+</code></pre>
+<p>The generator calls <code>provideDatabase</code> whenever a <code>Database</code> is needed, passing
+the correct <code>String</code> values via the qualifiers (see <a href="#named-bindings----qualifier"><code>@Qualifier</code></a> below).</p>
+<p>A <code>@provides</code> method can itself take dependencies — the generator wires them
+automatically. This creates a natural chain: modules compose into components
+without manual wiring.</p>
+<h2 id="shared-instances--singleton"><a class="header" href="#shared-instances--singleton">Shared instances — <code>@singleton</code></a></h2>
+<p>Add <code>@singleton</code> to guarantee a single instance for the component’s lifetime:</p>
+<pre><code class="language-dart">@inject
+@singleton
+class CounterRepository { ... }
+
+// or on a @provides method:
+@module
+class DatabaseModule {
+  @provides
+  @singleton
+  Database provideDatabase(...) =&gt; ...;
+}
+</code></pre>
+<p><code>identical(component.counterRepository, component.counterRepository)</code> is
+guaranteed to be <code>true</code>.</p>
+<p><strong>View models are deliberately <em>not</em> singletons.</strong> Each widget gets a fresh
+instance with isolated state that is created in <code>initState</code> and disposed in
+<code>dispose</code>. If view models were singletons, all instances of a screen would
+share the same state.</p>
+<h2 id="named-bindings--qualifier"><a class="header" href="#named-bindings--qualifier">Named bindings — <code>@Qualifier</code></a></h2>
+<p>When two providers return the same Dart type, a qualifier makes them distinct.
+The binding identity in inject.dart is <code>(type, qualifier)</code>, not <code>type</code> alone.</p>
+<p>The idiomatic form is two lines — declare once, use as annotation:</p>
+<pre><code class="language-dart">const databasePath = Qualifier(#databasePath);
+const databaseName = Qualifier(#databaseName);
+
+@module
+class DatabaseModule {
+  @provides
+  @databasePath
+  String provideDatabasePath() =&gt; '/data/counter.db';
+
+  @provides
+  @databaseName
+  String provideDatabaseName() =&gt; 'counter_db';
+
+  @provides
+  @singleton
+  Database provideDatabase(
+    @databasePath String path,   // routes to provideDatabasePath
+    @databaseName String name,   // routes to provideDatabaseName
+  ) =&gt; Database(path: path, name: name);
+}
+</code></pre>
+<p>Both <code>@databasePath String</code> and <code>@databaseName String</code> have the same Dart type.
+inject.dart routes each correctly because it tracks the qualifier alongside the
+type.</p>
+<p><strong>Rule:</strong> a <code>@Qualifier</code> is part of the binding key. <code>@prod String</code> and
+<code>@test String</code> are <em>different</em> keys and never override each other.</p>
+<h2 id="asynchronous-providers--asynchronous"><a class="header" href="#asynchronous-providers--asynchronous">Asynchronous providers — <code>@asynchronous</code></a></h2>
+<p>inject.dart distinguishes two ways to expose a <code>Future&lt;T&gt;</code>:</p>
+<h3 id="with-asynchronous--binding-type-is-t"><a class="header" href="#with-asynchronous--binding-type-is-t">With <code>@asynchronous</code> — binding type is <code>T</code></a></h3>
+<pre><code class="language-dart">const welcome = Qualifier(#welcome);
+
+@module
+class AppModule {
+  @provides
+  @singleton
+  @asynchronous
+  Future&lt;AppInfo&gt; provideAppInfo() async {
+    await Future.delayed(Duration.zero); // real app: SharedPreferences, platform channel, ...
+    return const AppInfo(name: 'Counter App', version: '1.0.0');
+  }
+
+  @welcome
+  @provides
+  @singleton
+  @asynchronous
+  Future&lt;String&gt; provideWelcomeMessage(AppInfo appInfo) =&gt;
+      Future.value('${appInfo.name} — tap + to start counting!');
+}
+</code></pre>
+<p><code>@asynchronous</code> tells the generator: <em>unwrap the <code>Future</code> and register the
+binding as <code>T</code>, not <code>Future&lt;T&gt;</code></em>.</p>
+<p>Consequences:</p>
+<ul>
+<li><code>provideWelcomeMessage</code> receives <code>AppInfo</code> — not <code>Future&lt;AppInfo&gt;</code>. The
+generator inserted the <code>await</code> transparently.</li>
+<li>Async-ness <em>propagates</em> upward. The component entry point becomes
+<code>Future&lt;String&gt;</code>:</li>
+</ul>
+<pre><code class="language-dart">// In main():
+final message = await component.welcomeMessage; // Future&lt;String&gt;
+</code></pre>
+<p>The <code>await</code> at the entry point is not a contradiction — <code>@asynchronous</code> means
+“the binding type is <code>T</code> so intermediate providers see <code>T</code>”. At the component
+boundary you cross back into async-world.</p>
+<h3 id="without-asynchronous--binding-type-is-futuret"><a class="header" href="#without-asynchronous--binding-type-is-futuret">Without <code>@asynchronous</code> — binding type is <code>Future&lt;T&gt;</code></a></h3>
+<pre><code class="language-dart">@module
+class AppModule {
+  @provides
+  @singleton
+  Future&lt;int&gt; provideInitialCount() =&gt; Future.value(0);
+}
+</code></pre>
+<p>The binding type <em>is</em> <code>Future&lt;int&gt;</code>. The consumer holds and awaits the future:</p>
+<pre><code class="language-dart">@inject
+class CounterViewModel extends ChangeNotifier {
+  CounterViewModel({required Future&lt;int&gt; initialCount, ...})
+    : _initialCount = initialCount;
+
+  final Future&lt;int&gt; _initialCount;
+
+  Future&lt;void&gt; init() async {
+    final value = await _initialCount;
+    // ...
+  }
+}
+</code></pre>
+<p><strong>Important for <code>ViewModelFactory</code>:</strong> a provider marked <code>@asynchronous</code> in the
+ViewModel’s dependency chain makes the entire chain async. <code>ViewModelFactory</code>
+requires <em>synchronous</em> provider resolution, so mixing <code>@asynchronous</code> deps into
+a ViewModel chain is a build error. Raw <code>Future&lt;T&gt;</code> bindings (no
+<code>@asynchronous</code>) are safe because the provision itself is synchronous — the
+<code>Future</code> object is handed over immediately without awaiting.</p>
+<h3 id="choosing-between-the-two"><a class="header" href="#choosing-between-the-two">Choosing between the two</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Use <code>@asynchronous</code> when…</th><th>Use raw <code>Future&lt;T&gt;</code> when…</th></tr>
+</thead>
+<tbody>
+<tr><td>downstream consumers should see <code>T</code>, not <code>Future</code></td><td>the consumer owns the await (e.g. in <code>init()</code>)</td></tr>
+<tr><td>async-ness should propagate to the entry point</td><td>the chain must stay synchronous (a <code>ViewModelFactory</code> dependency)</td></tr>
+</tbody>
+</table>
+</div>
+<p>The choice is about the <strong>binding type</strong> — whether dependents receive <code>T</code> or
+<code>Future&lt;T&gt;</code> — not about how quickly the future completes. A raw <code>Future&lt;T&gt;</code> is
+the right tool whenever a synchronous consumer sits in the chain, regardless of
+whether the future resolves instantly or after a real I/O round-trip.</p>
+<h2 id="lazy-and-on-demand-access--providert"><a class="header" href="#lazy-and-on-demand-access--providert">Lazy and on-demand access — <code>Provider&lt;T&gt;</code></a></h2>
+<p>A <code>Provider&lt;T&gt;</code> as a component entry point defers creation to call time:</p>
+<pre><code class="language-dart">@Component([AppModule, DatabaseModule])
+abstract class MainComponent {
+  @inject
+  Provider&lt;CounterRepository&gt; get counterRepositoryProvider;
+}
+
+// In app code:
+final repo = component.counterRepositoryProvider.get();
+</code></pre>
+<p>Use <code>Provider&lt;T&gt;</code> when:</p>
+<ul>
+<li>you want lazy initialisation (don’t create until first use),</li>
+<li>you need to pass the provider reference to non-DI code,</li>
+<li>or you need multiple independent instances — but only for <strong>non-<code>@singleton</code></strong>
+bindings; a <code>@singleton</code> provider returns the same cached instance on every
+<code>.get()</code>.</li>
+</ul>
+<p><code>ViewModelFactory&lt;T&gt;</code> (from <code>inject_flutter</code>) is itself built on <code>Provider&lt;T&gt;</code> —
+a concrete, in-repo example of the pattern.</p>
+<blockquote>
+<p><strong>Note:</strong> <code>Provider&lt;T&gt;</code> works as a component entry point, as a <code>@provides</code>
+method return type, and as a constructor parameter on any <code>@inject</code> class —
+injected like any other dependency. There the generator passes the provider
+itself (not its resolved value), so the consumer controls when <code>.get()</code> runs.</p>
+</blockquote>
+<h2 id="runtime-parameters--assistedinject"><a class="header" href="#runtime-parameters--assistedinject">Runtime parameters — <code>@assistedInject</code></a></h2>
+<p>Some constructor parameters are only known at the call site (a route argument,
+a widget key). Mark them <code>@assisted</code> and inject the rest from the graph:</p>
+<pre><code class="language-dart">class HomePage extends StatelessWidget {
+  @assistedInject
+  const HomePage({
+    @assisted super.key,
+    @assisted required this.title,
+    required this.viewModelFactory,   // from the DI graph
+  });
+
+  final String title;
+  final ViewModelFactory&lt;CounterViewModel&gt; viewModelFactory;
+}
+</code></pre>
+<p>The generator synthesises a factory class:</p>
+<pre><code class="language-dart">// generated — you never write this:
+abstract class HomePageFactory {
+  HomePage create({Key? key, required String title});
+}
+</code></pre>
+<p>The factory is automatically available as a binding — inject it wherever you
+build <code>HomePage</code>:</p>
+<pre><code class="language-dart">class MyApp extends StatelessWidget {
+  @assistedInject
+  const MyApp({@assisted super.key, required this.homePageFactory});
+
+  final HomePageFactory homePageFactory;
+
+  Widget build(BuildContext context) =&gt;
+      MaterialApp(home: homePageFactory.create(title: 'Counter Demo'));
+}
+</code></pre>
+<h3 id="explicit-assistedfactory"><a class="header" href="#explicit-assistedfactory">Explicit <code>@assistedFactory</code></a></h3>
+<p>If you need a custom factory shape — a different method name, multiple <code>create</code>
+variants, or a specific class name — declare it yourself:</p>
+<pre><code class="language-dart">@assistedFactory
+abstract class CustomHomePageFactory {
+  HomePage create({Key? key, required String title});
+}
+</code></pre>
+<p>The synthesised variant is the default for the common case. An explicit
+<code>@assistedFactory</code> takes precedence over synthesis.</p>
+<h3 id="file-setup-for-assistedinject"><a class="header" href="#file-setup-for-assistedinject">File setup for <code>@assistedInject</code></a></h3>
+<p>Files containing <code>@assistedInject</code> constructors need a <code>part</code> directive so the
+factory builder can write into them:</p>
+<pre><code class="language-dart">part 'home_page.factory.dart';
+</code></pre>
+<h2 id="observing-provisions--provisionlistener"><a class="header" href="#observing-provisions--provisionlistener">Observing provisions — <code>@provisionListener</code></a></h2>
+<p><code>ProvisionListener&lt;T&gt;</code> is a callback fired after every instance of <code>T</code> is
+created by the component. Use it for centralised logging, metrics, or tracking
+resources that need explicit cleanup:</p>
+<pre><code class="language-dart">class CreationLogListener implements ProvisionListener&lt;ChangeNotifier&gt; {
+  int _count = 0;
+  int get provisionCount =&gt; _count;
+
+  @override
+  void onProvision(ChangeNotifier instance) {
+    _count++;
+    debugPrint('inject.dart provisioned ${instance.runtimeType} (#$_count)');
+  }
+}
+
+@module
+class AppModule {
+  @provides
+  @singleton
+  @provisionListener
+  CreationLogListener provideCreationLogListener() =&gt; CreationLogListener();
+}
+</code></pre>
+<p>Three annotations work together:</p>
+<ul>
+<li><code>@provides</code> — exposes the listener as a binding.</li>
+<li><code>@singleton</code> — the same instance observes every provisioned object.</li>
+<li><code>@provisionListener</code> — registers it as a hook.</li>
+</ul>
+<p>The generic parameter narrows scope: <code>ProvisionListener&lt;ChangeNotifier&gt;</code> fires
+only for <code>ChangeNotifier</code> subtypes; <code>ProvisionListener&lt;Object&gt;</code> is a catch-all.</p>
+<h2 id="typedef-dependencies"><a class="header" href="#typedef-dependencies">Typedef dependencies</a></h2>
+<p>inject.dart supports <strong>typedef-wrapped</strong> function types and record types as
+dependency types:</p>
+<pre><code class="language-dart">typedef OnEvent = void Function(String event);
+typedef UserData = (String name, int age);
+
+class EventLogger {
+  @inject
+  EventLogger(this.onEvent, this.userData);
+  final OnEvent onEvent;
+  final UserData userData;
+}
+
+@module
+class AppModule {
+  @provides
+  OnEvent provideOnEvent() =&gt; print;
+
+  @provides
+  UserData provideUserData() =&gt; ('Alice', 30);
+}
+</code></pre>
+<p>Source: <code>packages/inject_generator/test/golden/code_generator/typedef_module_component.dart</code></p>
+<p><strong>Raw function types and raw record types without a typedef are not supported.</strong>
+The typedef is required for the generator to identify the dependency type
+unambiguously.</p>
+<h3 id="auto-synthesized-typedef-viewmodelfactoryt"><a class="header" href="#auto-synthesized-typedef-viewmodelfactoryt">Auto-synthesized typedef: <code>ViewModelFactory&lt;T&gt;</code></a></h3>
+<p><code>ViewModelFactory&lt;T extends ChangeNotifier&gt;</code> from <code>inject_flutter</code> is a typedef:</p>
+<pre><code class="language-dart">typedef ViewModelFactory&lt;T extends ChangeNotifier&gt; = ViewModelBuilder&lt;T&gt; Function({
+  Key? key,
+  ViewModelInitializer&lt;T&gt;? init,
+  Widget? loading,
+  ViewModelErrorBuilder? error,
+  required ViewModelWidgetBuilder&lt;T&gt; builder,
+  Widget? child,
+});
+</code></pre>
+<p><code>init</code> may be synchronous or <code>async</code>. An asynchronous initializer is awaited via
+a <code>FutureBuilder</code>: the <code>loading</code> widget is shown while it runs and the <code>error</code>
+builder if it fails (without an <code>error</code> builder the failure is reported through
+<code>FlutterError.reportError</code> rather than dropped). Both are ignored for a
+synchronous <code>init</code>.</p>
+<p>The generator synthesises the <code>ViewModelFactory&lt;T&gt;</code> binding automatically when
+it encounters an <code>@inject</code> class that extends <code>ChangeNotifier</code>. You never write
+a <code>@provides</code> method for <code>ViewModelFactory</code> — the synthesis happens behind the
+scenes. This is an extension of the assisted-injection mechanism: the generator
+detects that <code>ViewModelBuilder&lt;T&gt;</code>’s constructor accepts injectable parameters
+(a <code>Provider&lt;T&gt;</code>) and synthesises accordingly.</p>
+<h2 id="module-override-semantics"><a class="header" href="#module-override-semantics">Module override semantics</a></h2>
+<p>When two or more modules provide the same <code>(type, qualifier)</code> pair, the <strong>later
+module wins</strong>:</p>
+<pre><code class="language-dart">@Component([ModuleA, ModuleB])   // ModuleB overrides ModuleA for shared keys
+abstract class AppComponent { ... }
+</code></pre>
+<p>This is the same convention as Dagger 2 on Android. It makes two patterns
+trivial:</p>
+<p><strong>Test-mock swap:</strong></p>
+<pre><code class="language-dart">// Production component
+@Component([DatabaseModule])
+abstract class AppComponent { ... }
+
+// Test component — TestDatabaseModule overrides DatabaseModule's Database binding
+@Component([DatabaseModule, TestDatabaseModule])
+abstract class TestRepositoryComponent {
+  static const create = g.TestRepositoryComponent$Component.create;
+
+  @inject
+  CounterRepository get counterRepository;
+}
+
+@module
+class TestDatabaseModule {
+  @provides
+  @singleton
+  Database provideDatabase(
+    @databasePath String path,
+    @databaseName String name,
+  ) =&gt; FakeDatabase();
+}
+</code></pre>
+<p><strong>Environment swap:</strong> use separate components sharing a base module:</p>
+<pre><code class="language-dart">@Component([BaseModule, ProdModule])
+abstract class ProdComponent { ... }
+
+@Component([BaseModule, StagingModule])
+abstract class StagingComponent { ... }
+</code></pre>
+<blockquote>
+<p><strong>Note on qualifiers and override:</strong> <code>@prod String</code> and <code>@test String</code> are
+<em>different</em> keys. Override only fires when both the type <em>and</em> the qualifier
+are identical.</p>
+</blockquote>
+<h2 id="builder-options"><a class="header" href="#builder-options">Builder options</a></h2>
+<p>Configure the generator in <code>build.yaml</code> under the <code>inject_generator|inject_builder</code>
+key:</p>
+<pre><code class="language-yaml">targets:
+  $default:
+    builders:
+      inject_generator|inject_builder:
+        options:
+          nullable_duplicate_binding_policy: error  # default
+          debug_graph: false                        # default
+</code></pre>
+<h3 id="nullable_duplicate_binding_policy"><a class="header" href="#nullable_duplicate_binding_policy"><code>nullable_duplicate_binding_policy</code></a></h3>
+<p>Controls what happens when both <code>Foo?</code> and <code>Foo</code> exist for the same type and
+qualifier:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Value</th><th>Behaviour</th></tr>
+</thead>
+<tbody>
+<tr><td><code>error</code></td><td>Build error (default). Having both is almost always a mistake.</td></tr>
+<tr><td><code>warn</code></td><td>Both kept, a WARNING is emitted on the second binding.</td></tr>
+<tr><td><code>allow</code></td><td>Both kept silently — pre-policy behaviour, useful for migration.</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="debug_graph"><a class="header" href="#debug_graph"><code>debug_graph</code></a></h3>
+<p>Prints a formatted dependency-graph tree per component during the build.
+Off by default; enable temporarily to understand a complex graph:</p>
+<pre><code class="language-yaml">options:
+  debug_graph: true
+</code></pre>
+<pre><code>[inject_generator] Dependency graph for MainComponent:
+  MainComponent
+  ├── CounterRepository (@singleton)
+  │   └── Database (@singleton)
+  │       ├── String (@databaseName)
+  │       └── String (@databasePath)
+  ├── CreationLogListener (@singleton)
+  ├── MyAppFactory
+  │   └── HomePageFactory
+  │       └── ViewModelFactory&lt;CounterViewModel&gt;
+  │           └── CounterViewModel
+  │               ├── Future&lt;int&gt; (@singleton)
+  │               └── IncrementCounterUseCase (@singleton)
+  │                   └── CounterRepository (@singleton)
+  │                       └── Database (@singleton)
+  │                           ├── String (@databaseName)
+  │                           └── String (@databasePath)
+  └── String (@welcome, @singleton, @async)
+      └── AppInfo (@singleton, @async)
+</code></pre>
+<p>If sources haven’t changed since the last build, <code>build_runner</code> skips all
+inputs and nothing is printed. Run a clean first:</p>
+<pre><code class="language-bash">dart run build_runner clean
+dart run build_runner build
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="chapter_3_quickstart.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="chapter_5_state_management.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="chapter_3_quickstart.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="chapter_5_state_management.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-8df1eaa7.js"></script>
+        <script src="book-c22b7243.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>
