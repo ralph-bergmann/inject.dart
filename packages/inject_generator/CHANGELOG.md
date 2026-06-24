@@ -1,3 +1,7 @@
+## 1.1.1
+
+* fix dependency conflict with flutter_test
+
 ## 1.1.0
 
 - Full rewrite of the generator: new Analysis → Validation → Codegen pipeline.

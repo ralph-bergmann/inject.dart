@@ -1,3 +1,7 @@
+## 1.1.1
+
+* fix dependency conflict with flutter_test
+
 ## 1.1.0
 
 * `ViewModelInitializer` now accepts an **asynchronous** `init` callback (its type widened from `void Function(T)` to `FutureOr<void> Function(T)`). An asynchronous `init` is awaited via a `FutureBuilder`, so a long-running `init` no longer races the first frame. Synchronous `init` callbacks keep working unchanged.

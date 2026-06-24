@@ -3,7 +3,7 @@ description: >-
   Flutter integration for inject_annotation. Provides ViewModelFactory and
   ViewModelBuilder to inject ViewModels into widgets with automatic lifecycle
   management.
-version: 1.1.0
+version: 1.1.1
 documentation: https://ralph-bergmann.github.io/inject.dart/
 repository: https://github.com/ralph-bergmann/inject.dart
 issue_tracker: https://github.com/ralph-bergmann/inject.dart/issues
@@ -22,7 +22,7 @@ dependencies:
   flutter:
     sdk: flutter
   inject_annotation: ^1.1.0
-  inject_generator: ^1.1.0
+  inject_generator: ^1.1.1
 
 dev_dependencies:
   flutter_lints: ^6.0.0

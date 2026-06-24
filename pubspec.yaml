@@ -14,7 +14,7 @@ workspace:
   - packages/inject_generator
 
 dev_dependencies:
-  melos: ^7.7.0
+  melos: ^8.0.0
 
 melos:
   ide:
