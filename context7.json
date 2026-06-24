@@ -1,27 +1,18 @@
 {
   "$schema": "https://context7.com/schema/context7.json",
   "projectTitle": "inject.dart",
-  "description": "Compile-time dependency injection for Dart and Flutter. Validates the entire dependency graph at build time — missing bindings, circular dependencies, and qualifier conflicts are build errors, not runtime crashes.",
+  "description": "Compile-time dependency injection for Dart and Flutter.",
   "folders": [
-    "book/src",
-    "packages/inject_annotation/lib",
-    "packages/inject_flutter/lib",
     "examples",
-    "rules",
-    "skills"
+    "packages/inject_annotation",
+    "packages/inject_flutter",
+    "rules"
   ],
   "excludeFolders": [
-    "_bmad",
-    "_bmad-output",
+    "blob",
+    "book",
     "docs",
-    "book/book",
-    "packages/inject_generator",
-    "build",
-    ".dart_tool"
-  ],
-  "excludeFiles": [
-    "CHANGELOG.md",
-    "pubspec.lock"
+    "packages/inject_generator"
   ],
   "rules": [
     "Use constructor injection exclusively — never service locator patterns like GetIt or manual lookup",
@@ -38,5 +29,7 @@
     "ViewModelFactory<T> in inject_flutter is only valid for T extends ChangeNotifier whose construction chain is fully synchronous; inject the factory and call it (factory(builder: (context, vm, child) => ...)), never construct ViewModelBuilder by hand",
     "ViewModelBuilder init may be sync or async (FutureOr<void>); an async init is awaited, showing the 'loading' widget while it runs and 'error' (ViewModelErrorBuilder) if it throws",
     "The static 'create' field on a component must point to the generated implementation: static const create = g.AppComponent$Component.create"
-  ]
+  ],
+  "url": "https://context7.com/ralph-bergmann/inject.dart",
+  "public_key": "pk_iAT3qJLTQm8Si45xl4IH6"
 }
