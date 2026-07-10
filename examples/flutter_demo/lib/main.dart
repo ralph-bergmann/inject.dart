@@ -1,3 +1,4 @@
+import 'package:counter_analytics/counter_analytics.dart';
 import 'package:flutter/material.dart';
 import 'package:inject_annotation/inject_annotation.dart';
 
@@ -8,7 +9,12 @@ import 'src/data/services/database.dart';
 import 'src/features/app/my_app.dart';
 
 void main() async {
-  final component = MainComponent.create();
+  // [AnalyticsModule] has no default constructor (it needs the app name),
+  // so the generated `create` factory REQUIRES an instance — passing a
+  // pre-configured module is how runtime configuration enters the graph.
+  final component = MainComponent.create(
+    analyticsModule: const AnalyticsModule('Counter App'),
+  );
 
   // [welcomeMessage] is [Future<String>] — await is required at this
   // entry-point boundary even though both [provideAppInfo] and
@@ -32,18 +38,24 @@ void main() async {
 
 /// Root of the dependency graph.
 ///
-/// Two modules cover distinct concerns:
+/// Three modules cover distinct concerns:
 /// - [AppModule]: app metadata ([@asynchronous] [AppInfo]), welcome message
 ///   (also [@asynchronous], injects [AppInfo] directly), initial count (raw
 ///   [Future<int>] **without** [@asynchronous]), and the [@provisionListener].
 /// - [DatabaseModule]: qualified [String] config values and the [Database]
 ///   singleton.
+/// - [AnalyticsModule]: from the **local `counter_analytics` package** —
+///   modules from other packages are listed exactly like local ones. This is
+///   how a monorepo marries its infrastructure packages (api, database,
+///   auth, analytics, ...) into one graph. Because [AnalyticsModule] has no
+///   default constructor, `create` requires a configured instance (see
+///   `main()`).
 ///
 /// **Module order matters.** A binding in a later module overrides an earlier
 /// module's binding for the same (type, qualifier) pair. The test components
 /// in [test/] exploit this: they append a module that provides a fake
 /// [Database], and that binding wins over [DatabaseModule]'s real one.
-@Component([AppModule, DatabaseModule])
+@Component([AppModule, DatabaseModule, AnalyticsModule])
 abstract class MainComponent {
   static const create = g.MainComponent$Component.create;
 

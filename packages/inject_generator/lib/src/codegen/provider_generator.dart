@@ -308,7 +308,7 @@ class ProviderGenerator {
     bool createLambda;
     if (hasListeners) {
       createBodyCode = Block.of([
-        constructorCall.assignFinal('instance').statement,
+        declareFinal('instance').assign(constructorCall).statement,
         ...listenerStatementCodes,
         refer('instance').returned.statement,
       ]);

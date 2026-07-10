@@ -131,11 +131,20 @@ abstract class AppComponent {
 **Rules:**
 
 - Must be `abstract`.
+- Components declare **no constructors**. `@inject` and `@assistedInject`
+  constructors belong on injectable classes — never on a component class. The
+  generated `create` factory is the only way a component is instantiated.
 - Entry points are exposed as **abstract getters** (or abstract methods).
   Annotating them with `@inject` is **optional** — an abstract getter on a
   component is recognized as an entry point either way. Annotating is the
   convention used throughout the examples; do so for clarity and consistency.
 - The static `create` reference points to the generated implementation.
+- The generated `create` factory takes one **named parameter per module**
+  (in `@Component([...])` declaration order): optional when the module has a
+  public no-arg constructor (falls back to `Module()`), **`required`**
+  otherwise. Passing a pre-built module instance is the supported way to feed
+  runtime values or externally-constructed objects into the graph — including
+  objects obtained from another component (root → feature component wiring).
 - Module list order matters: later modules override bindings from earlier ones.
 
 ### `@module`

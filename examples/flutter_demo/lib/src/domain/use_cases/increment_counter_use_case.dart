@@ -1,3 +1,4 @@
+import 'package:counter_analytics/counter_analytics.dart';
 import 'package:inject_annotation/inject_annotation.dart';
 
 import '../../data/repositories/counter_repository.dart';
@@ -20,12 +21,22 @@ import '../models/counter.dart';
 @inject
 @singleton
 class IncrementCounterUseCase {
-  const IncrementCounterUseCase({required this._repository});
+  const IncrementCounterUseCase({
+    required this._repository,
+    // [IncrementTracker] comes from the local `counter_analytics` package —
+    // a library package with no code generation of its own. The generator
+    // resolves @inject classes across package boundaries; the providers are
+    // emitted into this app's main.inject.dart.
+    required this._tracker,
+  });
 
   final CounterRepository _repository;
+  final IncrementTracker _tracker;
 
   Future<Counter> execute() async {
     await _repository.increment();
-    return _repository.counter;
+    final counter = await _repository.counter;
+    _tracker.onIncrement(counter.value);
+    return counter;
   }
 }

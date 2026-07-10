@@ -9,6 +9,7 @@ environment:
 workspace:
   - examples/example
   - examples/flutter_demo
+  - examples/flutter_demo/packages/counter_analytics
   - packages/inject_annotation
   - packages/inject_flutter
   - packages/inject_generator

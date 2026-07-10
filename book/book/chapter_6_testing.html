@@ -15,8 +15,8 @@
         <link rel="icon" href="favicon-de23e50b.svg">
         <link rel="shortcut icon" href="favicon-8114d1fc.png">
         <link rel="stylesheet" href="css/variables-8adf115d.css">
-        <link rel="stylesheet" href="css/general-0392ca55.css">
-        <link rel="stylesheet" href="css/chrome-fc474251.css">
+        <link rel="stylesheet" href="css/general-e96d0476.css">
+        <link rel="stylesheet" href="css/chrome-d279d366.css">
 
         <!-- Fonts -->
         <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
@@ -36,7 +36,7 @@
             const default_dark_theme = "ayu";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-aa1c9d3a.js"></script>
+        <script src="toc-e5cee16d.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -239,6 +239,28 @@ class FakeDatabase extends Database {
   Future&lt;int&gt; selectCount() =&gt; Future.value(_fakeCount);
 }
 </code></pre>
+<h3 id="alternative-pass-a-pre-configured-module-instance"><a class="header" href="#alternative-pass-a-pre-configured-module-instance">Alternative: pass a pre-configured module instance</a></h3>
+<p>Listing the override module in <code>@Component([...])</code> is enough when the module
+has a no-arg constructor. If the fake needs <strong>per-test configuration</strong>, give
+the module a constructor parameter — the generated <code>create</code> then <em>requires</em> an
+instance, and each test builds its own:</p>
+<pre><code class="language-dart">@module
+class TestDatabaseModule {
+  TestDatabaseModule(this.fake);
+  final Database fake;
+
+  @provides
+  @singleton
+  Database provideDatabase() =&gt; fake;
+}
+
+// In the test:
+final component = TestRepositoryComponent.create(
+  testDatabaseModule: TestDatabaseModule(FakeDatabase()),
+);
+</code></pre>
+<p>This is the same module-instance mechanism used to connect components — see
+<a href="./chapter_8_multiple_components.html">Composing Components and Multi-Package Projects</a>.</p>
 <p>The fake extends the real <code>Database</code> and overrides its I/O methods with
 in-memory ones — so the <code>CounterRepository</code> logic is tested in isolation without
 any file-system access.</p>
@@ -381,7 +403,7 @@ production.</p>
 
         <script src="clipboard-1626706a.min.js"></script>
         <script src="highlight-8df1eaa7.js"></script>
-        <script src="book-c22b7243.js"></script>
+        <script src="book-609e4cb8.js"></script>
 
         <!-- Custom JS scripts -->
 

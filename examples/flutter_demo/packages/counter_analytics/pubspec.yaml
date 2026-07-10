@@ -1,0 +1,25 @@
+name: counter_analytics
+description: >
+  Infrastructure package for the flutter_demo example — the kind of package
+  Flutter monorepos typically have (api, database, auth, analytics, ...).
+  Self-contained: it ships the AnalyticsService interface, a console
+  implementation, the AnalyticsModule that binds them, and an @inject
+  consumer (IncrementTracker). The app installs it by listing
+  AnalyticsModule in its @Component annotation.
+publish_to: none
+version: 0.1.0
+
+environment:
+  sdk: ^3.12.0
+  flutter: ^3.44.0
+resolution: workspace
+
+# Note: inject_annotation is the only inject.dart dependency this package
+# needs. Code is generated where the @Component lives (the app package) —
+# a library package that only declares @inject classes and modules runs
+# no code generation at all.
+dependencies:
+  flutter:
+    sdk: flutter
+
+  inject_annotation: ^1.1.0

@@ -7,3 +7,4 @@
 - [State Management and Application Architecture](./chapter_5_state_management.md)
 - [Testing with Dependency Injection](./chapter_6_testing.md)
 - [AI Coding Assistants](./chapter_7_ai_assisted_development.md)
+- [Composing Components and Multi-Package Projects](./chapter_8_multiple_components.md)

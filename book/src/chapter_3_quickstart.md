@@ -308,8 +308,9 @@ class AppModule {
 ## Step 6 — Declare the component
 
 The component is the graph root. It lists its modules and exposes entry points.
-`main.dart` holds **only** the `@Component` — it has no `@assistedInject`
-constructor, so it takes **no** `part` directive; it imports the generated
+A component is an abstract graph declaration — it never declares constructors
+of its own. Since no class in `main.dart` declares an `@assistedInject`
+constructor, the file needs **no** `part` directive; it imports the generated
 component library instead:
 
 ```dart
@@ -362,10 +363,10 @@ produces a `MyApp` with every injected dependency already in place.
 
 ## Troubleshooting
 
-### "component class must declare at least one @inject-annotated provider"
+### "Component 'MainComponent' has no entry points"
 
-A `@Component` must expose at least one entry point via an `@inject` getter
-(here, `myAppFactory`). Add one if your component has none.
+A `@Component` must expose at least one entry point — an abstract getter or
+method (here, `myAppFactory`). Add one if your component has none.
 
 ### "Could not find a way to provide X"
 
@@ -381,8 +382,8 @@ The generator has no binding for a dependency. Common causes:
 A file with an `@assistedInject` (or `@assistedFactory`) constructor needs a
 `part '<file>.factory.dart';` directive **in that same file** — for example
 `part 'home_page.factory.dart';` in `home_page.dart`. It is *not* added to the
-component file unless the component file itself declares an assisted
-constructor.
+component file unless another class in that same file declares an assisted
+constructor (the component itself never does).
 
 ## Complete example
 

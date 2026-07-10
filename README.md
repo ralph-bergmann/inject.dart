@@ -122,6 +122,8 @@ Two things are happening here:
 ```dart
 import 'main.inject.dart' as g;
 
+// `part` is needed because CounterPage's @assistedInject constructor
+// lives in this same file — components themselves never require it.
 part 'main.factory.dart';
 
 void main() => runApp(
@@ -300,6 +302,40 @@ abstract class AppComponent { /* ... */ }
 A module's `@provides` methods can themselves take dependencies — the
 generator wires them automatically.
 
+### Passing module instances to `create`
+
+The generated component factory accepts one **named parameter per
+module** listed in `@Component([...])`, in declaration order:
+
+- a module with a public no-arg constructor becomes an *optional*
+  parameter — `create()` constructs it for you when omitted;
+- a module whose constructor takes parameters becomes a **`required`**
+  parameter — you build the instance and pass it in.
+
+```dart
+@module
+class DbModule {
+  DbModule(this.path);
+  final String path;
+
+  @provides
+  @singleton
+  Database provideDb() => Database.open(path);
+}
+
+// Generated signature: create({required DbModule dbModule})
+final component = AppComponent.create(dbModule: DbModule('app.db'));
+```
+
+Passing a pre-built module instance is the intended way to feed
+**runtime values and externally-constructed objects** into the graph —
+the inject.dart counterpart to Dagger's `@BindsInstance`. See
+[Composing Components and Multi-Package Projects][book-composing] for
+how the same mechanism connects a feature component to a root
+component.
+
+[book-composing]: https://ralph-bergmann.github.io/inject.dart/chapter_8_multiple_components.html
+
 ## Shared instances — `@singleton`
 
 Apply `@singleton` to an `@inject`ed class or a `@provides` method to
@@ -407,8 +443,10 @@ class Repository {
 
 The `@asynchronous` annotation tells inject.dart to **resolve the
 future before** providing the value. Consumers see plain `Database`,
-not `Future<Database>`. The component's `create` method becomes
-asynchronous in turn.
+not `Future<Database>`. Async-ness surfaces at the component boundary
+instead: an entry point whose dependency chain contains an
+`@asynchronous` binding is declared `Future<T>` and awaited there —
+`create()` itself always stays synchronous.
 
 If you actually want to inject the `Future` itself, leave the
 annotation off — `Future<Database>` is then just another type.
@@ -609,7 +647,23 @@ behaves like hand-written code.
 
 Yes. Components are independent values. A common pattern is one root
 component for the app and a per-screen or per-feature component that
-gets its dependencies from the root.
+gets its dependencies from the root. The bridge is a module with
+constructor parameters: the feature component lists a module whose
+constructor carries the objects it needs, and you pass a pre-configured
+instance to the feature component's `create` method:
+
+```dart
+final root = RootComponent.create();
+final feature = FeatureComponent.create(
+  featureModule: FeatureModule(root.db),
+);
+```
+
+Note that `@singleton` is scoped **per component instance** — a second
+component that merely lists the same modules builds *fresh* singletons
+of its own. Passing instances through a module constructor is how you
+share them. The full pattern is described in
+[Composing Components and Multi-Package Projects][book-composing].
 
 ## Module Override Semantics
 
@@ -772,9 +826,12 @@ You usually do not. Construct the class directly with whatever fakes
 you want — every constructor parameter is explicit, so no DI framework
 is involved at the unit-test level. If you want to test a whole
 component, use the **module override pattern** described above — build
-an alternate `@module` that provides fakes, list it last in
-`@Component([..., TestModule])`, and pass it to the component's
-`create` method.
+an alternate `@module` that provides fakes and list it last in
+`@Component([..., TestModule])`. Listing it is enough when the module
+has a no-arg constructor; if the fake needs per-test configuration,
+give the module a constructor parameter and pass a pre-built instance
+to the component's `create` method (see
+[Passing module instances to `create`](#passing-module-instances-to-create)).
 
 # Development
 

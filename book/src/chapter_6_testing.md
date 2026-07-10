@@ -97,6 +97,33 @@ class FakeDatabase extends Database {
 }
 ```
 
+### Alternative: pass a pre-configured module instance
+
+Listing the override module in `@Component([...])` is enough when the module
+has a no-arg constructor. If the fake needs **per-test configuration**, give
+the module a constructor parameter — the generated `create` then *requires* an
+instance, and each test builds its own:
+
+```dart
+@module
+class TestDatabaseModule {
+  TestDatabaseModule(this.fake);
+  final Database fake;
+
+  @provides
+  @singleton
+  Database provideDatabase() => fake;
+}
+
+// In the test:
+final component = TestRepositoryComponent.create(
+  testDatabaseModule: TestDatabaseModule(FakeDatabase()),
+);
+```
+
+This is the same module-instance mechanism used to connect components — see
+[Composing Components and Multi-Package Projects](./chapter_8_multiple_components.md).
+
 The fake extends the real `Database` and overrides its I/O methods with
 in-memory ones — so the `CounterRepository` logic is tested in isolation without
 any file-system access.

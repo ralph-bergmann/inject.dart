@@ -15,8 +15,8 @@
         <link rel="icon" href="favicon-de23e50b.svg">
         <link rel="shortcut icon" href="favicon-8114d1fc.png">
         <link rel="stylesheet" href="css/variables-8adf115d.css">
-        <link rel="stylesheet" href="css/general-0392ca55.css">
-        <link rel="stylesheet" href="css/chrome-fc474251.css">
+        <link rel="stylesheet" href="css/general-e96d0476.css">
+        <link rel="stylesheet" href="css/chrome-d279d366.css">
 
         <!-- Fonts -->
         <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
@@ -36,7 +36,7 @@
             const default_dark_theme = "ayu";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-aa1c9d3a.js"></script>
+        <script src="toc-e5cee16d.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -425,8 +425,9 @@ class AppModule {
 </blockquote>
 <h2 id="step-6--declare-the-component"><a class="header" href="#step-6--declare-the-component">Step 6 — Declare the component</a></h2>
 <p>The component is the graph root. It lists its modules and exposes entry points.
-<code>main.dart</code> holds <strong>only</strong> the <code>@Component</code> — it has no <code>@assistedInject</code>
-constructor, so it takes <strong>no</strong> <code>part</code> directive; it imports the generated
+A component is an abstract graph declaration — it never declares constructors
+of its own. Since no class in <code>main.dart</code> declares an <code>@assistedInject</code>
+constructor, the file needs <strong>no</strong> <code>part</code> directive; it imports the generated
 component library instead:</p>
 <pre><code class="language-dart">// lib/main.dart
 import 'main.inject.dart' as g;
@@ -468,9 +469,9 @@ the <code>as g</code> prefix keeps generated names out of your namespace.</li>
 <p><code>MainComponent.create()</code> returns the wired component; <code>myAppFactory.create()</code>
 produces a <code>MyApp</code> with every injected dependency already in place.</p>
 <h2 id="troubleshooting"><a class="header" href="#troubleshooting">Troubleshooting</a></h2>
-<h3 id="component-class-must-declare-at-least-one-inject-annotated-provider"><a class="header" href="#component-class-must-declare-at-least-one-inject-annotated-provider">“component class must declare at least one @inject-annotated provider”</a></h3>
-<p>A <code>@Component</code> must expose at least one entry point via an <code>@inject</code> getter
-(here, <code>myAppFactory</code>). Add one if your component has none.</p>
+<h3 id="component-maincomponent-has-no-entry-points"><a class="header" href="#component-maincomponent-has-no-entry-points">“Component ‘MainComponent’ has no entry points”</a></h3>
+<p>A <code>@Component</code> must expose at least one entry point — an abstract getter or
+method (here, <code>myAppFactory</code>). Add one if your component has none.</p>
 <h3 id="could-not-find-a-way-to-provide-x"><a class="header" href="#could-not-find-a-way-to-provide-x">“Could not find a way to provide X”</a></h3>
 <p>The generator has no binding for a dependency. Common causes:</p>
 <ul>
@@ -483,8 +484,8 @@ produces a <code>MyApp</code> with every injected dependency already in place.</
 <p>A file with an <code>@assistedInject</code> (or <code>@assistedFactory</code>) constructor needs a
 <code>part '&lt;file&gt;.factory.dart';</code> directive <strong>in that same file</strong> — for example
 <code>part 'home_page.factory.dart';</code> in <code>home_page.dart</code>. It is <em>not</em> added to the
-component file unless the component file itself declares an assisted
-constructor.</p>
+component file unless another class in that same file declares an assisted
+constructor (the component itself never does).</p>
 <h2 id="complete-example"><a class="header" href="#complete-example">Complete example</a></h2>
 <p>The full, running source is in <a href="https://github.com/ralph-bergmann/inject.dart/tree/master/examples/flutter_demo"><code>flutter_demo</code></a>. For a single-file
 variant, see <a href="https://github.com/ralph-bergmann/inject.dart/blob/master/examples/example/lib/main.dart"><code>examples/example/lib/main.dart</code></a>. The deeper
@@ -536,7 +537,7 @@ architecture walkthrough is in
 
         <script src="clipboard-1626706a.min.js"></script>
         <script src="highlight-8df1eaa7.js"></script>
-        <script src="book-c22b7243.js"></script>
+        <script src="book-609e4cb8.js"></script>
 
         <!-- Custom JS scripts -->
 

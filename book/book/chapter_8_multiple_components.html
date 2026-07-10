@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>AI Coding Assistants - inject.dart Documentation</title>
+        <title>Composing Components and Multi-Package Projects - inject.dart Documentation</title>
 
 
         <!-- Custom HTML head -->
@@ -153,113 +153,181 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <h1 id="ai-coding-assistants"><a class="header" href="#ai-coding-assistants">AI Coding Assistants</a></h1>
-<p>Most developers now build with an AI coding assistant, so inject.dart ships
-first-class guidance for them. Your assistant gets the annotations, the
-<code>build_runner</code> workflow, and the compile-time DI model right — without you
-re-explaining it every session. There are two complementary channels: a rules
-document and installable Agent Skills.</p>
-<h2 id="ai-rules-file"><a class="header" href="#ai-rules-file">AI rules file</a></h2>
-<h2 id="agent-skills"><a class="header" href="#agent-skills">Agent Skills</a></h2>
-<p>For agents that support the <a href="https://agentskills.io/specification">Agent Skills</a> format (Claude Code and
-others), inject.dart provides task-focused skills under <a href="https://github.com/ralph-bergmann/inject.dart/tree/master/packages/inject_annotation/skills"><code>skills/</code></a>.
-Where the rules file is one big document, each skill teaches <em>how</em> to perform a
-single concrete task and is activated only when relevant. Install them with
-either tool:</p>
-<pre><code class="language-shell"># Node tool — installs straight from the GitHub repo
-npx skills add https://github.com/ralph-bergmann/inject.dart/tree/master/packages/inject_annotation/skills --skill '*' --agent universal
+                        <h1 id="composing-components-and-multi-package-projects"><a class="header" href="#composing-components-and-multi-package-projects">Composing Components and Multi-Package Projects</a></h1>
+<p>Most apps start — and many end — with a single root component. This chapter
+covers what comes next: monorepos that split infrastructure into packages
+(api, database, auth, analytics, …), and per-feature components that borrow
+objects from a root component.</p>
+<h2 id="one-graph-or-many"><a class="header" href="#one-graph-or-many">One graph or many?</a></h2>
+<p>Components are <strong>independent values</strong>. There is no hidden registry and no
+global state: creating a component wires exactly the bindings reachable from
+its entry points, nothing else. Two components never share anything unless you
+explicitly hand an object from one to the other.</p>
+<p>Reasons to introduce a second component:</p>
+<ul>
+<li><strong>Per-feature or per-screen lifecycles</strong> — a checkout flow that should build
+its object graph when entered and release it when left.</li>
+<li><strong>Different environments</strong> — <code>ProdComponent</code> vs <code>StagingComponent</code> sharing a
+base module (see <a href="./chapter_4_core_concepts.html">Core Concepts</a>).</li>
+<li><strong>Tests</strong> — a test component that swaps real bindings for fakes (see
+<a href="./chapter_6_testing.html">Testing</a>).</li>
+</ul>
+<h2 id="singletons-are-scoped-per-component-instance"><a class="header" href="#singletons-are-scoped-per-component-instance">Singletons are scoped per component instance</a></h2>
+<p>One rule to internalise before composing anything: <code>@singleton</code> guarantees a
+single instance <strong>within one component instance</strong> — it is not app-global. Two
+components that happen to list the same modules each build their <em>own</em>
+singletons.</p>
+<p>That means a second component must never re-list the root’s modules in the
+hope of “seeing” the root’s objects — it would silently construct fresh
+duplicates (a second database connection, a second HTTP client, …). Objects
+that must be shared are <em>passed in</em>, as shown below.</p>
+<h2 id="marrying-packages-modules-are-the-seam"><a class="header" href="#marrying-packages-modules-are-the-seam">Marrying packages: modules are the seam</a></h2>
+<p>The typical Flutter monorepo splits infrastructure into packages — an api
+package, a database package, an auth package. Each package ships its classes
+plus a <code>@module</code>; the app installs a package by <strong>listing its module in the
+component</strong>, exactly like a local module:</p>
+<pre><code class="language-dart">// api package -----------------------------------------------------------
+@module
+class ApiModule {
+  const ApiModule(this._baseUrl); // runtime config — no default constructor
+  final String _baseUrl;
 
-# Dart tool (https://pub.dev/packages/skills) — discovers skills from your
-# dependency tree and configured GitHub registries, into your IDE's skills dir
-dart pub global activate skills
-skills get
+  @provides
+  @singleton
+  ApiClient provideApiClient() =&gt; ApiClient(baseUrl: _baseUrl);
+}
+
+// auth package -----------------------------------------------------------
+@module
+class AuthModule {
+  // Providers freely depend on bindings from other packages' modules —
+  // ApiClient comes from ApiModule above.
+  @provides
+  @singleton
+  AuthRepository provideAuthRepository(ApiClient client) =&gt;
+      AuthRepository(client);
+}
+
+// app package ------------------------------------------------------------
+@Component([ApiModule, AuthModule, AppModule])
+abstract class MainComponent {
+  static const create = g.MainComponent$Component.create;
+
+  @inject
+  MyAppFactory get myAppFactory;
+}
+
+void main() {
+  final component = MainComponent.create(
+    // ApiModule has no default constructor → the parameter is `required`;
+    // the compiler forces the wiring. AuthModule and AppModule have default
+    // constructors → optional, `create` builds them for you.
+    apiModule: const ApiModule('https://api.example.com'),
+  );
+  runApp(component.myAppFactory.create());
+}
 </code></pre>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Skill</th><th>Use it to…</th></tr>
-</thead>
-<tbody>
-<tr><td><a href="https://github.com/ralph-bergmann/inject.dart/blob/master/packages/inject_annotation/skills/inject_annotation-setup-di/SKILL.md"><code>inject_annotation-setup-di</code></a></td><td>Add <code>build_runner</code> + inject.dart and scaffold the root component (from scratch).</td></tr>
-<tr><td><a href="https://github.com/ralph-bergmann/inject.dart/blob/master/packages/inject_annotation/skills/inject_annotation-add-injectable/SKILL.md"><code>inject_annotation-add-injectable</code></a></td><td>Make a class injectable with <code>@inject</code> and expose it; <code>@singleton</code>.</td></tr>
-<tr><td><a href="https://github.com/ralph-bergmann/inject.dart/blob/master/packages/inject_annotation/skills/inject_annotation-create-module/SKILL.md"><code>inject_annotation-create-module</code></a></td><td>Provide third-party / configured types with a <code>@module</code> (<code>@provides</code>, <code>@asynchronous</code>, <code>Qualifier</code>).</td></tr>
-<tr><td><a href="https://github.com/ralph-bergmann/inject.dart/blob/master/packages/inject_annotation/skills/inject_annotation-add-assisted-injection/SKILL.md"><code>inject_annotation-add-assisted-injection</code></a></td><td>Mix injected and runtime parameters with <code>@assistedInject</code> / <code>@assisted</code> / <code>@assistedFactory</code>.</td></tr>
-<tr><td><a href="https://github.com/ralph-bergmann/inject.dart/blob/master/packages/inject_annotation/skills/inject_annotation-inject-provider/SKILL.md"><code>inject_annotation-inject-provider</code></a></td><td>Inject <code>Provider&lt;T&gt;</code> for lazy or multiple instances.</td></tr>
-<tr><td><a href="https://github.com/ralph-bergmann/inject.dart/blob/master/packages/inject_annotation/skills/inject_annotation-add-provision-listener/SKILL.md"><code>inject_annotation-add-provision-listener</code></a></td><td>Observe provisioning with <code>ProvisionListener&lt;T&gt;</code> + <code>@provisionListener</code>.</td></tr>
-<tr><td><a href="https://github.com/ralph-bergmann/inject.dart/blob/master/packages/inject_annotation/skills/inject_annotation-flutter-view-model/SKILL.md"><code>inject_annotation-flutter-view-model</code></a></td><td>Bind a <code>ChangeNotifier</code> view model to a widget with <code>ViewModelFactory</code> / <code>ViewModelBuilder</code> (sync or async init).</td></tr>
-<tr><td><a href="https://github.com/ralph-bergmann/inject.dart/blob/master/packages/inject_annotation/skills/inject_annotation-write-tests/SKILL.md"><code>inject_annotation-write-tests</code></a></td><td>Test injected code with a test component + test module + fakes.</td></tr>
-</tbody>
-</table>
-</div>
-<p>Together they cover every annotation in <code>inject_annotation</code> (<code>@component</code>,
-<code>@module</code>, <code>@inject</code>, <code>@provides</code>, <code>@singleton</code>, <code>@asynchronous</code>, <code>Qualifier</code>,
-<code>@assistedInject</code> / <code>@assisted</code> / <code>@assistedFactory</code>, <code>@provisionListener</code>), the
-runtime contracts <code>Provider&lt;T&gt;</code> and <code>ProvisionListener&lt;T&gt;</code>, and the
-<code>inject_flutter</code> view-model API.</p>
-<h2 id="the-core-rule"><a class="header" href="#the-core-rule">The core rule</a></h2>
-<p>Whichever channel you use, the one rule that anchors all the guidance is:
-inject.dart is <strong>constructor injection only</strong> — “if it builds, it runs.” A good
-assistant never suggests service-locator patterns (<code>get_it</code>, <code>provider</code> used as
-a locator, or hand-rolled registries), and re-runs code generation after every
-annotation change:</p>
-<pre><code class="language-shell">dart run build_runner build --delete-conflicting-outputs
+<p>That is the whole integration story. The pieces:</p>
+<ul>
+<li><strong>Listing = installing.</strong> Modules from other packages are listed like local
+ones, and module order keeps its meaning: a later module overrides an
+earlier one for the same <code>(type, qualifier)</code> key — so the app can append a
+module to reconfigure a package without touching it.</li>
+<li><strong>Module constructor parameters are the configuration channel.</strong> A module
+without a default constructor becomes a <em>required</em> <code>create</code> parameter (see
+<a href="./chapter_4_core_concepts.html#the-generated-create-factory">The generated <code>create</code> factory</a>);
+that’s how the base URL, database path, or app name enters the graph.</li>
+<li><strong><code>@inject</code> classes work across packages without ceremony.</strong> The generator
+resolves them wherever they live and emits their providers into the app’s
+<code>.inject.dart</code> — library packages run no code generation and only depend on
+<code>inject_annotation</code>.</li>
+<li><strong>Interfaces bind by declared return type.</strong> A package module typically
+exposes an interface (<code>@provides AnalyticsService provide() =&gt; ConsoleAnalyticsService(...)</code>);
+consumers inject the interface and tests override the binding with a fake.</li>
+</ul>
+<p>Two rules of thumb:</p>
+<ul>
+<li>The <code>@Component</code> belongs in the package that can import <strong>all</strong> the
+implementations — in practice the app. Dependencies point app → package,
+never the other way around. When in doubt, give every package the same
+setup from <a href="./chapter_2_installation.html">Installation</a>; an unused dev
+dependency on the generator does no harm.</li>
+<li>A file declaring <code>@assistedInject</code> needs its <code>part '&lt;file&gt;.factory.dart';</code>
+generated <em>in its own package</em> — so run <code>build_runner</code> in packages that
+declare assisted constructors, too.</li>
+</ul>
+<p>A complete, runnable version ships with the repo: <code>flutter_demo</code>’s local
+<a href="https://github.com/ralph-bergmann/inject.dart/tree/master/examples/flutter_demo/packages/counter_analytics"><code>counter_analytics</code></a> package bundles an <code>AnalyticsService</code>
+interface, a console implementation, an <code>@inject</code> consumer, and an
+<code>AnalyticsModule</code> that <a href="https://github.com/ralph-bergmann/inject.dart/blob/master/examples/flutter_demo/lib/main.dart"><code>MainComponent</code></a> lists like any local
+module — configured at startup via
+<code>create(analyticsModule: const AnalyticsModule('Counter App'))</code>, and swapped
+for a no-op fake in <a href="https://github.com/ralph-bergmann/inject.dart/blob/master/examples/flutter_demo/test/view_model_test.dart"><code>view_model_test.dart</code></a>.</p>
+<h2 id="per-feature-components"><a class="header" href="#per-feature-components">Per-feature components</a></h2>
+<p>The same module-instance mechanism connects <em>components</em>. A feature or screen
+component lists a module whose <strong>constructor carries the objects it borrows
+from the root</strong>, and the caller passes a configured instance built from the
+root component’s entry points:</p>
+<pre><code class="language-dart">@module
+class CheckoutModule {
+  const CheckoutModule(this.client);
+  final ApiClient client;
+
+  @provides
+  ApiClient provideClient() =&gt; client;
+}
+
+@Component([CheckoutModule])
+abstract class CheckoutComponent {
+  static const create = g.CheckoutComponent$Component.create;
+
+  @inject
+  CheckoutViewModel get viewModel;
+}
+
+// When the checkout flow is entered:
+final checkout = CheckoutComponent.create(
+  checkoutModule: CheckoutModule(root.apiClient),
+);
 </code></pre>
-<h2 id="validating-the-skills"><a class="header" href="#validating-the-skills">Validating the skills</a></h2>
-<p>The skills must stay true to the generator’s <em>actual</em> behaviour, not assumptions
-about it. The strongest check — for example after the generator changes — is to
-<strong>run each skill</strong>: have your AI assistant carry out the task each skill teaches,
-then prove the result compiles and generates correctly.</p>
-<ol>
-<li>Create a temporary pure-Dart package <code>_scratch/</code> — a <code>pubspec.yaml</code> with
-<code>resolution: workspace</code>, <code>inject_annotation</code> as a dependency, and
-<code>build_runner</code> + <code>inject_generator</code> (plus <code>test</code> if you exercise the testing
-skill) as dev-dependencies.</li>
-<li>Add <code>_scratch</code> to the <code>workspace:</code> list in the root <code>pubspec.yaml</code>.</li>
-<li>Inside <code>_scratch/</code>, <strong>follow each skill to perform its task</strong> — execute the
-skill as a user would, rather than copying snippets out of it:
-<code>inject_annotation-setup-di</code> to scaffold the component, <code>inject_annotation-add-injectable</code>
-for a service, <code>inject_annotation-create-module</code> to provide a configured /
-<code>@asynchronous</code> / <code>Qualifier</code>-ed type, then
-<code>inject_annotation-add-assisted-injection</code>, <code>inject_annotation-inject-provider</code>,
-<code>inject_annotation-add-provision-listener</code>, and <code>inject_annotation-write-tests</code>. The
-Flutter-only <code>inject_annotation-flutter-view-model</code> is exercised in a Flutter package
-— <code>examples/flutter_demo</code> already runs it and stays green.</li>
-<li>Run <code>dart pub get</code>, then inside <code>_scratch/</code>: <code>dart run build_runner build</code>
-and <code>dart analyze</code>.</li>
-<li>Confirm the build writes outputs and <code>dart analyze</code> reports <strong>No issues
-found!</strong> — i.e. following the skills produced code that <strong>compiles</strong> and
-generates correctly. Skim the generated <code>*.inject.dart</code> to confirm the wiring
-matches what each skill claims.</li>
-<li>Delete <code>_scratch/</code> and revert the <code>pubspec.yaml</code> edit.</li>
-</ol>
-<p>A prompt you can hand your AI tool verbatim:</p>
-<blockquote>
-<p>With the inject.dart skills installed, create a temporary pure-Dart workspace
-member <code>_scratch/</code> and <strong>follow each skill to carry out its task</strong> (set up DI,
-add an injectable, create a module, assisted injection, inject a <code>Provider</code>,
-add a provision listener, write a test) — don’t copy code out of the skills,
-run them. Add <code>_scratch</code> to the root <code>pubspec.yaml</code> <code>workspace:</code> list, run
-<code>dart pub get</code>, then <code>dart run build_runner build</code> and <code>dart analyze</code> inside
-it. Confirm the build writes outputs, <code>dart analyze</code> reports “No issues
-found!”, and the generated code compiles and matches what each skill describes.
-Show me the output, then remove <code>_scratch/</code> and revert the <code>pubspec.yaml</code>.
-(Validate the Flutter view-model skill against <code>examples/flutter_demo</code>.)</p>
-</blockquote>
-<p>This is how the skills were validated in the first place: run each one for real,
-read the generated output and analyzer result, and document only what the
-generator actually does.</p>
+<ul>
+<li>The compiler forces the wiring — <code>checkoutModule</code> is a required parameter.</li>
+<li>The feature component owns its own <code>@singleton</code>s and its own lifecycle;
+dropping the <code>checkout</code> reference releases the whole subgraph while the
+root lives on.</li>
+<li>The root never learns that feature components exist — the dependency arrow
+points root → feature only at the call site that wires them.</li>
+</ul>
+<h2 id="outlook-subcomponents"><a class="header" href="#outlook-subcomponents">Outlook: subcomponents</a></h2>
+<p>A first-class mechanism for encapsulated child graphs is planned: a module
+will be able to <em>install</em> a <code>@subcomponent</code> into the parent component, giving
+the child access to all parent bindings while keeping the child’s own bindings
+private, with <code>@singleton</code> scoped per child instance. The seam stays the same
+— you still just list a module. Until that lands, the patterns above are the
+supported composition mechanisms.</p>
+<h2 id="cheat-sheet"><a class="header" href="#cheat-sheet">Cheat sheet</a></h2>
+<ul>
+<li>One root component; more components only for lifecycle, environment, or test
+boundaries.</li>
+<li><code>@singleton</code> is per component instance — share objects by passing them, not
+by re-listing modules.</li>
+<li>Installing a package = listing its module in <code>@Component([...])</code>; later
+modules override earlier ones.</li>
+<li>A module without a default constructor becomes a <strong>required</strong> <code>create</code>
+parameter — the channel for runtime config and shared objects.</li>
+<li>Root → feature wiring: <code>FeatureComponent.create(featureModule: FeatureModule(root.thing))</code>.</li>
+<li>The <code>@Component</code> lives in the app package; run <code>build_runner</code> where
+<code>@Component</code>s and <code>@assistedInject</code> files live.</li>
+</ul>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="chapter_6_testing.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="chapter_7_ai_assisted_development.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
-                            <a rel="next prefetch" href="chapter_8_multiple_components.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
-                            </a>
 
                         <div style="clear: both"></div>
                     </nav>
@@ -267,13 +335,10 @@ generator actually does.</p>
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="chapter_6_testing.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="chapter_7_ai_assisted_development.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
-                    <a rel="next prefetch" href="chapter_8_multiple_components.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
-                    </a>
             </nav>
 
         </div>

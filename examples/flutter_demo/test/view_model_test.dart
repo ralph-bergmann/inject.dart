@@ -1,3 +1,4 @@
+import 'package:counter_analytics/counter_analytics.dart';
 import 'package:flutter_demo/src/data/repositories/counter_repository.dart';
 import 'package:flutter_demo/src/domain/models/counter.dart';
 import 'package:flutter_demo/src/features/home/counter_view_model.dart';
@@ -57,4 +58,19 @@ class TestViewModelModule {
 
   @provides
   Future<int> provideInitialCount() => Future.value(0);
+
+  /// [IncrementCounterUseCase] depends on [IncrementTracker] (from the
+  /// `counter_analytics` package), which needs an [AnalyticsService].
+  /// Tests bind a no-op fake — same interface-swap as in production, just
+  /// with a different implementation.
+  @provides
+  @singleton
+  AnalyticsService provideAnalyticsService() => _NoOpAnalyticsService();
+}
+
+class _NoOpAnalyticsService implements AnalyticsService {
+  @override
+  void track(String event) {
+    // Intentionally empty — tests don't report analytics.
+  }
 }

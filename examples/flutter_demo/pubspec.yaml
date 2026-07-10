@@ -12,6 +12,10 @@ dependencies:
   flutter:
     sdk: flutter
 
+  # Local library package demonstrating cross-package injection and
+  # interface binding — see the book chapter "Composing Components and
+  # Multi-Package Projects". Resolved via the pub workspace.
+  counter_analytics: any
   inject_annotation: ^1.1.0
   inject_flutter: ^1.1.1
 

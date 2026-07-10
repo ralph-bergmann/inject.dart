@@ -15,8 +15,8 @@
         <link rel="icon" href="favicon-de23e50b.svg">
         <link rel="shortcut icon" href="favicon-8114d1fc.png">
         <link rel="stylesheet" href="css/variables-8adf115d.css">
-        <link rel="stylesheet" href="css/general-0392ca55.css">
-        <link rel="stylesheet" href="css/chrome-fc474251.css">
+        <link rel="stylesheet" href="css/general-e96d0476.css">
+        <link rel="stylesheet" href="css/chrome-d279d366.css">
 
         <!-- Fonts -->
         <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
@@ -36,7 +36,7 @@
             const default_dark_theme = "ayu";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-aa1c9d3a.js"></script>
+        <script src="toc-e5cee16d.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -359,6 +359,30 @@ a ViewModel chain is a build error. Raw <code>Future&lt;T&gt;</code> bindings (n
 <code>Future&lt;T&gt;</code> — not about how quickly the future completes. A raw <code>Future&lt;T&gt;</code> is
 the right tool whenever a synchronous consumer sits in the chain, regardless of
 whether the future resolves instantly or after a real I/O round-trip.</p>
+<h3 id="a-third-option-resolve-before-the-graph"><a class="header" href="#a-third-option-resolve-before-the-graph">A third option: resolve <em>before</em> the graph</a></h3>
+<p>Both variants keep the async work <em>inside</em> the graph. Often the simplest escape
+from async-ness is to do the work <strong>before</strong> building the component and hand
+the finished object in via a pre-built module instance (see
+<a href="#the-generated-create-factory">The generated <code>create</code> factory</a>):</p>
+<pre><code class="language-dart">@module
+class DbModule {
+  DbModule(this.db);
+  final Database db;
+
+  @provides
+  @singleton
+  Database provideDb() =&gt; db;
+}
+
+Future&lt;void&gt; main() async {
+  final db = await Database.open('app.db'); // async work happens up front
+  final component = MainComponent.create(dbModule: DbModule(db));
+  runApp(component.myAppFactory.create());
+}
+</code></pre>
+<p>Everything downstream injects a plain <code>Database</code> — no <code>@asynchronous</code>, no
+<code>Future&lt;T&gt;</code> entry points, no async propagation, and the chain stays safe for
+<code>ViewModelFactory</code>.</p>
 <h2 id="lazy-and-on-demand-access--providert"><a class="header" href="#lazy-and-on-demand-access--providert">Lazy and on-demand access — <code>Provider&lt;T&gt;</code></a></h2>
 <p>A <code>Provider&lt;T&gt;</code> as a component entry point defers creation to call time:</p>
 <pre><code class="language-dart">@Component([AppModule, DatabaseModule])
@@ -513,6 +537,58 @@ a <code>@provides</code> method for <code>ViewModelFactory</code> — the synthe
 scenes. This is an extension of the assisted-injection mechanism: the generator
 detects that <code>ViewModelBuilder&lt;T&gt;</code>’s constructor accepts injectable parameters
 (a <code>Provider&lt;T&gt;</code>) and synthesises accordingly.</p>
+<h2 id="the-generated-create-factory"><a class="header" href="#the-generated-create-factory">The generated <code>create</code> factory</a></h2>
+<p>The generated component class exposes a factory constructor <code>create</code>, usually
+aliased via <code>static const create = g.AppComponent$Component.create;</code>. Its
+signature is derived from the component’s module list: one <strong>named parameter
+per module</strong>, in <code>@Component([...])</code> declaration order.</p>
+<ul>
+<li>A module with a public no-arg constructor becomes an <em>optional</em> parameter —
+when omitted, <code>create</code> instantiates the module itself.</li>
+<li>A module whose constructor takes parameters becomes a <strong><code>required</code></strong>
+parameter — you build the instance and pass it in.</li>
+</ul>
+<pre><code class="language-dart">@module
+class DbModule {
+  DbModule(this.path);
+  final String path;
+
+  @provides
+  @singleton
+  Database provideDb() =&gt; Database.open(path);
+}
+
+@Component([AppModule, DbModule])
+abstract class AppComponent {
+  static const create = g.AppComponent$Component.create;
+  // ...
+}
+
+// Generated signature:
+//   create({AppModule? appModule, required DbModule dbModule})
+final component = AppComponent.create(dbModule: DbModule('app.db'));
+</code></pre>
+<p>Passing a pre-built module instance is a first-class feature, not a loophole.
+It is the intended channel for:</p>
+<ul>
+<li><strong>runtime values</strong> the graph cannot know at compile time (file paths, flags,
+tokens) — the inject.dart counterpart to Dagger’s <code>@BindsInstance</code>;</li>
+<li><strong>objects that need async construction</strong> — <code>await</code> them in <code>main()</code> and pass
+the result in; the whole graph stays synchronous (see
+<a href="#a-third-option-resolve-before-the-graph">A third option: resolve before the graph</a>);</li>
+<li><strong>externally-constructed objects</strong>, including objects obtained from another
+component — see
+<a href="./chapter_8_multiple_components.html">Composing Components</a>;</li>
+<li><strong>pre-configured fakes</strong> in tests — see
+<a href="./chapter_6_testing.html">Testing</a>.</li>
+</ul>
+<p><code>create</code> is always <strong>synchronous</strong>, no matter how many <code>@asynchronous</code> bindings
+the graph contains — async-ness surfaces at the entry points instead (see
+above).</p>
+<p>One closing rule: a component itself declares <strong>no constructors</strong>. <code>@inject</code>
+and <code>@assistedInject</code> constructors belong on injectable classes, never on the
+component — the generated <code>create</code> factory is the only way a component comes
+to life.</p>
 <h2 id="module-override-semantics"><a class="header" href="#module-override-semantics">Module override semantics</a></h2>
 <p>When two or more modules provide the same <code>(type, qualifier)</code> pair, the <strong>later
 module wins</strong>:</p>
@@ -660,7 +736,7 @@ dart run build_runner build
 
         <script src="clipboard-1626706a.min.js"></script>
         <script src="highlight-8df1eaa7.js"></script>
-        <script src="book-c22b7243.js"></script>
+        <script src="book-609e4cb8.js"></script>
 
         <!-- Custom JS scripts -->
 

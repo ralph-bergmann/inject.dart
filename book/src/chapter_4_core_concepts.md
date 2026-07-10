@@ -239,6 +239,35 @@ The choice is about the **binding type** — whether dependents receive `T` or
 the right tool whenever a synchronous consumer sits in the chain, regardless of
 whether the future resolves instantly or after a real I/O round-trip.
 
+### A third option: resolve *before* the graph
+
+Both variants keep the async work *inside* the graph. Often the simplest escape
+from async-ness is to do the work **before** building the component and hand
+the finished object in via a pre-built module instance (see
+[The generated `create` factory](#the-generated-create-factory)):
+
+```dart
+@module
+class DbModule {
+  DbModule(this.db);
+  final Database db;
+
+  @provides
+  @singleton
+  Database provideDb() => db;
+}
+
+Future<void> main() async {
+  final db = await Database.open('app.db'); // async work happens up front
+  final component = MainComponent.create(dbModule: DbModule(db));
+  runApp(component.myAppFactory.create());
+}
+```
+
+Everything downstream injects a plain `Database` — no `@asynchronous`, no
+`Future<T>` entry points, no async propagation, and the chain stays safe for
+`ViewModelFactory`.
+
 ## Lazy and on-demand access — `Provider<T>`
 
 A `Provider<T>` as a component entry point defers creation to call time:
@@ -431,6 +460,63 @@ a `@provides` method for `ViewModelFactory` — the synthesis happens behind the
 scenes. This is an extension of the assisted-injection mechanism: the generator
 detects that `ViewModelBuilder<T>`'s constructor accepts injectable parameters
 (a `Provider<T>`) and synthesises accordingly.
+
+## The generated `create` factory
+
+The generated component class exposes a factory constructor `create`, usually
+aliased via `static const create = g.AppComponent$Component.create;`. Its
+signature is derived from the component's module list: one **named parameter
+per module**, in `@Component([...])` declaration order.
+
+- A module with a public no-arg constructor becomes an *optional* parameter —
+  when omitted, `create` instantiates the module itself.
+- A module whose constructor takes parameters becomes a **`required`**
+  parameter — you build the instance and pass it in.
+
+```dart
+@module
+class DbModule {
+  DbModule(this.path);
+  final String path;
+
+  @provides
+  @singleton
+  Database provideDb() => Database.open(path);
+}
+
+@Component([AppModule, DbModule])
+abstract class AppComponent {
+  static const create = g.AppComponent$Component.create;
+  // ...
+}
+
+// Generated signature:
+//   create({AppModule? appModule, required DbModule dbModule})
+final component = AppComponent.create(dbModule: DbModule('app.db'));
+```
+
+Passing a pre-built module instance is a first-class feature, not a loophole.
+It is the intended channel for:
+
+- **runtime values** the graph cannot know at compile time (file paths, flags,
+  tokens) — the inject.dart counterpart to Dagger's `@BindsInstance`;
+- **objects that need async construction** — `await` them in `main()` and pass
+  the result in; the whole graph stays synchronous (see
+  [A third option: resolve before the graph](#a-third-option-resolve-before-the-graph));
+- **externally-constructed objects**, including objects obtained from another
+  component — see
+  [Composing Components](./chapter_8_multiple_components.md);
+- **pre-configured fakes** in tests — see
+  [Testing](./chapter_6_testing.md).
+
+`create` is always **synchronous**, no matter how many `@asynchronous` bindings
+the graph contains — async-ness surfaces at the entry points instead (see
+above).
+
+One closing rule: a component itself declares **no constructors**. `@inject`
+and `@assistedInject` constructors belong on injectable classes, never on the
+component — the generated `create` factory is the only way a component comes
+to life.
 
 ## Module override semantics
 
