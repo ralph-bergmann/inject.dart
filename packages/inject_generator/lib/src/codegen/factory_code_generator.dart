@@ -5,6 +5,7 @@ import 'package:code_builder/code_builder.dart';
 import '../analysis/annotation_reader.dart';
 import '../analysis/assisted_reader.dart';
 import '../analysis/module_reader.dart';
+import '../analysis/subcomponent_reader.dart' show SubcomponentFactoryData;
 import '../logging/diagnostic_reporter.dart';
 import '../validation/visibility_validator.dart';
 import 'emit_and_format.dart';
@@ -23,15 +24,25 @@ class FactoryCodeGenerator {
   /// Returns the formatted source string, or `null` if no valid
   /// assisted factory pairs were found or validation fails.
   String? generate({required LibraryElement library, required AnnotationReader reader}) {
-    // Collect @assistedInject data
-    final List<ClassElement> assistedInjectClasses = library.classes.where(reader.isAssistedInject).toList();
+    // Collect @assistedInject data. Component classes are excluded here too —
+    // this scan is independent of FactoryBuilder's (re-derived from
+    // library.classes), so the exclusion is load-bearing in the mixed-file
+    // case where a malformed component coexists with a valid non-component
+    // @assistedInject class in the same library.
+    final List<ClassElement> assistedInjectClasses = library.classes
+        .where((c) => reader.isAssistedInject(c) && !reader.isComponent(c))
+        .toList();
 
     final injectDataList = <AssistedInjectData>[];
     for (final classElement in assistedInjectClasses) {
       injectDataList.addAll(reader.readAssistedInjects(classElement));
     }
 
-    if (injectDataList.isEmpty) {
+    // Collect @subcomponent classes — each gets a public abstract factory
+    // class in this part file so user code can reference it on clean builds.
+    final List<ClassElement> subcomponentClasses = library.classes.where(reader.isSubcomponent).toList();
+
+    if (injectDataList.isEmpty && subcomponentClasses.isEmpty) {
       return null;
     }
 
@@ -46,6 +57,40 @@ class FactoryCodeGenerator {
       }
     }
 
+    // Collect @subcomponentFactory data — an explicit factory replaces the
+    // synthesized `<Name>Factory` for its target subcomponent (mirrors
+    // @assistedFactory's precedence over a synthesized factory).
+    final List<ClassElement> subcomponentFactoryClasses = library.classes.where(reader.isSubcomponentFactory).toList();
+    final subcomponentFactoryDataList = <SubcomponentFactoryData>[];
+    for (final factoryClass in subcomponentFactoryClasses) {
+      final SubcomponentFactoryData? data = reader.readSubcomponentFactory(factoryClass);
+      if (data != null) {
+        subcomponentFactoryDataList.add(data);
+      }
+    }
+
+    // A subcomponent may have at most one explicit factory — this is the
+    // single, authoritative pass over the library's @subcomponentFactory
+    // classes, so it is also the only place this is checked.
+    final subcomponentFactoriesByTarget = <ClassElement, List<SubcomponentFactoryData>>{};
+    for (final data in subcomponentFactoryDataList) {
+      (subcomponentFactoriesByTarget[data.subcomponentClass] ??= []).add(data);
+    }
+    for (final MapEntry(key: subcomponentClass, value: dataForTarget) in subcomponentFactoriesByTarget.entries) {
+      if (dataForTarget.length > 1) {
+        for (final data in dataForTarget.skip(1)) {
+          reader.reporter.errorForElement(
+            data.factoryElement,
+            message:
+                "Subcomponent '${subcomponentClass.name}' already has an explicit @subcomponentFactory "
+                "('${dataForTarget.first.factoryElement.name}').",
+            suggestion: 'A subcomponent may have at most one explicit @subcomponentFactory class.',
+          );
+        }
+      }
+    }
+    final Set<ClassElement> matchedSubcomponentClasses = subcomponentFactoriesByTarget.keys.toSet();
+
     // Visibility validation: collect elements referenced in generated code
     final referencedElements = <Element>[];
     for (final data in injectDataList) {
@@ -57,6 +102,34 @@ class FactoryCodeGenerator {
     }
     for (final data in factoryDataList) {
       referencedElements.add(data.factoryElement);
+    }
+    for (final data in subcomponentFactoryDataList) {
+      referencedElements.add(data.factoryElement);
+    }
+
+    // Subcomponent factories reference the subcomponent type and its modules.
+    final subcomponentModulesByClass = <ClassElement, List<({ClassElement moduleClass, ModuleData moduleData})>>{};
+    for (final subcomponentClass in subcomponentClasses) {
+      referencedElements.add(subcomponentClass);
+      // An explicit factory replaces the synthesized one — nothing to
+      // synthesize for this subcomponent.
+      if (matchedSubcomponentClasses.contains(subcomponentClass)) {
+        continue;
+      }
+      // Only the module list is read here — entry points may reference types
+      // that this very build step is about to generate into the part file.
+      final List<DartType>? moduleTypes = reader.readSubcomponentModules(subcomponentClass);
+      if (moduleTypes == null) {
+        continue;
+      }
+      final modules = <({ClassElement moduleClass, ModuleData moduleData})>[];
+      for (final DartType moduleType in moduleTypes) {
+        if (moduleType case InterfaceType(element: final ClassElement moduleClass)) {
+          modules.add((moduleClass: moduleClass, moduleData: reader.readModule(moduleClass)));
+          referencedElements.add(moduleClass);
+        }
+      }
+      subcomponentModulesByClass[subcomponentClass] = modules;
     }
 
     VisibilityValidator(
@@ -102,11 +175,23 @@ class FactoryCodeGenerator {
       final bool isMulti = entries.length > 1;
 
       for (final injectData in unmatched) {
-        factorySpecs.add(_factoryGen.generateSynthesizedAbstractFactory(
-          injectData: injectData,
-          isMulti: isMulti,
-        ));
+        factorySpecs.add(
+          _factoryGen.generateSynthesizedAbstractFactory(
+            injectData: injectData,
+            isMulti: isMulti,
+          ),
+        );
       }
+    }
+
+    for (final MapEntry<ClassElement, List<({ClassElement moduleClass, ModuleData moduleData})>> entry
+        in subcomponentModulesByClass.entries) {
+      factorySpecs.add(
+        _factoryGen.generateSubcomponentAbstractFactory(
+          subcomponentClass: entry.key,
+          modules: entry.value,
+        ),
+      );
     }
 
     if (factorySpecs.isEmpty) {

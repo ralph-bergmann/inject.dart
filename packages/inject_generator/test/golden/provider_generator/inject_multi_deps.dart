@@ -31,7 +31,8 @@ class CoffeeMakerModule {
 
 @Component([CoffeeMakerModule])
 abstract class AppComponent {
-  static const g.AppComponent$Component Function({CoffeeMakerModule? coffeeMakerModule}) create = g.AppComponent$Component.create;
+  static const g.AppComponent$Component Function({CoffeeMakerModule? coffeeMakerModule}) create =
+      g.AppComponent$Component.create;
 
   @inject
   @brandNameA

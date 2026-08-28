@@ -2,6 +2,7 @@ import 'package:analyzer/dart/element/element.dart';
 import 'package:build/build.dart';
 import 'package:build_test/build_test.dart';
 import 'package:inject_generator/src/analysis/component_reader.dart';
+import 'package:inject_generator/src/analysis/entry_point_collector.dart';
 import 'package:inject_generator/src/logging/diagnostic_reporter.dart';
 import 'package:test/test.dart';
 
@@ -74,6 +75,36 @@ void main() {
         expect(result!.modules, hasLength(1), reason: 'duplicate must be dropped from modules list');
         expect(reporter.hasErrors, isTrue);
         expect(reporter.messages.first.message, contains('listed more than once'));
+      });
+
+      test('reports a @subcomponent-annotated type in the @Component module list as an error', () async {
+        final LibraryElement library = await _resolveLibrary('''
+          import 'package:inject_annotation/inject_annotation.dart';
+
+          @module
+          class NetworkModule {}
+
+          @subcomponent
+          abstract class HttpSubcomponent {}
+
+          @Component([NetworkModule, HttpSubcomponent])
+          abstract class AppComponent {}
+        ''');
+
+        final ClassElement classElement = library.getClass('AppComponent')!;
+        final ComponentData? result = componentReader.readComponent(classElement);
+
+        expect(result, isNotNull);
+        expect(
+          result!.modules.map((m) => m.element?.name),
+          ['NetworkModule'],
+          reason: 'the @subcomponent entry must be dropped from the module list',
+        );
+        expect(reporter.hasErrors, isTrue);
+        final DiagnosticMessage message = reporter.messages.firstWhere((m) => m.message.contains('HttpSubcomponent'));
+        expect(message.message, contains('annotated with @subcomponent'));
+        expect(message.message, contains("@Component on 'AppComponent'"));
+        expect(message.suggestion, contains('@Module(subcomponents: [HttpSubcomponent])'));
       });
 
       test('reads @Component with multiple modules in declaration order', () async {

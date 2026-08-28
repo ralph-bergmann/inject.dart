@@ -1,0 +1,16 @@
+name: bookshelf_api
+description: >
+  Fake in-memory backend for the bookshelf example: BooksApi and the
+  ApiModule that binds it. ApiModule has no default constructor — it needs
+  a base URL — so installing it makes that argument a required parameter
+  on the app's generated `create` factory. No code generation of its own.
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: ^3.13.1
+resolution: workspace
+
+dependencies:
+  bookshelf_core: any
+  inject_annotation: ^1.2.0

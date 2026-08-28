@@ -67,8 +67,7 @@ class BindingKey {
   /// nested or self-referential generic type arguments.
   static BindingKey? fromDartType(DartType dartType, {String? qualifier, int maxDepth = 20}) {
     if (dartType is InterfaceType) {
-      final ({String identity, bool isNullable})? result =
-          _buildIdentity(dartType, depth: 0, maxDepth: maxDepth);
+      final ({String identity, bool isNullable})? result = _buildIdentity(dartType, depth: 0, maxDepth: maxDepth);
       if (result == null) {
         return null;
       }
@@ -80,8 +79,12 @@ class BindingKey {
     // Covers both FunctionType and RecordType when wrapped in a typedef.
     final InstantiatedTypeAliasElement? alias = dartType.alias;
     if (alias != null) {
-      final ({String identity, bool isNullable})? result =
-          _buildAliasIdentity(alias, dartType.nullabilitySuffix, depth: 0, maxDepth: maxDepth);
+      final ({String identity, bool isNullable})? result = _buildAliasIdentity(
+        alias,
+        dartType.nullabilitySuffix,
+        depth: 0,
+        maxDepth: maxDepth,
+      );
       if (result == null) {
         return null;
       }

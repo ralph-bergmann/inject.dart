@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/element/element.dart';
+import 'package:analyzer/dart/element/type.dart';
 import 'package:source_gen/source_gen.dart';
 
 import '../logging/diagnostic_reporter.dart';
@@ -6,6 +7,7 @@ import 'assisted_reader.dart';
 import 'component_reader.dart';
 import 'inject_reader.dart';
 import 'module_reader.dart';
+import 'subcomponent_reader.dart';
 import 'type_checkers.dart';
 
 /// Facade for annotation detection — delegates to shared TypeCheckers.
@@ -20,12 +22,19 @@ class AnnotationReader {
   final DiagnosticReporter reporter;
 
   late final _componentReader = ComponentReader(reporter: reporter);
+  late final _subcomponentReader = SubcomponentReader(reporter: reporter);
   late final _moduleReader = ModuleReader(reporter: reporter);
   late final _injectReader = InjectReader(reporter: reporter);
   late final _assistedReader = AssistedReader(reporter: reporter);
 
   /// Returns `true` if [element] has a `@component` / `@Component(...)` annotation.
   bool isComponent(ClassElement element) => _hasAnnotation(componentChecker, element);
+
+  /// Returns `true` if [element] has a `@subcomponent` / `@Subcomponent(...)` annotation.
+  bool isSubcomponent(ClassElement element) => _hasAnnotation(subcomponentChecker, element);
+
+  /// Returns `true` if [element] has a `@subcomponentFactory` annotation.
+  bool isSubcomponentFactory(ClassElement element) => _hasAnnotation(subcomponentFactoryChecker, element);
 
   /// Returns `true` if [element] has a `@module` annotation.
   bool isModule(ClassElement element) => _hasAnnotation(moduleChecker, element);
@@ -78,9 +87,41 @@ class AnnotationReader {
   /// module references and entry points. Delegates to [ComponentReader].
   ComponentData? readComponent(ClassElement classElement) => _componentReader.readComponent(classElement);
 
+  /// Reads the `@subcomponent` annotation from [classElement] and returns
+  /// the extracted [SubcomponentData], or `null` if it could not be read.
+  ///
+  /// See `SubcomponentReader.readSubcomponentModules` for the meaning of
+  /// [validate].
+  SubcomponentData? readSubcomponent(ClassElement classElement, {bool validate = true}) =>
+      _subcomponentReader.readSubcomponent(classElement, validate: validate);
+
+  /// Reads only the module list from the `@Subcomponent(...)` annotation on
+  /// [classElement] — safe to call from the factory builder (no entry-point
+  /// resolution). Returns `null` if the annotation could not be read.
+  ///
+  /// See `SubcomponentReader.readSubcomponentModules` for the meaning of
+  /// [validate].
+  List<DartType>? readSubcomponentModules(ClassElement classElement, {bool validate = true}) =>
+      _subcomponentReader.readSubcomponentModules(classElement, validate: validate);
+
+  /// Reads the `@subcomponentFactory` annotation from [classElement] and
+  /// returns the extracted [SubcomponentFactoryData], or `null` if it could
+  /// not be read.
+  ///
+  /// See `SubcomponentReader.readSubcomponentFactory` for the meaning of
+  /// [validate].
+  SubcomponentFactoryData? readSubcomponentFactory(ClassElement classElement, {bool validate = true}) =>
+      _subcomponentReader.readSubcomponentFactory(classElement, validate: validate);
+
   /// Reads the `@module` class and returns provider method descriptors.
   /// Delegates to [ModuleReader].
   ModuleData readModule(ClassElement classElement) => _moduleReader.readModule(classElement);
+
+  /// Expands [directModules] by transitively following each module's
+  /// `@Module(includes: [...])` list (cycle detection + dedup-by-type).
+  /// Delegates to [ModuleReader.expandModules].
+  List<({ClassElement moduleClass, ModuleData moduleData})> expandModules(List<ClassElement> directModules) =>
+      _moduleReader.expandModules(directModules);
 
   /// Reads the `@inject`-annotated class and returns constructor dependencies
   /// and binding metadata. Delegates to [InjectReader].
@@ -96,6 +137,11 @@ class AnnotationReader {
   /// any of its constructors.
   bool isAssistedInject(ClassElement element) =>
       element.constructors.any((constructor) => _hasAnnotation(assistedInjectChecker, constructor));
+
+  /// Returns `true` if [element] has an `@inject` annotation on any of its
+  /// constructors (not the class-level `@inject`; see [isInjectable] for that).
+  bool hasInjectConstructor(ClassElement element) =>
+      element.constructors.any((constructor) => _hasAnnotation(injectChecker, constructor));
 
   /// Returns `true` if [element] has an `@assistedFactory` annotation.
   bool isAssistedFactory(ClassElement element) => _hasAnnotation(assistedFactoryChecker, element);

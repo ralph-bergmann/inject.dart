@@ -2,7 +2,9 @@ import 'package:analyzer/dart/element/element.dart';
 import 'package:code_builder/code_builder.dart';
 
 import '../analysis/assisted_reader.dart';
+import '../analysis/module_reader.dart';
 import '../extensions/dart_type_extensions.dart';
+import '../extensions/string_extensions.dart';
 import 'naming.dart';
 
 /// Generates the public abstract factory class for a synthesized
@@ -51,6 +53,57 @@ class FactoryGenerator {
               ..returns = returnTypeRef
               ..requiredParameters.addAll(requiredCreateParams)
               ..optionalParameters.addAll(optionalCreateParams),
+          ),
+        ),
+    );
+  }
+
+  /// Generates the public abstract factory class for a `@subcomponent`.
+  ///
+  /// The abstract class is what user code references (module providers,
+  /// component entry points); the concrete implementation
+  /// (`_<FactoryName>$Factory`) is generated into the parent component's
+  /// `.inject.dart`. The `create(...)` method takes one named parameter per
+  /// subcomponent module, `required` when the module has no accessible
+  /// no-arg constructor — mirroring the generated component `create(...)`.
+  Class generateSubcomponentAbstractFactory({
+    required ClassElement subcomponentClass,
+    required List<({ClassElement moduleClass, ModuleData moduleData})> modules,
+  }) {
+    final String subcomponentName = subcomponentClass.name!;
+    final String abstractClassName = subcomponentFactoryClassName(subcomponentName);
+    final Reference returnTypeRef = subcomponentClass.thisType.typeRef();
+
+    final params = <Parameter>[];
+    for (final m in modules) {
+      final bool hasDefaultCtor = m.moduleData.hasDefaultConstructor;
+      final Reference moduleTypeRef = m.moduleClass.thisType.typeRef();
+      params.add(
+        Parameter(
+          (b) => b
+            ..name = m.moduleClass.name!.uncapitalize
+            ..named = true
+            ..required = !hasDefaultCtor
+            ..type = TypeReference(
+              (b) => b
+                ..symbol = (moduleTypeRef as TypeReference).symbol
+                ..url = moduleTypeRef.url
+                ..isNullable = hasDefaultCtor,
+            ),
+        ),
+      );
+    }
+
+    return Class(
+      (b) => b
+        ..name = abstractClassName
+        ..abstract = true
+        ..methods.add(
+          Method(
+            (b) => b
+              ..name = 'create'
+              ..returns = returnTypeRef
+              ..optionalParameters.addAll(params),
           ),
         ),
     );

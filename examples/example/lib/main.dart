@@ -11,6 +11,9 @@
 //   4. @assistedInject — compile-time DI combined with runtime parameters.
 //   5. ViewModelFactory<T> — the inject_flutter bridge between DI and
 //      Flutter's widget lifecycle.
+//   6. @subcomponent — an encapsulated child graph whose bindings stay
+//      invisible to the parent; only a re-exported service crosses the
+//      boundary.
 //
 // Concepts omitted for space (all shown in `flutter_demo`):
 //   • Two-line Qualifier form for same-Dart-type disambiguation.
@@ -52,6 +55,11 @@ abstract class MainComponent {
 
   @inject
   MyAppFactory get myAppFactory;
+
+  /// Re-exported from the [BackupSubcomponent] — see the module provider in
+  /// [AppModule]. The [BackupClient] behind it stays private to the subgraph.
+  @inject
+  BackupService get backupService;
 }
 
 // ─── Module ──────────────────────────────────────────────────────────────────
@@ -63,11 +71,81 @@ abstract class MainComponent {
 ///
 /// See `flutter_demo` → `DatabaseModule` for a version that uses two-line
 /// [Qualifier]s to disambiguate two [String] bindings of the same Dart type.
-@module
+@Module(subcomponents: [BackupSubcomponent])
 class AppModule {
   @provides
   @singleton
   Database provideDatabase() => Database();
+
+  /// Re-exports the subcomponent's service into the parent graph: the
+  /// injected [BackupSubcomponentFactory] (a parent binding, generated into
+  /// `main.factory.dart`) creates the child graph, and only [BackupService]
+  /// crosses the boundary. Note the child binds it with a [Qualifier] so this
+  /// unqualified parent binding does not collide with the child's own key.
+  @provides
+  @singleton
+  BackupService provideBackupService(BackupSubcomponentFactory factory) => factory.create().backupService;
+}
+
+// ─── Encapsulated subgraph — @subcomponent ───────────────────────────────────
+
+/// Marks the subcomponent-internal [BackupService] binding; the parent
+/// re-export above is unqualified, so the two keys never collide.
+const internalBackup = Qualifier(#internalBackup);
+
+/// Private to the backup subgraph: the parent graph cannot inject
+/// [BackupClient] — trying to do so fails at build time with a diagnostic
+/// that names [BackupSubcomponent] as the nearby source.
+class BackupClient {
+  const BackupClient(this.database);
+
+  final Database database; // parent binding, read through the parent graph
+
+  Future<void> upload() async {
+    // Simulated network call.
+  }
+}
+
+/// The only type that leaves the subgraph (via the re-export in [AppModule]).
+class BackupService {
+  const BackupService(this._client);
+
+  final BackupClient _client;
+
+  Future<void> backup() => _client.upload();
+}
+
+/// Providers of the child graph. [BackupClient] consumes the parent's
+/// [Database] transparently; `@singleton` here means once per subcomponent
+/// instance, not app-wide.
+@module
+class BackupModule {
+  @provides
+  @singleton
+  BackupClient provideClient(Database database) => BackupClient(database);
+
+  @provides
+  @internalBackup
+  BackupService provideService(BackupClient client) => BackupService(client);
+}
+
+/// The encapsulated child graph. Installed on [AppModule] via
+/// `@Module(subcomponents: [...])`, which makes the generated
+/// [BackupSubcomponentFactory] available as a binding in the parent graph.
+///
+/// This example calls `factory.create()` exactly once, eagerly, via the
+/// [AppModule.provideBackupService] re-export above — the "hide an
+/// implementation detail behind a public service" flavor of subcomponents.
+/// The *other* flavor uses the identical mechanism differently: call
+/// `factory.create()` again whenever a new scope should start (e.g. after a
+/// user logs in) and drop the reference when it ends (on logout) — every
+/// call produces an independent instance with its own `@singleton`
+/// bindings, released together when nothing references it anymore. See the
+/// README's "Encapsulating subgraphs" section for that pattern in detail.
+@Subcomponent([BackupModule])
+abstract class BackupSubcomponent {
+  @internalBackup
+  BackupService get backupService;
 }
 
 // ─── Data layer ──────────────────────────────────────────────────────────────

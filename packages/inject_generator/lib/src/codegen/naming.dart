@@ -29,3 +29,12 @@ final _qualifierIdentifierPattern = RegExp(r'^[a-zA-Z0-9_]+$');
 /// hyphen, dot, space, `$`, and other non-identifier characters.
 bool isValidQualifierIdentifier(String qualifier) =>
     qualifier.isNotEmpty && _qualifierIdentifierPattern.hasMatch(qualifier);
+
+/// Synthesized factory class name for a `@subcomponent` class.
+///
+/// The abstract class is emitted by the `factory_builder` into the
+/// `.factory.dart` part file of the library declaring the subcomponent, so
+/// that user code (module providers, component entry points) can reference
+/// it on a clean build. The concrete implementation lives in the parent
+/// component's `.inject.dart`.
+String subcomponentFactoryClassName(String subcomponentName) => '${subcomponentName}Factory';

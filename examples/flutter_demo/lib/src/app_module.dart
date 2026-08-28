@@ -54,8 +54,7 @@ class AppModule {
   @provides
   @singleton
   @asynchronous
-  Future<String> provideWelcomeMessage(AppInfo appInfo) =>
-      Future.value('${appInfo.name} — tap + to start counting!');
+  Future<String> provideWelcomeMessage(AppInfo appInfo) => Future.value('${appInfo.name} — tap + to start counting!');
 
   /// Provides the initial counter value **WITHOUT** [@asynchronous].
   ///

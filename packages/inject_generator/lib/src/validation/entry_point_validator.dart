@@ -1,6 +1,6 @@
 import 'package:analyzer/dart/element/element.dart';
 
-import '../analysis/component_reader.dart';
+import '../analysis/entry_point_collector.dart';
 import '../logging/diagnostic_reporter.dart';
 import 'async_propagation_result.dart';
 

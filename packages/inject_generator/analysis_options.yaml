@@ -37,7 +37,6 @@ linter:
     - avoid_implementing_value_types # Don't implement classes that override ==.
     - avoid_multiple_declarations_per_line # Don't declare multiple variables on a single line.
     - avoid_positional_boolean_parameters # Avoid positional boolean parameters.
-    - avoid_private_typedef_functions # Avoid private typedef functions.
     - avoid_redundant_argument_values # Avoid redundant argument values.
     - avoid_returning_this # Avoid returning this from methods just to enable a fluent interface.
     - avoid_setters_without_getters # Avoid setters without getters.
@@ -103,7 +102,6 @@ linter:
     - throw_in_finally # Avoid throw in finally block.
     - tighten_type_of_initializing_formals # Tighten type of initializing formal.
     - unawaited_futures # Future results in async function bodies must be awaited or marked unawaited using dart:async.
-    - unnecessary_await_in_return # Unnecessary await keyword in return.
     - unnecessary_breaks # Don't use explicit breaks when a break is implied.
     #    - unnecessary_const_in_enum_constructor # Don't use an explicit const in a generative enum constructor.
     - unnecessary_ignore # Don't ignore a diagnostic code that is not produced.
@@ -120,6 +118,15 @@ linter:
     - use_super_parameters # Use super-initializer parameters where possible.
     - use_test_throws_matchers # Use throwsA matcher instead of fail().
     - use_to_and_as_if_applicable # Start the name of the method with to/_to or as/_as if applicable.
+analyzer:
+  exclude:
+    - build/**
+    - android/**
+    - ios/**
+    - web/**
+    - windows/**
+    - macos/**
+    - linux/**
 
 
 # For more information about the core and recommended set of lints, see

@@ -762,5 +762,342 @@ void main() {
         expect(result.hasDefaultConstructor, isFalse);
       });
     });
+
+    group('subcomponents extraction', () {
+      test('reads subcomponents list from @Module annotation', () async {
+        final LibraryElement library = await _resolveLibrary('''
+          import 'package:inject_annotation/inject_annotation.dart';
+
+          @subcomponent
+          abstract class HttpSubcomponent {}
+
+          @subcomponent
+          abstract class DbSubcomponent {}
+
+          @Module(subcomponents: [HttpSubcomponent, DbSubcomponent])
+          class NetworkModule {}
+        ''');
+
+        final ClassElement classElement = library.getClass('NetworkModule')!;
+        final ModuleData result = moduleReader.readModule(classElement);
+
+        expect(result.installedSubcomponents.map((s) => s.element?.name), ['HttpSubcomponent', 'DbSubcomponent']);
+        expect(reporter.hasErrors, isFalse);
+      });
+
+      test('legacy @module without subcomponents yields empty list', () async {
+        final LibraryElement library = await _resolveLibrary('''
+          import 'package:inject_annotation/inject_annotation.dart';
+
+          @module
+          class PlainModule {
+            @provides
+            int provideAnswer() => 42;
+          }
+        ''');
+
+        final ClassElement classElement = library.getClass('PlainModule')!;
+        final ModuleData result = moduleReader.readModule(classElement);
+
+        expect(result.installedSubcomponents, isEmpty);
+        expect(result.providers, hasLength(1));
+        expect(reporter.hasErrors, isFalse);
+      });
+
+      test('reports duplicate subcomponent entries as errors', () async {
+        final LibraryElement library = await _resolveLibrary('''
+          import 'package:inject_annotation/inject_annotation.dart';
+
+          @subcomponent
+          abstract class HttpSubcomponent {}
+
+          @Module(subcomponents: [HttpSubcomponent, HttpSubcomponent])
+          class NetworkModule {}
+        ''');
+
+        final ClassElement classElement = library.getClass('NetworkModule')!;
+        final ModuleData result = moduleReader.readModule(classElement);
+
+        expect(result.installedSubcomponents, hasLength(1), reason: 'duplicate must be dropped');
+        expect(reporter.hasErrors, isTrue);
+        expect(reporter.messages.first.message, contains('listed more than once'));
+      });
+
+      test('reports non-@subcomponent types in the list as errors', () async {
+        final LibraryElement library = await _resolveLibrary('''
+          import 'package:inject_annotation/inject_annotation.dart';
+
+          class NotASubcomponent {}
+
+          @Module(subcomponents: [NotASubcomponent])
+          class NetworkModule {}
+        ''');
+
+        final ClassElement classElement = library.getClass('NetworkModule')!;
+        final ModuleData result = moduleReader.readModule(classElement);
+
+        expect(result.installedSubcomponents, isEmpty, reason: 'invalid entry must be dropped');
+        expect(reporter.hasErrors, isTrue);
+        expect(reporter.messages.first.message, contains('not annotated with @subcomponent'));
+      });
+    });
+
+    group('includes extraction', () {
+      test('reads includes list from @Module annotation', () async {
+        final LibraryElement library = await _resolveLibrary('''
+          import 'package:inject_annotation/inject_annotation.dart';
+
+          @module
+          class ApiModule {}
+
+          @module
+          class DbModule {}
+
+          @Module(includes: [ApiModule, DbModule])
+          class UmbrellaModule {}
+        ''');
+
+        final ClassElement classElement = library.getClass('UmbrellaModule')!;
+        final ModuleData result = moduleReader.readModule(classElement);
+
+        expect(result.includes.map((s) => s.element?.name), ['ApiModule', 'DbModule']);
+        expect(reporter.hasErrors, isFalse);
+      });
+
+      test('legacy @module without includes yields empty list', () async {
+        final LibraryElement library = await _resolveLibrary('''
+          import 'package:inject_annotation/inject_annotation.dart';
+
+          @module
+          class PlainModule {
+            @provides
+            int provideAnswer() => 42;
+          }
+        ''');
+
+        final ClassElement classElement = library.getClass('PlainModule')!;
+        final ModuleData result = moduleReader.readModule(classElement);
+
+        expect(result.includes, isEmpty);
+        expect(reporter.hasErrors, isFalse);
+      });
+
+      test('reports duplicate includes entries as errors', () async {
+        final LibraryElement library = await _resolveLibrary('''
+          import 'package:inject_annotation/inject_annotation.dart';
+
+          @module
+          class ApiModule {}
+
+          @Module(includes: [ApiModule, ApiModule])
+          class UmbrellaModule {}
+        ''');
+
+        final ClassElement classElement = library.getClass('UmbrellaModule')!;
+        final ModuleData result = moduleReader.readModule(classElement);
+
+        expect(result.includes, hasLength(1), reason: 'duplicate must be dropped');
+        expect(reporter.hasErrors, isTrue);
+        expect(reporter.messages.first.message, contains('listed more than once'));
+      });
+
+      test('reports non-@module types in the list as errors', () async {
+        final LibraryElement library = await _resolveLibrary('''
+          import 'package:inject_annotation/inject_annotation.dart';
+
+          class NotAModule {}
+
+          @Module(includes: [NotAModule])
+          class UmbrellaModule {}
+        ''');
+
+        final ClassElement classElement = library.getClass('UmbrellaModule')!;
+        final ModuleData result = moduleReader.readModule(classElement);
+
+        expect(result.includes, isEmpty, reason: 'invalid entry must be dropped');
+        expect(reporter.hasErrors, isTrue);
+        expect(reporter.messages.first.message, contains('not annotated with @module'));
+      });
+
+      test('includes composes independently of subcomponents on the same module', () async {
+        final LibraryElement library = await _resolveLibrary('''
+          import 'package:inject_annotation/inject_annotation.dart';
+
+          @module
+          class ApiModule {}
+
+          @subcomponent
+          abstract class HttpSubcomponent {}
+
+          @Module(includes: [ApiModule], subcomponents: [HttpSubcomponent])
+          class UmbrellaModule {}
+        ''');
+
+        final ClassElement classElement = library.getClass('UmbrellaModule')!;
+        final ModuleData result = moduleReader.readModule(classElement);
+
+        expect(result.includes.map((s) => s.element?.name), ['ApiModule']);
+        expect(result.installedSubcomponents.map((s) => s.element?.name), ['HttpSubcomponent']);
+        expect(reporter.hasErrors, isFalse);
+      });
+    });
+
+    group('expandModules', () {
+      test('single-level include: pulls in the included module', () async {
+        final LibraryElement library = await _resolveLibrary('''
+          import 'package:inject_annotation/inject_annotation.dart';
+
+          class Foo {}
+
+          @module
+          class OtherModule {
+            @provides
+            Foo provideFoo() => Foo();
+          }
+
+          @Module(includes: [OtherModule])
+          class Umbrella {}
+        ''');
+
+        final ClassElement umbrella = library.getClass('Umbrella')!;
+        final result = moduleReader.expandModules([umbrella]);
+
+        expect(result.map((m) => m.moduleClass.name), ['OtherModule', 'Umbrella']);
+        expect(reporter.hasErrors, isFalse);
+      });
+
+      test('transitive include: A includes B includes C — all three present', () async {
+        final LibraryElement library = await _resolveLibrary('''
+          import 'package:inject_annotation/inject_annotation.dart';
+
+          @module
+          class C {}
+
+          @Module(includes: [C])
+          class B {}
+
+          @Module(includes: [B])
+          class A {}
+        ''');
+
+        final ClassElement a = library.getClass('A')!;
+        final result = moduleReader.expandModules([a]);
+
+        expect(result.map((m) => m.moduleClass.name), ['C', 'B', 'A']);
+        expect(reporter.hasErrors, isFalse);
+      });
+
+      test('diamond: A includes B,C; B,C include D — D installed exactly once', () async {
+        final LibraryElement library = await _resolveLibrary('''
+          import 'package:inject_annotation/inject_annotation.dart';
+
+          @module
+          class D {}
+
+          @Module(includes: [D])
+          class B {}
+
+          @Module(includes: [D])
+          class C {}
+
+          @Module(includes: [B, C])
+          class A {}
+        ''');
+
+        final ClassElement a = library.getClass('A')!;
+        final result = moduleReader.expandModules([a]);
+
+        expect(result.map((m) => m.moduleClass.name), ['D', 'B', 'C', 'A']);
+        expect(reporter.hasErrors, isFalse);
+      });
+
+      test('cycle: A includes B, B includes A — reports a cycle diagnostic and terminates', () async {
+        final LibraryElement library = await _resolveLibrary('''
+          import 'package:inject_annotation/inject_annotation.dart';
+
+          @Module(includes: [B])
+          class A {}
+
+          @Module(includes: [A])
+          class B {}
+        ''');
+
+        final ClassElement a = library.getClass('A')!;
+        moduleReader.expandModules([a]);
+
+        expect(reporter.hasErrors, isTrue);
+        expect(reporter.messages.any((m) => m.message.contains('cycle')), isTrue);
+      });
+
+      test('direct modules take precedence over transitively-included ones', () async {
+        final LibraryElement library = await _resolveLibrary('''
+          import 'package:inject_annotation/inject_annotation.dart';
+
+          @module
+          class Included {}
+
+          @Module(includes: [Included])
+          class Direct {}
+        ''');
+
+        final ClassElement direct = library.getClass('Direct')!;
+        final result = moduleReader.expandModules([direct]);
+
+        expect(result.last.moduleClass.name, 'Direct');
+      });
+
+      test(
+        'a directly-listed module outranks a module reached only through a different, '
+        'later-listed direct module\'s includes',
+        () async {
+          final LibraryElement library = await _resolveLibrary('''
+          import 'package:inject_annotation/inject_annotation.dart';
+
+          @module
+          class Shared {}
+
+          @Module(includes: [Shared])
+          class Umbrella {}
+
+          @module
+          class DirectModule {}
+        ''');
+
+          final ClassElement directModule = library.getClass('DirectModule')!;
+          final ClassElement umbrella = library.getClass('Umbrella')!;
+          final result = moduleReader.expandModules([directModule, umbrella]);
+
+          // Both direct modules must rank after Shared (the included-only module),
+          // and DirectModule must keep its original position ahead of Umbrella —
+          // Shared must never land between them.
+          expect(result.map((m) => m.moduleClass.name), ['Shared', 'DirectModule', 'Umbrella']);
+        },
+      );
+
+      test(
+        'an includes entry that does not resolve to a class reports an error instead of silently dropping it',
+        () async {
+          final LibraryElement library = await _resolveLibrary('''
+          import 'package:inject_annotation/inject_annotation.dart';
+
+          @module
+          mixin NotAClassModule {}
+
+          @Module(includes: [NotAClassModule])
+          class Umbrella {}
+        ''');
+
+          final ClassElement umbrella = library.getClass('Umbrella')!;
+          moduleReader.expandModules([umbrella]);
+
+          expect(reporter.hasErrors, isTrue);
+          expect(
+            reporter.messages.any((m) => m.message.contains('does not resolve to a class')),
+            isTrue,
+            reason: reporter.messages.map((m) => m.message).join('\n'),
+          );
+        },
+      );
+    });
   });
 }

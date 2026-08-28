@@ -11,9 +11,9 @@ class AsyncPropagationResult {
     required Map<BindingKey, bool> asyncBindings,
     required Map<BindingKey, BindingSource> bindingMap,
     required Map<BindingKey, List<BindingKey>> dependencyEdges,
-  })  : asyncBindings = Map.unmodifiable(asyncBindings),
-        _bindingMap = Map.unmodifiable(bindingMap),
-        _dependencyEdges = Map.unmodifiable(dependencyEdges);
+  }) : asyncBindings = Map.unmodifiable(asyncBindings),
+       _bindingMap = Map.unmodifiable(bindingMap),
+       _dependencyEdges = Map.unmodifiable(dependencyEdges);
 
   /// Maps each [BindingKey] to whether the binding requires async
   /// initialization (either directly or transitively).

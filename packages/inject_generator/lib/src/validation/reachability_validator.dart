@@ -1,4 +1,4 @@
-import '../analysis/component_reader.dart';
+import '../analysis/entry_point_collector.dart';
 import '../logging/diagnostic_reporter.dart';
 import 'binding_key.dart';
 import 'binding_graph_result.dart';

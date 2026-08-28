@@ -138,6 +138,9 @@ abstract class AppComponent {
   Annotating them with `@inject` is **optional** — an abstract getter on a
   component is recognized as an entry point either way. Annotating is the
   convention used throughout the examples; do so for clarity and consistency.
+  This includes getters **inherited from an `implements` clause** — a
+  component that `implements SomeInterface` gets `SomeInterface`'s abstract
+  getters as entry points automatically, without re-declaring them.
 - The static `create` reference points to the generated implementation.
 - The generated `create` factory takes one **named parameter per module**
   (in `@Component([...])` declaration order): optional when the module has a
@@ -145,6 +148,17 @@ abstract class AppComponent {
   otherwise. Passing a pre-built module instance is the supported way to feed
   runtime values or externally-constructed objects into the graph — including
   objects obtained from another component (root → feature component wiring).
+- Root → feature component wiring has two shapes: pass an already-built
+  object through a module constructor (above) for a handful of objects; or,
+  for many/async objects, or when the two components have no parent/child
+  relationship at all, define a narrow interface that the other component
+  `implements` and have the module consume only that interface — the
+  equivalent of Dagger's `@Component(dependencies: [...])`. See "Interface
+  bridge" below.
+- For an **encapsulated child graph** instead — one that reads every parent
+  binding but keeps its own bindings private, scoped to its own instance —
+  use `@subcomponent` / `@Module(subcomponents: ...)` below instead of a
+  second independent `@Component`.
 - Module list order matters: later modules override bindings from earlier ones.
 
 ### `@module`
@@ -167,6 +181,229 @@ class NetworkModule {
 - Provider methods are annotated with `@provides`.
 - Method parameters are injected from the graph automatically.
 - Modules are registered on the component: `@Component([NetworkModule])`.
+
+### `@Module(includes: [...])`
+
+Folds another module's providers into this one, transitively — lets a
+library author bundle several internal modules behind one public "umbrella"
+module, so a consuming app only has to list that one module.
+
+```dart
+// Inside the library — not exported.
+@module
+class ApiModule {
+  @provides
+  ApiClient provideApiClient() => ApiClient();
+}
+
+@module
+class DbModule {
+  @provides
+  Database provideDatabase() => Database();
+}
+
+// The library's public surface.
+@Module(includes: [ApiModule, DbModule])
+class MyLibraryModule {}
+
+// App code only ever lists MyLibraryModule.
+@Component([MyLibraryModule])
+abstract class AppComponent { /* ... */ }
+```
+
+**Rules:**
+
+- `includes` is followed transitively (an included module can itself include
+  more modules), and a module reachable through more than one include path
+  is installed exactly once — the first-reached position in the include
+  traversal wins, which is what determines its place in the override order
+  — so diamond-shaped include graphs are safe. A module that transitively
+  includes itself is a compile-time error.
+- A component's (or subcomponent's) own **directly-listed** modules always
+  take precedence over anything pulled in through `includes`. When a module
+  both provides its own bindings and includes another module for the same
+  key, the including module's own providers win.
+- Included modules are still ordinary `create()` parameters: each included
+  module class must stay **public**, the same as a directly-listed one, and
+  one with no usable no-argument constructor becomes a **required**
+  parameter on the *component's* (or subcomponent's) generated `create()`
+  — there is no separate generated factory for the umbrella module itself.
+- `includes` and `subcomponents` (below) are independent `@Module`
+  parameters — an included module can declare its own `subcomponents:`.
+
+### `@subcomponent` / `@Module(subcomponents: [...])`
+
+Marks an abstract class as an **encapsulated child graph**, installed into a
+parent component through a module. The child can read every binding of the
+parent; the parent cannot see any of the child's own bindings unless a
+module provider explicitly re-exports one.
+
+```dart
+@module
+class HttpModule {
+  @provides
+  @singleton
+  HttpClient provideClient() => HttpClient();
+
+  @provides
+  RestApiService provideApi(HttpClient client, Database db) =>
+      RestApiService(client, db); // Database comes from the parent.
+}
+
+@Subcomponent([HttpModule])
+abstract class HttpSubcomponent {
+  RestApiService get apiService;
+}
+
+@Module(subcomponents: [HttpSubcomponent])
+class NetworkModule {}
+
+@Component([NetworkModule])
+abstract class AppComponent {
+  @inject
+  Database get db;
+
+  @inject
+  HttpSubcomponentFactory get httpFactory; // synthesized, bound in the parent
+}
+
+// Usage:
+final app = AppComponent.create();
+final http = app.httpFactory.create();
+print(http.apiService); // HttpClient itself stays private to the subgraph.
+```
+
+**Rules:**
+
+- Installing a subcomponent via `subcomponents:` synthesizes a
+  `<Name>Factory` class and binds it as an ordinary **parent** binding —
+  inject it anywhere in the parent graph and call `create(...)` for a fresh
+  child instance.
+- The synthesized factory is generated into the `.factory.dart` **part
+  file** of the library that declares the `@Subcomponent` — that file needs
+  its own `part '<file>.factory.dart';` directive, exactly like an
+  `@assistedInject` file.
+- `@singleton` inside the subcomponent means once **per subcomponent
+  instance**, not once per app. Parent `@singleton`s stay app-wide, shared
+  by every child instance built from that parent.
+- A subcomponent must **not** re-declare a binding key the parent already
+  provides — that is a compile-time error, not an override.
+- `@asynchronous` propagates across the parent/child boundary: a child
+  entry point whose dependency chain reaches an async parent binding must
+  be declared `Future<T>`. `create(...)` itself always stays synchronous,
+  exactly like a component's.
+- Multi-level hierarchies (a subcomponent installing its own subcomponents)
+  are **not supported**.
+- `@provisionListener` does **not** cross the parent/child boundary — a
+  listener registered in one graph never observes provisions in the other.
+- To re-export one child binding to the parent, give a parent module
+  provider a dependency on the subcomponent factory and call `.create()`
+  from it. The re-declare rule above applies to the re-export too: the
+  child must bind the type under a different key — typically a
+  `@Qualifier` — so the parent's unqualified binding does not collide.
+  For the example above: add `const internal = Qualifier(#internal);`,
+  annotate `HttpModule.provideApi` and the `apiService` entry point with
+  `@internal`, then:
+
+  ```dart
+  @Module(subcomponents: [HttpSubcomponent])
+  class NetworkModule {
+    @provides
+    @singleton
+    RestApiService provideApi(HttpSubcomponentFactory factory) =>
+        factory.create().apiService;
+  }
+  ```
+
+### `@subcomponentFactory`
+
+Replaces the synthesized `<Name>Factory` with an explicit one that also
+accepts **runtime values** directly, without wrapping them in a module
+constructor:
+
+```dart
+@subcomponentFactory
+abstract class HttpSubcomponentFactory {
+  HttpSubcomponent create(HttpModule module, String userId);
+}
+```
+
+**Rules:**
+
+- Must be `abstract` and declare exactly one abstract method returning the
+  installed `@subcomponent` type; it replaces the synthesized factory for
+  that subcomponent.
+- A parameter whose type is one of the subcomponent's own declared modules
+  behaves exactly like a synthesized factory's module parameter.
+- Every other parameter is a **value parameter**: it becomes an instance
+  binding in the child graph, injectable under its `(type, qualifier)` —
+  honoring nullable-wrap resolution like any other binding — the
+  equivalent of Dagger's `@BindsInstance`.
+- A value parameter whose `(type, qualifier)` collides with a binding the
+  parent already provides is a build error — it counts as re-declaring a
+  parent key, same as a child module provider would.
+- `create(...)` stays synchronous, exactly like the synthesized factory.
+
+### Interface bridge (cross-component access without a shared parent)
+
+When two components have no parent/child relationship — or a feature needs
+many objects, an async one, or must not statically reference the other
+component at all (e.g. a deferred-loaded Flutter feature) — bridge them
+with a narrow interface instead of passing instances:
+
+```dart
+// feature side — states what it needs, names no app type:
+abstract class AppDeps {
+  Db get db;
+}
+
+@module
+class BridgeModule {
+  BridgeModule(this.deps);
+  final AppDeps deps;
+
+  @provides
+  Db db() => deps.db;
+}
+
+@Component([BridgeModule])
+abstract class FeatureComponent { /* entry points */ }
+
+// app side — satisfies the feature-defined interface. `db` is inherited
+// as an entry point; AppComponent does not re-declare it.
+@Component([DbModule])
+abstract class AppComponent implements AppDeps {}
+
+// wiring:
+final app = AppComponent.create();
+final feature = FeatureComponent.create(bridgeModule: BridgeModule(app));
+```
+
+**Rules:**
+
+- This is the inject.dart equivalent of Dagger's `@Component(dependencies:
+  [...])` (and of Hilt's `@EntryPoint`-based dynamic-feature-module
+  recipe) — but the dependency points the other way: the **feature**
+  defines the interface, the **app** implements it, and the feature never
+  names an app type.
+- **Lazy:** the bridge module's provider calls the interface getter every
+  time the feature graph resolves that binding — nothing is captured
+  eagerly when the bridge module is constructed.
+- **Scope-preserving:** `@singleton` caching happens in whichever graph
+  owns the binding (the app, above) — the bridge never creates a second
+  instance.
+- **Async-transparent:** declare the interface getter as `Future<T>` and
+  the bridge's provider `@provides @asynchronous Future<T>`; the `await`
+  happens where the feature graph resolves the entry point, never where
+  the bridge module is constructed.
+- A deferred-loaded feature must use this pattern, not a `@subcomponent` —
+  a subcomponent's factory is a type the parent module references
+  directly, which (per Dart's loading-unit rules) would pull the whole
+  feature into the base loading unit. The shared interface (`AppDeps`
+  above) must live in a library both sides import normally — Dart forbids
+  using a deferred library's types in the file that imports it.
+- A fake implementation of the interface is the natural test seam for the
+  feature component — no test parent component needed on this axis.
 
 ### `@inject`
 

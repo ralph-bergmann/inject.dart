@@ -6,6 +6,7 @@ import 'package:inject_generator/src/analysis/assisted_reader.dart';
 import 'package:inject_generator/src/analysis/component_reader.dart';
 import 'package:inject_generator/src/analysis/inject_reader.dart';
 import 'package:inject_generator/src/analysis/module_reader.dart';
+import 'package:inject_generator/src/analysis/subcomponent_reader.dart';
 import 'package:inject_generator/src/logging/diagnostic_reporter.dart';
 import 'package:test/test.dart';
 
@@ -46,6 +47,32 @@ void main() {
 
         final ClassElement classElement = library.getClass('PlainService')!;
         expect(reader.isComponent(classElement), isFalse);
+      });
+    });
+
+    group('isSubcomponent', () {
+      test('returns true for @subcomponent-annotated abstract class', () async {
+        final LibraryElement library = await _resolveLibrary('''
+          import 'package:inject_annotation/inject_annotation.dart';
+
+          @subcomponent
+          abstract class HttpSubcomponent {}
+        ''');
+
+        final ClassElement classElement = library.getClass('HttpSubcomponent')!;
+        expect(reader.isSubcomponent(classElement), isTrue);
+      });
+
+      test('returns false for @component-annotated class', () async {
+        final LibraryElement library = await _resolveLibrary('''
+          import 'package:inject_annotation/inject_annotation.dart';
+
+          @component
+          abstract class CoffeeShop {}
+        ''');
+
+        final ClassElement classElement = library.getClass('CoffeeShop')!;
+        expect(reader.isSubcomponent(classElement), isFalse);
       });
     });
 
@@ -294,6 +321,33 @@ void main() {
       });
     });
 
+    group('readSubcomponent', () {
+      test('delegates to SubcomponentReader and returns module list and entry points', () async {
+        final LibraryElement library = await _resolveLibrary('''
+          import 'package:inject_annotation/inject_annotation.dart';
+
+          @module
+          class HttpModule {}
+
+          class ApiService {}
+
+          @Subcomponent([HttpModule])
+          abstract class HttpSubcomponent {
+            @inject
+            ApiService get apiService;
+          }
+        ''');
+
+        final ClassElement classElement = library.getClass('HttpSubcomponent')!;
+        final SubcomponentData? result = reader.readSubcomponent(classElement);
+
+        expect(result, isNotNull);
+        expect(result!.modules, hasLength(1));
+        expect(result.modules.first.element?.name, 'HttpModule');
+        expect(result.entryPoints, hasLength(1));
+      });
+    });
+
     group('readModule', () {
       test('delegates to ModuleReader and returns provider descriptors', () async {
         final LibraryElement library = await _resolveLibrary('''
@@ -378,6 +432,59 @@ void main() {
 
         final ClassElement classElement = library.getClass('MyService')!;
         expect(reader.isAssistedInject(classElement), isTrue);
+      });
+    });
+
+    group('hasInjectConstructor', () {
+      test('returns true for class with @inject constructor', () async {
+        final LibraryElement library = await _resolveLibrary('''
+          import 'package:inject_annotation/inject_annotation.dart';
+
+          class MyService {
+            @inject
+            MyService();
+          }
+        ''');
+
+        final ClassElement classElement = library.getClass('MyService')!;
+        expect(reader.hasInjectConstructor(classElement), isTrue);
+      });
+
+      test('returns false for unannotated class', () async {
+        final LibraryElement library = await _resolveLibrary('''
+          class PlainService {}
+        ''');
+
+        final ClassElement classElement = library.getClass('PlainService')!;
+        expect(reader.hasInjectConstructor(classElement), isFalse);
+      });
+
+      test('returns true for class with @inject on named constructor', () async {
+        final LibraryElement library = await _resolveLibrary('''
+          import 'package:inject_annotation/inject_annotation.dart';
+
+          class MyService {
+            @inject
+            MyService.create();
+          }
+        ''');
+
+        final ClassElement classElement = library.getClass('MyService')!;
+        expect(reader.hasInjectConstructor(classElement), isTrue);
+      });
+
+      test('returns false for class-level @inject with no annotated constructor', () async {
+        final LibraryElement library = await _resolveLibrary('''
+          import 'package:inject_annotation/inject_annotation.dart';
+
+          @inject
+          class MyService {
+            MyService();
+          }
+        ''');
+
+        final ClassElement classElement = library.getClass('MyService')!;
+        expect(reader.hasInjectConstructor(classElement), isFalse);
       });
     });
 

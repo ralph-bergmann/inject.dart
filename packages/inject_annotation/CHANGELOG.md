@@ -1,3 +1,16 @@
+## 1.2.0
+
+- Add `@subcomponent` and `@Module(subcomponents: ...)` for encapsulated dependency subgraphs.
+- Add `@subcomponentFactory` / `SubcomponentFactory`: an explicit factory for a `@subcomponent` that
+  replaces the synthesized `<Name>Factory`. Its method's non-module parameters become instance
+  bindings in the subcomponent graph (Dagger's `@BindsInstance` equivalent), letting runtime values
+  (e.g. a login token) flow into a subcomponent without wrapping them in a module constructor.
+- Add `@Module(includes: [...])`: a module can fold in other modules' providers, transitively, with
+  cycle detection and dedup-by-type for diamond includes. Lets a library author ship one public
+  "umbrella" module backed by several internal modules, so a consuming app only has to list the
+  umbrella module. A component's/subcomponent's own directly-listed modules always take precedence
+  over anything pulled in through `includes`.
+
 ## 1.1.0
 
 - Add provision listeners: the `@provisionListener` annotation and the `ProvisionListener` interface.

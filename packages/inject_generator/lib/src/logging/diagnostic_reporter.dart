@@ -70,17 +70,16 @@ class DiagnosticMessage {
   ///   {message}
   ///   → {suggestion}
   /// ```
-  String get formattedMessage =>
-      [
-        '[inject_generator] ${switch (severity) {
-          DiagnosticSeverity.error => 'ERROR',
-          DiagnosticSeverity.warning => 'WARNING',
-          DiagnosticSeverity.info => 'INFO',
-        }} in $filePath:$line:$column',
-        if (snippet != null) snippet!.format().trimRight(),
-        _indentBlock(message, prefix: '  '),
-        if (suggestion != null && suggestion!.isNotEmpty) _indentBlock(suggestion!, prefix: '  → '),
-      ].join('\n');
+  String get formattedMessage => [
+    '[inject_generator] ${switch (severity) {
+      DiagnosticSeverity.error => 'ERROR',
+      DiagnosticSeverity.warning => 'WARNING',
+      DiagnosticSeverity.info => 'INFO',
+    }} in $filePath:$line:$column',
+    if (snippet != null) snippet!.format().trimRight(),
+    _indentBlock(message, prefix: '  '),
+    if (suggestion != null && suggestion!.isNotEmpty) _indentBlock(suggestion!, prefix: '  → '),
+  ].join('\n');
 }
 
 /// Collects and formats diagnostic messages from all generator phases.
@@ -161,22 +160,13 @@ class DiagnosticReporter {
   bool get hasErrors => _diagnostics.any((d) => d.severity == DiagnosticSeverity.error);
 
   /// Returns the number of error-severity diagnostics collected.
-  int get errorCount =>
-      _diagnostics
-          .where((d) => d.severity == DiagnosticSeverity.error)
-          .length;
+  int get errorCount => _diagnostics.where((d) => d.severity == DiagnosticSeverity.error).length;
 
   /// Returns the number of warning-severity diagnostics collected.
-  int get warningCount =>
-      _diagnostics
-          .where((d) => d.severity == DiagnosticSeverity.warning)
-          .length;
+  int get warningCount => _diagnostics.where((d) => d.severity == DiagnosticSeverity.warning).length;
 
   /// Returns the number of info-severity diagnostics collected.
-  int get infoCount =>
-      _diagnostics
-          .where((d) => d.severity == DiagnosticSeverity.info)
-          .length;
+  int get infoCount => _diagnostics.where((d) => d.severity == DiagnosticSeverity.info).length;
 
   /// Returns an unmodifiable list of all collected diagnostics.
   List<DiagnosticMessage> get messages => List.unmodifiable(_diagnostics);

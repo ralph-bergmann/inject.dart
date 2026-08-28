@@ -1,0 +1,16 @@
+name: bookshelf_core
+description: >
+  Shared kernel for the bookshelf example — a Logger interface, the domain
+  models (User, Credentials, Book), and CoreModule, which binds Logger.
+  Consumed by bookshelf_api, bookshelf_auth, and the app; listed exactly
+  once, in MainComponent. Ships no code generation of its own — its
+  @inject/@module classes resolve into the app's main.inject.dart.
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: ^3.13.1
+resolution: workspace
+
+dependencies:
+  inject_annotation: ^1.2.0

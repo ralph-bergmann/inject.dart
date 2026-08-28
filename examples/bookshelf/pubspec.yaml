@@ -1,0 +1,32 @@
+name: bookshelf
+description: "A multi-package example: shared core, cross-package bindings, and a login session subcomponent."
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.13.1
+  flutter: ^3.47.1
+resolution: workspace
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Local library packages — see the book chapter "Composing Components and
+  # Multi-Package Projects". Resolved via the pub workspace.
+  bookshelf_api: any
+  bookshelf_auth: any
+  bookshelf_core: any
+  inject_annotation: ^1.2.0
+  inject_flutter: ^1.2.0
+
+dev_dependencies:
+  build_runner: ^2.16.0
+  flutter_lints: ^6.0.0
+  flutter_test:
+    sdk: flutter
+  inject_generator: ^1.2.0
+  test: ^1.31.1
+
+flutter:
+  uses-material-design: true

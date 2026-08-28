@@ -451,6 +451,159 @@ void main() {
         reason: 'factoryBuilder must not emit .factory.dart when qualifier content is invalid',
       );
     });
+
+    test('produces no output for @Component class with @assistedInject constructor', () async {
+      final TestBuilderResult result = await testBuilder(builder, {
+        ...injectAnnotationAssets,
+        'pkg|lib/example.dart': '''
+              import 'package:inject_annotation/inject_annotation.dart';
+
+              @component
+              abstract class CoffeeShop {
+                @assistedInject
+                CoffeeShop();
+              }
+            ''',
+      });
+
+      expect(result.succeeded, isTrue);
+      expect(
+        result.outputs.where((id) => id.path.endsWith('.factory.dart')),
+        isEmpty,
+        reason: 'factoryBuilder must exclude @Component classes from @assistedInject synthesis',
+      );
+    });
+
+    test('still synthesizes factory for a valid non-component class alongside a clean component', () async {
+      final TestBuilderResult result = await testBuilder(builder, {
+        ...injectAnnotationAssets,
+        'pkg|lib/example.dart': '''
+              import 'package:inject_annotation/inject_annotation.dart';
+
+              part 'example.factory.dart';
+
+              @component
+              abstract class CoffeeShop {}
+
+              class CoffeeMaker {
+                @assistedInject
+                CoffeeMaker({@assisted required this.temperature});
+                final int temperature;
+              }
+            ''',
+      });
+
+      expect(result.succeeded, isTrue);
+      final String factoryOutput = _readGeneratedFactoryOutput(result, '.factory.dart');
+      expect(
+        factoryOutput,
+        contains('CoffeeMakerFactory'),
+        reason: 'A clean @Component must not suppress factory synthesis for a separate @assistedInject class',
+      );
+    });
+
+    test(
+      'excludes a malformed component from synthesis while synthesizing for another class in the same file',
+      () async {
+        final TestBuilderResult result = await testBuilder(builder, {
+          ...injectAnnotationAssets,
+          'pkg|lib/example.dart': '''
+              import 'package:inject_annotation/inject_annotation.dart';
+
+              part 'example.factory.dart';
+
+              @component
+              abstract class CoffeeShop {
+                @assistedInject
+                CoffeeShop();
+              }
+
+              class CoffeeMaker {
+                @assistedInject
+                CoffeeMaker({@assisted required this.temperature});
+                final int temperature;
+              }
+            ''',
+        });
+
+        expect(result.succeeded, isTrue);
+        final String factoryOutput = _readGeneratedFactoryOutput(result, '.factory.dart');
+        expect(factoryOutput, contains('CoffeeMakerFactory'));
+        expect(
+          factoryOutput,
+          isNot(contains('CoffeeShop')),
+          reason: 'FactoryCodeGenerator must exclude the component even when it re-scans library.classes',
+        );
+      },
+    );
+
+    test('explicit @subcomponentFactory suppresses synthesis and needs no .factory.dart output', () async {
+      final TestBuilderResult result = await testBuilder(builder, {
+        ...injectAnnotationAssets,
+        'pkg|lib/example.dart': '''
+              import 'package:inject_annotation/inject_annotation.dart';
+
+              @module
+              class ApiModule {}
+
+              @Subcomponent([ApiModule])
+              abstract class ApiSubcomponent {
+                String get userId;
+              }
+
+              @subcomponentFactory
+              abstract class ApiSubcomponentFactory {
+                ApiSubcomponent create(String userId);
+              }
+            ''',
+      });
+
+      expect(result.succeeded, isTrue);
+      expect(
+        result.outputs.where((id) => id.path.endsWith('.factory.dart')),
+        isEmpty,
+        reason: 'An explicit @subcomponentFactory replaces the synthesized one — nothing to emit',
+      );
+    });
+
+    test('reports error when two explicit @subcomponentFactory classes target the same subcomponent', () async {
+      final logs = <LogRecord>[];
+      final TestBuilderResult result = await testBuilder(builder, {
+        ...injectAnnotationAssets,
+        'pkg|lib/example.dart': '''
+              import 'package:inject_annotation/inject_annotation.dart';
+
+              @module
+              class ApiModule {}
+
+              @Subcomponent([ApiModule])
+              abstract class ApiSubcomponent {
+                String get userId;
+              }
+
+              @subcomponentFactory
+              abstract class FirstFactory {
+                ApiSubcomponent create(String userId);
+              }
+
+              @subcomponentFactory
+              abstract class SecondFactory {
+                ApiSubcomponent create(String userId);
+              }
+            ''',
+      }, onLog: logs.add);
+
+      expect(
+        logs.where((l) => l.level == Level.SEVERE).map((l) => l.message),
+        anyElement(contains('already has an explicit @subcomponentFactory')),
+      );
+      expect(result.succeeded, isFalse, reason: 'A SEVERE log must fail the build, not just be logged');
+      expect(
+        result.outputs.where((id) => id.path.endsWith('.factory.dart')),
+        isEmpty,
+        reason: 'No factory output must be emitted once the conflicting-factory error is reported',
+      );
+    });
   });
 
   group('FactoryBuilder', () {

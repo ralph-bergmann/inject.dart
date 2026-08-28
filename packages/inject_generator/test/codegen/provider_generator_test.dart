@@ -1,6 +1,4 @@
-import 'package:inject_generator/src/analysis/annotation_reader.dart';
 import 'package:inject_generator/src/codegen/provider_generator.dart';
-import 'package:inject_generator/src/logging/diagnostic_reporter.dart';
 import 'package:test/test.dart';
 
 import '../helpers/pipeline_golden_helper.dart';
@@ -9,16 +7,6 @@ const _goldenDir = 'test/golden/provider_generator';
 
 void main() {
   group('ProviderGenerator', () {
-    late DiagnosticReporter reporter;
-    late AnnotationReader reader;
-    late ProviderGenerator generator;
-
-    setUp(() {
-      reporter = DiagnosticReporter();
-      reader = AnnotationReader(reporter: reporter);
-      generator = ProviderGenerator();
-    });
-
     group('providerClassName / providerBaseName', () {
       test('Pascal-cases primitive type names to avoid field/class collision', () {
         // Without Pascal-casing, both class and field would be `_int\$Provider`,

@@ -4,9 +4,11 @@ import 'package:source_gen/source_gen.dart';
 
 import '../analysis/assisted_reader.dart';
 import '../analysis/component_reader.dart';
+import '../analysis/entry_point_collector.dart';
 import '../analysis/dependency_discovery.dart';
 import '../analysis/inject_reader.dart';
 import '../analysis/module_reader.dart';
+import '../analysis/subcomponent_reader.dart';
 import '../extensions/dart_type_extensions.dart';
 import '../builder/inject_builder_options.dart';
 import '../logging/diagnostic_reporter.dart';
@@ -32,6 +34,18 @@ enum GeneratedOutputKind {
   factory,
 }
 
+/// The result of validating one subcomponent graph.
+///
+/// `graphResult` covers the child bindings only (with `parentBindingsUsed`
+/// naming the consumed parent keys); `asyncResult` is computed over the
+/// merged parent+child graph so async parent bindings propagate into child
+/// entry-point signatures.
+typedef SubcomponentValidationResult = ({
+  BindingGraphResult graphResult,
+  AsyncPropagationResult asyncResult,
+  List<EntryPoint> validEntryPoints,
+});
+
 /// Facade that orchestrates graph validation before code generation.
 ///
 /// Delegates to specialized sub-validators. Each sub-validator reports
@@ -54,6 +68,7 @@ class GraphValidator {
   AsyncPropagationResult? _lastAsyncResult;
   BindingGraphResult? _lastGraphResult;
   List<EntryPoint>? _lastValidEntryPoints;
+  Map<ClassElement, SubcomponentValidationResult> _lastSubcomponentResults = {};
 
   /// The async binding results from the latest validation run.
   Map<BindingKey, bool> get asyncBindings => _lastAsyncResult?.asyncBindings ?? const {};
@@ -66,6 +81,11 @@ class GraphValidator {
 
   /// The validated entry points from the latest run, or `null` if not yet run.
   List<EntryPoint>? get lastValidEntryPoints => _lastValidEntryPoints;
+
+  /// Per-subcomponent validation results from the latest [validate] run,
+  /// keyed by the subcomponent class. Empty when the component installs no
+  /// subcomponents.
+  Map<ClassElement, SubcomponentValidationResult> get lastSubcomponentResults => _lastSubcomponentResults;
 
   /// Validates the full dependency graph for a single component.
   ///
@@ -83,12 +103,18 @@ class GraphValidator {
     List<({ClassElement factoryElement, AssistedInjectData injectData, AssistedFactoryData factoryData})> factories =
         const [],
     List<TypedefProviderData> typedefProviders = const [],
+    List<SubcomponentFactoryDescriptor> subcomponentDescriptors = const [],
     GeneratedOutputKind outputKind = GeneratedOutputKind.inject,
     NullableDuplicatePolicy nullableDuplicatePolicy = NullableDuplicatePolicy.error,
   }) {
     _lastAsyncResult = null;
     _lastGraphResult = null;
     _lastValidEntryPoints = null;
+    _lastSubcomponentResults = {};
+
+    // Duplicate-installation check: the same subcomponent must not be
+    // installed by more than one module of this component.
+    _validateDuplicateInstallations(componentClass, modules);
 
     // Sub-validator 0: Module-level constraints (private class, reserved words,
     // qualified/unqualified conflict within a single module).
@@ -141,6 +167,25 @@ class GraphValidator {
     //    which binding to use → error.
     final List<EntryPoint> validEntryPoints = _validateEntryPointNameConflicts(componentData.entryPoints);
 
+    // Installed subcomponents contribute their factory as a parent binding
+    // (AC-3) and their privately-provided keys as missing-binding hints (AC-9).
+    final subcomponentFactories = <({BindingKey key, ClassElement factoryClass})>[
+      for (final descriptor in subcomponentDescriptors)
+        (key: descriptor.factoryBindingKey, factoryClass: descriptor.factoryClass),
+    ];
+    final subcomponentProvidedKeyHints = <BindingKey, String>{};
+    for (final descriptor in subcomponentDescriptors) {
+      final Set<BindingKey> childKeys = collectAllProvidedKeys(
+        modules: descriptor.subcomponentModules,
+        injectables: descriptor.subcomponentInjectables,
+        factories: descriptor.subcomponentFactories,
+        typedefProviders: descriptor.subcomponentTypedefProviders,
+      );
+      for (final BindingKey key in childKeys) {
+        subcomponentProvidedKeyHints[key] = descriptor.subcomponentClass.name!;
+      }
+    }
+
     // Sub-validator 2: Binding resolution — Phase 1 (registry) + Phase 2 (dep check)
     final graphResult = _bindingResolver.resolve(
       modules: modules,
@@ -150,6 +195,8 @@ class GraphValidator {
       entryPoints: validEntryPoints,
       allowModuleOverrides: true,
       nullableDuplicatePolicy: nullableDuplicatePolicy,
+      subcomponentFactories: subcomponentFactories,
+      subcomponentProvidedKeyHints: subcomponentProvidedKeyHints,
     );
 
     // Sub-validator 3: Async propagation — Phase 3
@@ -171,10 +218,41 @@ class GraphValidator {
     // Sub-validator 5: Entry-point async signatures — Phase 5
     _entryPointValidator.validate(asyncResult, validEntryPoints);
 
-    // Sub-validator 6: Cycle detection
+    // Sub-validator 5b: Validate every installed subcomponent graph against
+    // this (parent) graph. Runs before cycle detection so the factory→child
+    // consumption edges are known (AC: cycle through factory re-export).
+    for (final descriptor in subcomponentDescriptors) {
+      final SubcomponentValidationResult? childResult = validateSubcomponent(
+        sourceLibrary: sourceLibrary,
+        parentComponentClass: componentClass,
+        parentGraphResult: graphResult,
+        descriptor: descriptor,
+        nullableDuplicatePolicy: nullableDuplicatePolicy,
+      );
+      if (childResult != null) {
+        _lastSubcomponentResults[descriptor.subcomponentClass] = childResult;
+      }
+    }
+
+    // Sub-validator 6: Cycle detection.
+    // The parent edges are augmented with one synthetic edge per installed
+    // subcomponent: factory → every parent key the child graph consumes.
+    // A module provider that injects the factory while the child (transitively)
+    // consumes that provider's output then closes a cycle whose path shows
+    // the factory node explicitly. The augmented edges are used for cycle
+    // detection ONLY — async propagation must not cross them (the factory
+    // itself is a plain synchronous object).
+    final Map<BindingKey, List<BindingKey>> cycleEdges = {...graphResult.dependencyEdges};
+    for (final descriptor in subcomponentDescriptors) {
+      final SubcomponentValidationResult? childResult = _lastSubcomponentResults[descriptor.subcomponentClass];
+      if (childResult == null) {
+        continue;
+      }
+      cycleEdges[descriptor.factoryBindingKey] = childResult.graphResult.parentBindingsUsed.toList();
+    }
     _cycleValidator.validate(
       bindingMap: graphResult.bindingMap,
-      dependencyEdges: graphResult.dependencyEdges,
+      dependencyEdges: cycleEdges,
     );
 
     // Sub-validator 7: Qualifier conflicts
@@ -223,6 +301,208 @@ class GraphValidator {
       entryPoints: validEntryPoints,
       exemptKeys: listenerExemptKeys,
     );
+  }
+
+  /// Validates one subcomponent graph against its parent graph.
+  ///
+  /// Mirrors [validate] for the child scope: module constraints, visibility,
+  /// entry-point conflicts, hierarchical binding resolution (child sees
+  /// parent), async propagation over the merged graph, entry-point async
+  /// signatures, cycles (merged graph), qualifier conflicts, and
+  /// reachability.
+  ///
+  /// Returns `null` when the subcomponent has no entry points (fatal) —
+  /// otherwise the child results needed by the code generator.
+  SubcomponentValidationResult? validateSubcomponent({
+    required LibraryElement sourceLibrary,
+    required ClassElement parentComponentClass,
+    required BindingGraphResult parentGraphResult,
+    required SubcomponentFactoryDescriptor descriptor,
+    NullableDuplicatePolicy nullableDuplicatePolicy = NullableDuplicatePolicy.error,
+  }) {
+    final ClassElement subcomponentClass = descriptor.subcomponentClass;
+    final SubcomponentData subcomponentData = descriptor.subcomponentData;
+
+    // Multi-level hierarchies are out of scope for v1: a subcomponent's own
+    // modules must not install further subcomponents.
+    for (final m in descriptor.subcomponentModules) {
+      if (m.moduleData.installedSubcomponents.isNotEmpty) {
+        _reporter.errorForElement(
+          subcomponentClass,
+          message:
+              "Subcomponent '${subcomponentClass.name}' installs nested subcomponents through "
+              "module '${m.moduleClass.name}' — multi-level subcomponent hierarchies are not "
+              'supported.',
+          suggestion:
+              'Install the nested subcomponent into the parent component instead, or flatten '
+              'the hierarchy into a single subcomponent.',
+        );
+      }
+    }
+
+    // Module-level constraints for the child scope.
+    _moduleValidator
+      ..validateModules(descriptor.subcomponentModules)
+      ..validateInjectables(descriptor.subcomponentInjectables);
+
+    // A subcomponent without entry points exposes nothing — fatal, mirroring
+    // the component guard.
+    if (subcomponentData.entryPoints.isEmpty) {
+      _reporter.errorForElement(
+        subcomponentClass,
+        message:
+            "Subcomponent '${subcomponentClass.name}' has no entry points. "
+            'Declare at least one abstract getter or method that the '
+            'subcomponent should provide.',
+        suggestion:
+            'Add an abstract getter, e.g.: '
+            '`MyType get myType;`',
+      );
+      return null;
+    }
+
+    // Visibility checks for everything the generated output references.
+    final List<Element> referencedElements = _collectReferencedElements(
+      componentClass: subcomponentClass,
+      componentData: subcomponentData,
+      modules: descriptor.subcomponentModules,
+      injectables: descriptor.subcomponentInjectables,
+      factories: descriptor.subcomponentFactories,
+    );
+    _visibilityValidator.validateForInjectOutput(sourceLibrary: sourceLibrary, elements: referencedElements);
+
+    // Entry-point name conflicts (same rules as components).
+    final List<EntryPoint> validEntryPoints = _validateEntryPointNameConflicts(subcomponentData.entryPoints);
+
+    // Hierarchical binding resolution: child registers its own bindings and
+    // falls back to the parent for everything else. The subcomponent name
+    // flows into missing-binding diagnostics so they say which child graph
+    // the resolution happened in.
+    final BindingGraphResult childGraphResult = _bindingResolver.resolve(
+      modules: descriptor.subcomponentModules,
+      injectables: descriptor.subcomponentInjectables,
+      factories: descriptor.subcomponentFactories,
+      typedefProviders: descriptor.subcomponentTypedefProviders,
+      entryPoints: validEntryPoints,
+      allowModuleOverrides: true,
+      nullableDuplicatePolicy: nullableDuplicatePolicy,
+      parentBindings: ParentBindings(parentGraphResult.bindingMap),
+      subcomponentFactoryValueParameters: descriptor.valueParameters,
+      subcomponentName: subcomponentClass.name,
+    );
+
+    // Async propagation runs over the MERGED graph so that async parent
+    // bindings propagate into child entry-point signatures (the child's
+    // dependency edges already point at parent keys where applicable).
+    final mergedGraphResult = BindingGraphResult(
+      bindingMap: {...parentGraphResult.bindingMap, ...childGraphResult.bindingMap},
+      dependencyEdges: {...parentGraphResult.dependencyEdges, ...childGraphResult.dependencyEdges},
+      duplicateBindings: childGraphResult.duplicateBindings,
+      parentBindingsUsed: childGraphResult.parentBindingsUsed,
+    );
+    final AsyncPropagationResult mergedAsyncResult = _asyncPropagator.propagate(mergedGraphResult);
+
+    // ViewModel constraints for the child scope.
+    _viewModelFactoryValidator.validate(
+      graphResult: mergedGraphResult,
+      asyncResult: mergedAsyncResult,
+      modules: descriptor.subcomponentModules,
+      injectables: descriptor.subcomponentInjectables,
+      typedefProviders: descriptor.subcomponentTypedefProviders,
+      factories: descriptor.subcomponentFactories,
+    );
+
+    // Entry-point async signatures: identical rules to components — a sync
+    // entry point on an async chain (including chains that cross into the
+    // parent) is an error; `create(...)` itself always stays synchronous.
+    _entryPointValidator.validate(mergedAsyncResult, validEntryPoints);
+
+    // Cycle detection over the CHILD's own graph only (not the merged one):
+    // parent keys the child depends on act as leaf nodes here, which is
+    // sufficient — a cycle entirely inside the parent is already reported
+    // once by the parent's own top-level cycle check (`validate` above),
+    // and a genuine cross-boundary cycle can only occur through the
+    // factory-re-export pattern (AC-10e), which that same top-level check
+    // also covers via its synthetic factory→parentBindingsUsed edge. Reusing
+    // the merged graph here would re-detect (and re-report) any purely
+    // parent-side cycle once per installed subcomponent.
+    _cycleValidator.validate(
+      bindingMap: childGraphResult.bindingMap,
+      dependencyEdges: childGraphResult.dependencyEdges,
+    );
+
+    // Qualifier conflicts within the child scope.
+    _qualifierValidator.validate(
+      bindingMap: childGraphResult.bindingMap,
+      duplicateBindings: childGraphResult.duplicateBindings,
+    );
+
+    // Reachability warnings for unused child bindings.
+    final Set<BindingKey> childReachableKeys = ReachabilityValidator.computeReachableKeys(
+      bindingMap: childGraphResult.bindingMap,
+      dependencyEdges: childGraphResult.dependencyEdges,
+      entryPoints: validEntryPoints,
+    );
+    final childReachableProvisionedTypes = <DartType>[
+      for (final m in descriptor.subcomponentModules)
+        for (final provider in m.moduleData.providers)
+          if (!provider.metadata.isProvisionListener && childReachableKeys.contains(provider.key))
+            provider.metadata.isAsynchronous ? provider.returnType.unwrapFuture : provider.returnType,
+      for (final injectable in descriptor.subcomponentInjectables)
+        if (childReachableKeys.contains(injectable.injectable.key)) injectable.classElement.thisType,
+    ];
+    final childListenerExemptKeys = <BindingKey>{
+      for (final m in descriptor.subcomponentModules)
+        for (final provider in m.moduleData.providers)
+          if (provider.metadata.isProvisionListener &&
+              _listenerMatchesAnyProvisionedType(
+                provider.metadata.listenerTypeArgument,
+                childReachableProvisionedTypes,
+              ))
+            provider.key,
+    };
+    _reachabilityValidator.validate(
+      bindingMap: childGraphResult.bindingMap,
+      dependencyEdges: childGraphResult.dependencyEdges,
+      entryPoints: validEntryPoints,
+      exemptKeys: childListenerExemptKeys,
+    );
+
+    return (
+      graphResult: childGraphResult,
+      asyncResult: mergedAsyncResult,
+      validEntryPoints: validEntryPoints,
+    );
+  }
+
+  /// Reports one aggregated error per subcomponent that is installed by more
+  /// than one module of the same component.
+  void _validateDuplicateInstallations(
+    ClassElement componentClass,
+    List<({ClassElement moduleClass, ModuleData moduleData})> modules,
+  ) {
+    final installedBy = <Element, List<String>>{};
+    for (final m in modules) {
+      for (final DartType subcomponentType in m.moduleData.installedSubcomponents) {
+        final Element? element = subcomponentType.element;
+        if (element == null) {
+          continue;
+        }
+        installedBy.putIfAbsent(element, () => []).add(m.moduleClass.name!);
+      }
+    }
+    for (final MapEntry<Element, List<String>> entry in installedBy.entries) {
+      if (entry.value.length < 2) {
+        continue;
+      }
+      _reporter.errorForElement(
+        componentClass,
+        message:
+            "Subcomponent '${entry.key.name}' is installed more than once on "
+            "'${componentClass.name}' (by modules: ${entry.value.join(', ')}).",
+        suggestion: 'Install the subcomponent through exactly one module.',
+      );
+    }
   }
 
   /// Returns `true` if [listenerTypeArg] is a catch-all (`null`) or matches at

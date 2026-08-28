@@ -1,3 +1,15 @@
+## 1.2.0
+
+* Added `SubcomponentBuilder<T>`: a `StatefulWidget` that owns the lifecycle of a `@subcomponent` graph (e.g. a login session). It calls its `create` callback (sync or `async`) exactly once in `initState`, exposes the result through `builder(context, subcomponent, child)`, and calls the optional `dispose` callback with the instance when removed from the tree. An asynchronous `create` shows the optional `loading` widget while it runs and the optional `error` builder (or, if none is given, `FlutterError.reportError`) if it fails. A widget `Key` change is the only recreation trigger — same convention as `ViewModelBuilder`. Unlike `ViewModelBuilder`, the created value is not expected to be a `ChangeNotifier`; `SubcomponentBuilder` never listens to it.
+
+```dart
+SubcomponentBuilder<SessionComponent>(
+  key: ValueKey(credentials),
+  create: () => sessionFactory.create(credentials),
+  builder: (context, session, _) => HomePage(session: session),
+);
+```
+
 ## 1.1.1
 
 * fix dependency conflict with flutter_test

@@ -9,6 +9,10 @@ part of 'main.dart';
 // **************************************************************************
 
 // ignore_for_file: type=lint, type=warning
+abstract class BackupSubcomponentFactory {
+  BackupSubcomponent create({BackupModule? backupModule});
+}
+
 abstract class HomePageFactory {
   HomePage create({Key? key, required String title});
 }

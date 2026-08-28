@@ -182,10 +182,10 @@ class _ViewModelBuilderState<T extends ChangeNotifier> extends State<ViewModelBu
   }
 
   Widget _buildViewModel(BuildContext context) => ListenableBuilder(
-        listenable: _viewModel,
-        builder: (context, child) => widget.builder(context, _viewModel, child),
-        child: widget.child,
-      );
+    listenable: _viewModel,
+    builder: (context, child) => widget.builder(context, _viewModel, child),
+    child: widget.child,
+  );
 
   @override
   Widget build(BuildContext context) {

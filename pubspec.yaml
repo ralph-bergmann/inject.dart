@@ -4,9 +4,13 @@ repository: https://github.com/ralph-bergmann/inject.dart
 issue_tracker: https://github.com/ralph-bergmann/inject.dart/issues
 
 environment:
-  sdk: ^3.12.0
+  sdk: ^3.13.1
 
 workspace:
+  - examples/bookshelf
+  - examples/bookshelf/packages/bookshelf_api
+  - examples/bookshelf/packages/bookshelf_auth
+  - examples/bookshelf/packages/bookshelf_core
   - examples/example
   - examples/flutter_demo
   - examples/flutter_demo/packages/counter_analytics
@@ -15,7 +19,7 @@ workspace:
   - packages/inject_generator
 
 dev_dependencies:
-  melos: ^8.0.0
+  melos: ^8.5.0
 
 melos:
   ide:
@@ -56,13 +60,23 @@ melos:
         flutter: true
 
     test:
-      run: melos run test:plain --no-select && melos run test:build-runner-dart --no-select && melos run test:build-runner-flutter --no-select
+      run: melos run test:plain --no-select && melos run test:plain-flutter --no-select && melos run test:build-runner-dart --no-select && melos run test:build-runner-flutter --no-select
     test:plain:
       run: melos exec -c 1 --fail-fast -- "dart test"
       packageFilters:
         noDependsOn: build_runner
         dirExists: test
         flutter: false
+    test:plain-flutter:
+      # Flutter packages that need no code generation of their own (e.g.
+      # inject_flutter's widget tests) — `dart test` can't run widget tests,
+      # so this is `flutter test` without the build_runner step the
+      # test:build-runner-flutter bucket below requires.
+      run: melos exec -c 1 --fail-fast -- "flutter test"
+      packageFilters:
+        noDependsOn: build_runner
+        dirExists: test
+        flutter: true
     test:build-runner-dart:
       run: melos exec -c 1 --fail-fast -- "dart run build_runner clean && dart run build_runner test -d"
       packageFilters:
@@ -82,8 +96,8 @@ melos:
     analyze:examples:
       run: melos run analyze:examples:get --no-select && melos run analyze:examples:build --no-select && melos run analyze:examples:analyze --no-select
     analyze:examples:get:
-      run: melos exec -c 1 --fail-fast --scope="example,flutter_demo" -- "dart pub get"
+      run: melos exec -c 1 --fail-fast --scope="example,flutter_demo,bookshelf" -- "dart pub get"
     analyze:examples:build:
-      run: melos exec -c 1 --fail-fast --scope="example,flutter_demo" -- "dart run build_runner build --delete-conflicting-outputs"
+      run: melos exec -c 1 --fail-fast --scope="example,flutter_demo,bookshelf" -- "dart run build_runner build --delete-conflicting-outputs"
     analyze:examples:analyze:
-      run: melos exec -c 1 --fail-fast --scope="example,flutter_demo" -- "dart analyze"
+      run: melos exec -c 1 --fail-fast --scope="example,flutter_demo,bookshelf" -- "dart analyze"

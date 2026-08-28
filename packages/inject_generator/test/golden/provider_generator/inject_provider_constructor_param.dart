@@ -18,8 +18,7 @@ import 'inject_provider_constructor_param.inject.dart' as g;
 
 @Component([WaterModule])
 abstract class AppComponent {
-  static const g.AppComponent$Component Function({WaterModule? waterModule}) create =
-      g.AppComponent$Component.create;
+  static const g.AppComponent$Component Function({WaterModule? waterModule}) create = g.AppComponent$Component.create;
 
   @inject
   CoffeeMaker get coffeeMaker;

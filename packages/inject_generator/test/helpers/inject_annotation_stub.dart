@@ -11,8 +11,23 @@ class Component {
 }
 const component = Component();
 
-class Module { const Module._(); }
+class Module {
+  final List<Type> subcomponents;
+  final List<Type> includes;
+  const factory Module({List<Type> subcomponents, List<Type> includes}) = Module._;
+  const Module._({this.subcomponents = const <Type>[], this.includes = const <Type>[]});
+}
 const module = Module._();
+
+class Subcomponent {
+  final List<Type> modules;
+  const factory Subcomponent([List<Type> modules]) = Subcomponent._;
+  const Subcomponent._([this.modules = const <Type>[]]);
+}
+const subcomponent = Subcomponent();
+
+class SubcomponentFactory { const SubcomponentFactory._(); }
+const subcomponentFactory = SubcomponentFactory._();
 
 class Inject { const Inject._(); }
 const inject = Inject._();

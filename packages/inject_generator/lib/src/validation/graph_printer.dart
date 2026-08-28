@@ -1,6 +1,6 @@
 import 'package:analyzer/dart/element/element.dart';
 
-import '../analysis/component_reader.dart';
+import '../analysis/entry_point_collector.dart';
 import 'async_propagation_result.dart';
 import 'binding_graph_result.dart';
 import 'binding_key.dart';
@@ -16,10 +16,10 @@ class GraphPrinter {
     required List<EntryPoint> entryPoints,
     required BindingGraphResult graphResult,
     required AsyncPropagationResult asyncResult,
-  })  : _componentClass = componentClass,
-        _entryPoints = entryPoints,
-        _graphResult = graphResult,
-        _asyncResult = asyncResult {
+  }) : _componentClass = componentClass,
+       _entryPoints = entryPoints,
+       _graphResult = graphResult,
+       _asyncResult = asyncResult {
     // Invert dependencyEdges once: dependency → set of dependents (receivers).
     // Set semantics so a class that requests the same dep type twice in one
     // constructor doesn't double-count its single parent as two receivers.
@@ -70,8 +70,7 @@ class GraphPrinter {
     out.writeln('[inject_generator] Dependency graph for ${_componentClass.name}:');
     out.writeln('  ${_componentClass.name}');
 
-    final sortedEntryPoints = _entryPoints.toList()
-      ..sort((a, b) => a.key.debugLabel.compareTo(b.key.debugLabel));
+    final sortedEntryPoints = _entryPoints.toList()..sort((a, b) => a.key.debugLabel.compareTo(b.key.debugLabel));
 
     for (var i = 0; i < sortedEntryPoints.length; i++) {
       final ep = sortedEntryPoints[i];
@@ -86,8 +85,7 @@ class GraphPrinter {
     out.writeln();
     out.writeln('  (shared bindings — each appears in the tree above as <name>...)');
 
-    final sortedShared = _sharedKeys.toList()
-      ..sort((a, b) => a.debugLabel.compareTo(b.debugLabel));
+    final sortedShared = _sharedKeys.toList()..sort((a, b) => a.debugLabel.compareTo(b.debugLabel));
 
     for (final sharedKey in sortedShared) {
       final isSingleton = _graphResult.bindingMap[sharedKey]?.isSingleton ?? false;

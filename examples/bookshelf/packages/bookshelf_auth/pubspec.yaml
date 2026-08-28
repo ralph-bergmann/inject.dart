@@ -1,0 +1,17 @@
+name: bookshelf_auth
+description: >
+  AuthRepository and AuthModule for the bookshelf example — depends on
+  BooksApi (bookshelf_api) and Logger (bookshelf_core) without depending
+  on either package's module: the app supplies both bindings by installing
+  CoreModule and ApiModule. No code generation of its own.
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: ^3.13.1
+resolution: workspace
+
+dependencies:
+  bookshelf_api: any
+  bookshelf_core: any
+  inject_annotation: ^1.2.0

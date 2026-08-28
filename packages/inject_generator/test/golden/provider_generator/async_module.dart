@@ -62,7 +62,8 @@ class DatabaseModule {
 
 @Component([DatabaseModule])
 abstract class AppComponent {
-  static const g.AppComponent$Component Function({DatabaseModule? databaseModule}) create = g.AppComponent$Component.create;
+  static const g.AppComponent$Component Function({DatabaseModule? databaseModule}) create =
+      g.AppComponent$Component.create;
 
   @inject
   Future<DatabaseService> get databaseService;

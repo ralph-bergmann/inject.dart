@@ -2,7 +2,7 @@ import 'package:analyzer/dart/element/element.dart';
 import 'package:build/build.dart';
 import 'package:build_test/build_test.dart';
 import 'package:inject_generator/src/analysis/annotation_reader.dart';
-import 'package:inject_generator/src/analysis/component_reader.dart';
+import 'package:inject_generator/src/analysis/entry_point_collector.dart';
 import 'package:inject_generator/src/analysis/inject_reader.dart';
 import 'package:inject_generator/src/analysis/module_reader.dart';
 import 'package:inject_generator/src/logging/diagnostic_reporter.dart';
@@ -22,8 +22,9 @@ void _validateCycles({
   required List<({ClassElement classElement, InjectableData injectable})> injectables,
   List<EntryPoint> entryPoints = const [],
 }) {
-  final result = BindingResolver(reporter: reporter)
-      .resolve(modules: modules, injectables: injectables, entryPoints: entryPoints);
+  final result = BindingResolver(
+    reporter: reporter,
+  ).resolve(modules: modules, injectables: injectables, entryPoints: entryPoints);
 
   CycleValidator(reporter: reporter).validate(
     bindingMap: result.bindingMap,

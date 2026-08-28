@@ -1011,9 +1011,10 @@ void main() {
           expect(typedefEdges.single.qualifier, equals('apiKey'));
         });
 
-        test('reports missing binding when typedef-provider param is qualified but only unqualified binding exists',
-            () async {
-          final library = await _resolveLibrary('''
+        test(
+          'reports missing binding when typedef-provider param is qualified but only unqualified binding exists',
+          () async {
+            final library = await _resolveLibrary('''
             import 'package:inject_annotation/inject_annotation.dart';
 
             const apiKey = Qualifier(#apiKey);
@@ -1040,53 +1041,54 @@ void main() {
             }
           ''');
 
-          final reader = AnnotationReader(reporter: reporter);
-          final factoryClass = library.getClass('IMyFactory')!;
-          final injectClass = library.getClass('MyClass')!;
-          final moduleClass = library.getClass('AppModule')!;
-          final factoryData = reader.readAssistedFactory(factoryClass)!;
-          final injectData = reader.readAssistedInject(injectClass)!;
-          final moduleData = reader.readModule(moduleClass);
+            final reader = AnnotationReader(reporter: reporter);
+            final factoryClass = library.getClass('IMyFactory')!;
+            final injectClass = library.getClass('MyClass')!;
+            final moduleClass = library.getClass('AppModule')!;
+            final factoryData = reader.readAssistedFactory(factoryClass)!;
+            final injectData = reader.readAssistedInject(injectClass)!;
+            final moduleData = reader.readModule(moduleClass);
 
-          final factories = [(factoryElement: factoryClass, injectData: injectData, factoryData: factoryData)];
-          final typedefProviders = <TypedefProviderData>[];
+            final factories = [(factoryElement: factoryClass, injectData: injectData, factoryData: factoryData)];
+            final typedefProviders = <TypedefProviderData>[];
 
-          discoverTypedefProviders(
-            reader: reader,
-            factories: factories,
-            injectables: [],
-            modules: [(moduleClass: moduleClass, moduleData: moduleData)],
-            typedefProviders: typedefProviders,
-          );
+            discoverTypedefProviders(
+              reader: reader,
+              factories: factories,
+              injectables: [],
+              modules: [(moduleClass: moduleClass, moduleData: moduleData)],
+              typedefProviders: typedefProviders,
+            );
 
-          expect(typedefProviders, isNotEmpty);
-          expect(
-            typedefProviders.first.injectedParams.single.qualifier,
-            equals('apiKey'),
-            reason: 'typedef-provider injected param must carry the @apiKey qualifier',
-          );
+            expect(typedefProviders, isNotEmpty);
+            expect(
+              typedefProviders.first.injectedParams.single.qualifier,
+              equals('apiKey'),
+              reason: 'typedef-provider injected param must carry the @apiKey qualifier',
+            );
 
-          resolver.resolve(
-            modules: [(moduleClass: moduleClass, moduleData: moduleData)],
-            injectables: [],
-            factories: factories,
-            typedefProviders: typedefProviders,
-          );
+            resolver.resolve(
+              modules: [(moduleClass: moduleClass, moduleData: moduleData)],
+              injectables: [],
+              factories: factories,
+              typedefProviders: typedefProviders,
+            );
 
-          expect(
-            reporter.hasErrors,
-            isTrue,
-            reason: 'unqualified String binding must NOT silently satisfy @apiKey String dep',
-          );
-          // The qualifier-mismatch path surfaces the unqualified binding as a
-          // related candidate — "No binding for 'String (#apiKey)' ...". The
-          // key invariant is that the diagnostic mentions the requested qualifier.
-          expect(
-            reporter.messages.any((m) => m.message.contains('#apiKey')),
-            isTrue,
-            reason: 'diagnostic must reference the requested @apiKey qualifier',
-          );
-        });
+            expect(
+              reporter.hasErrors,
+              isTrue,
+              reason: 'unqualified String binding must NOT silently satisfy @apiKey String dep',
+            );
+            // The qualifier-mismatch path surfaces the unqualified binding as a
+            // related candidate — "No binding for 'String (#apiKey)' ...". The
+            // key invariant is that the diagnostic mentions the requested qualifier.
+            expect(
+              reporter.messages.any((m) => m.message.contains('#apiKey')),
+              isTrue,
+              reason: 'diagnostic must reference the requested @apiKey qualifier',
+            );
+          },
+        );
 
         test('nullable typedef-provider param is satisfied by non-nullable binding via widening', () async {
           final library = await _resolveLibrary('''

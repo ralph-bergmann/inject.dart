@@ -22,6 +22,8 @@ export 'src/api/annotations.dart'
         ProvisionListenerAnnotation,
         Qualifier,
         Singleton,
+        Subcomponent,
+        SubcomponentFactory,
         assisted,
         assistedFactory,
         assistedInject,
@@ -31,6 +33,8 @@ export 'src/api/annotations.dart'
         module,
         provides,
         provisionListener,
-        singleton;
+        singleton,
+        subcomponent,
+        subcomponentFactory;
 export 'src/api/provider.dart';
 export 'src/api/provision_listener.dart';

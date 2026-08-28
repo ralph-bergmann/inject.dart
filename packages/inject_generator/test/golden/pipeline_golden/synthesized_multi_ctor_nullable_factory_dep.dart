@@ -50,8 +50,7 @@ class CoffeeMaker {
   // field is nullable so ctor A can initialise it to null.
   @fancy
   @assistedInject
-  CoffeeMaker.fancy(this.grinder, LatteFactory latteFactory, @assisted this.beans)
-      : latteFactory = latteFactory;
+  CoffeeMaker.fancy(this.grinder, LatteFactory latteFactory, @assisted this.beans) : latteFactory = latteFactory;
 
   final Grinder grinder;
   final LatteFactory? latteFactory;

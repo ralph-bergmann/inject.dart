@@ -336,6 +336,85 @@ component.
 
 [book-composing]: https://ralph-bergmann.github.io/inject.dart/chapter_8_multiple_components.html
 
+### Umbrella modules — `@Module(includes: ...)`
+
+A library author shipping several internal modules can bundle them
+behind one public "umbrella" module, so a consuming app only has to
+list that one module instead of every module the library happens to
+be split into internally:
+
+```dart
+// Inside the library — not exported.
+@module
+class ApiModule {
+  @provides
+  ApiClient provideApiClient() => ApiClient();
+}
+
+@module
+class DbModule {
+  @provides
+  Database provideDatabase() => Database();
+}
+
+// The library's public surface.
+@Module(includes: [ApiModule, DbModule])
+class MyLibraryModule {}
+```
+
+```dart
+// App code only ever sees MyLibraryModule.
+@Component([MyLibraryModule])
+abstract class AppComponent { /* ... */ }
+```
+
+`AppComponent.create()` gets every provider from `ApiModule` and
+`DbModule` exactly as if the app had listed both directly — `includes`
+is followed transitively (an included module can itself include more
+modules) and a module reachable through more than one include path is
+installed exactly once (the first-reached position in the include
+traversal wins, which is what determines its place in the override
+order), so diamond-shaped include graphs are safe. A cycle (a module
+that transitively includes itself) is a compile-time error.
+
+Included modules follow the same [override
+order](#passing-module-instances-to-create) as directly-listed ones —
+later entries win for a shared provider key — with one added rule: a
+component's (or subcomponent's) own directly-listed modules always
+take precedence over anything pulled in through `includes`. That
+covers the overlap case too: a module that is both listed directly
+and reachable through another listed module's `includes:` is
+installed exactly once, in its directly-listed position — one
+`create()` parameter, direct precedence. Because
+included modules become ordinary named parameters on `create()` too,
+tests can still override one for mocking even though the app never
+lists it directly — `FakeApiModule` here extends `ApiModule`, so it
+satisfies the parameter's declared type:
+
+```dart
+AppComponent.create(apiModule: FakeApiModule());
+```
+
+Two things follow from included modules still being ordinary `create()`
+parameters: each included module class must stay **public** (an
+included module can't be private, the same as any directly-listed
+one), and if it has no usable no-argument constructor, its parameter
+becomes **required** on the *component's* (or subcomponent's)
+generated `create()` — the same `create()` that already takes a
+parameter for the umbrella module itself; there is no separate
+generated factory for the umbrella module. So `includes` hides the
+*listing*, not the module classes themselves.
+And when a module both provides its own bindings and includes another
+module for the same key, the including module's own providers win
+(they're flattened after their own includes), independent of the
+direct-over-included rule above, which only concerns *other*
+directly-listed modules.
+
+`includes` and `subcomponents` (see "Encapsulating subgraphs" below)
+are independent `@Module` parameters — an included module can declare
+its own `subcomponents:`, and that subcomponent still installs
+correctly on whichever component ultimately includes it.
+
 ## Shared instances — `@singleton`
 
 Apply `@singleton` to an `@inject`ed class or a `@provides` method to
@@ -451,6 +530,184 @@ instead: an entry point whose dependency chain contains an
 If you actually want to inject the `Future` itself, leave the
 annotation off — `Future<Database>` is then just another type.
 
+## Encapsulating subgraphs — `@subcomponent`
+
+Sometimes a group of bindings belongs together but should **not** be
+visible to the rest of the graph — an HTTP stack whose client must
+only be reachable through a public service, or a session graph that
+has a shorter lifetime than the app. A subcomponent is an
+encapsulated child graph: it can read every binding of its parent
+component, but its own bindings stay invisible to the parent.
+
+Declare the child graph with `@subcomponent` and install it through a
+module — installing the module is the single integration point:
+
+```dart
+// The generated HttpSubcomponentFactory lands in this part file.
+part 'network.factory.dart';
+
+const internal = Qualifier(#internal);
+
+@inject
+@singleton
+class Database {}
+
+@module
+class HttpModule {
+  @provides
+  @singleton
+  HttpClient provideClient() => HttpClient();
+
+  // Qualified — the parent re-export below binds the unqualified
+  // RestApiService, and the same key must not exist on both sides.
+  @provides
+  @internal
+  RestApiService provideApi(HttpClient client, Database db) =>
+      RestApiService(client, db); // Database comes from the parent
+}
+
+@Subcomponent([HttpModule])
+abstract class HttpSubcomponent {
+  @internal
+  RestApiService get apiService;
+}
+
+@Module(subcomponents: [HttpSubcomponent])
+class NetworkModule {}
+
+@Component([NetworkModule])
+abstract class AppComponent {
+  @inject
+  Database get db;
+
+  @inject
+  HttpSubcomponentFactory get httpFactory;
+}
+```
+
+inject.dart generates a `HttpSubcomponentFactory` (declared in the
+`.factory.dart` part file of the file that declares the subcomponent —
+note the `part` directive above) and binds it in the **parent**
+graph. Inject it anywhere — a module provider, a class, or expose it
+as an entry point — and call `create(...)` to get a fresh
+subcomponent instance:
+
+```dart
+final component = AppComponent.create();
+final httpGraph = component.httpFactory.create();
+print(httpGraph.apiService); // but HttpClient stays private to the subgraph
+```
+
+How the two graphs relate:
+
+| Aspect | Behaviour |
+|---|---|
+| Visibility | Child sees every parent binding; the parent sees **none** of the child's. A parent injection of a child-private type fails with a missing-binding error that names the subcomponent. |
+| Scope | `@singleton` inside the subcomponent means **once per subcomponent instance**. Parent singletons stay app-wide and are shared by all child instances. |
+| Re-binding | A subcomponent must not re-declare a binding key that the parent already provides — that is a build-time (codegen) error, not an override. |
+| Async | `@asynchronous` propagates across the boundary: a child entry point whose chain reaches an async parent binding is declared `Future<T>`. `create(...)` itself always stays synchronous, exactly like components. |
+| Runtime values | Through a module constructor — give the child module one and pass the instance to `create(httpModule: ...)` — or directly via `@subcomponentFactory`; see below. |
+| Provision listeners | Component-local: a parent listener never observes child provisions, and vice versa — see "Observing provisions" below. |
+
+Each `create(...)` call produces an independent instance, which makes
+subcomponents a natural fit for session scopes: create the child
+graph after login, drop the reference on logout, and all its
+singletons are released with it. See [`examples/bookshelf`][bookshelf-readme]
+for a complete, runnable app built around exactly that pattern — a
+login flow that creates a `SessionComponent` holding session-private
+credentials and a repository, released on logout. For the other ways
+to split an app into several graphs — and when a plain second
+component fits better — see the FAQ
+"Can I have more than one component?" below.
+
+In Flutter, `inject_flutter`'s `SubcomponentBuilder<T>` widget owns that
+lifecycle for you: it calls `create` once when mounted (sync or `async`),
+hands the instance to `builder`, and calls an optional `dispose` when
+removed from the tree — a widget `Key` change is the only way to force a
+new instance. Compose it *below* whatever branch point decides a
+subcomponent should exist (a login/logout switch, say), so mounting it is
+"create" and unmounting it is "dispose":
+
+```dart
+SubcomponentBuilder<SessionComponent>(
+  key: ValueKey(credentials), // a new key forces a fresh session
+  create: () => sessionFactory.create(credentials),
+  builder: (context, session, _) => HomePage(session: session),
+)
+```
+
+`examples/bookshelf`'s `AuthGate` is exactly this: it shows the login form
+while signed out and mounts `SubcomponentBuilder<SessionComponent>` once
+signed in.
+
+To re-export a single binding to the parent, add a parent module
+provider that consumes the subcomponent factory. One rule shapes the
+pattern: the same binding key must not exist on both sides of the
+boundary (see "Re-binding" above), and the re-export *is* a
+parent-provided key. So the child binds the type under a different
+key — the `@internal` qualifier in the example above (binding it
+under a different type works too) — while the parent re-export binds
+the plain, unqualified `RestApiService`:
+
+```dart
+@Module(subcomponents: [HttpSubcomponent])
+class NetworkModule {
+  @provides
+  @singleton
+  RestApiService provideApi(HttpSubcomponentFactory factory) =>
+      factory.create().apiService;
+}
+```
+
+### Runtime values — `@subcomponentFactory`
+
+The synthesized `<Name>Factory` above only accepts the subcomponent's own
+**modules** as parameters. To pass a runtime value straight in — a login
+token, a request ID — without wrapping it in a module constructor, declare
+an explicit factory instead:
+
+```dart
+@subcomponentFactory
+abstract class HttpSubcomponentFactory {
+  HttpSubcomponent create(String userId);
+}
+```
+
+An `@subcomponentFactory` class must be `abstract` and declare exactly one
+abstract method returning the installed `@subcomponent` type; it **replaces**
+the synthesized factory for that subcomponent. Each parameter is classified
+independently:
+
+- A parameter whose type is one of the subcomponent's own declared modules
+  behaves exactly like a synthesized factory's module parameter.
+- Every other parameter is a **value parameter**: it becomes an instance
+  binding in the child graph, injectable by any child binding under its
+  `(type, qualifier)` — honoring `@Qualifier` and nullable-wrap resolution
+  like any other binding. This is Dagger's `@BindsInstance` / Metro's
+  `@Provides` factory-parameter equivalent.
+
+A factory method may mix both kinds:
+
+```dart
+@subcomponentFactory
+abstract class HttpSubcomponentFactory {
+  HttpSubcomponent create(HttpModule module, String userId);
+}
+```
+
+`create(...)` stays synchronous, exactly like the synthesized factory.
+
+Related but different: `@assistedInject` (below) passes runtime
+parameters into the construction of **one object** through a factory;
+an `@subcomponentFactory` value parameter turns a runtime value into a
+**binding** that the entire child graph can inject.
+
+> **Out of scope (for now):** multi-level hierarchies — a subcomponent
+> installing further subcomponents of its own; attempting it fails the
+> build with "multi-level subcomponent hierarchies are not supported".
+> (Set/Map multibindings are unrelated to subcomponents — inject.dart
+> does not support them anywhere in the graph yet.)
+
 ## Runtime parameters — `@assistedInject`
 
 Some constructor parameters are only known at the call site (a widget
@@ -483,6 +740,11 @@ abstract class DetailPageFactory {
 
 You then inject the factory wherever you build the page — the
 caller supplies `itemId`, inject.dart supplies `repository`.
+
+Assisted injection covers a runtime value that one object needs at
+construction time. To make a runtime value a *binding* that a whole
+child graph can inject, use "Runtime values — `@subcomponentFactory`"
+above instead.
 
 > **Need a custom factory shape?** Declare an `@assistedFactory`
 > abstract class manually — e.g. to expose multiple `create` variants,
@@ -535,9 +797,21 @@ managed elsewhere (e.g. view models owned by `ViewModelFactory`),
 otherwise the same object could be disposed twice. The pure-observer
 implementation above is safe by construction.
 
+**Scope with `@subcomponent`:** listeners are component-local and do
+**not** cross the parent/child boundary. A listener registered in the
+parent only observes provisions made by the parent graph; it does not
+fire for bindings provisioned inside an installed subcomponent, even
+though the subcomponent can read the parent's other bindings.
+Conversely, a listener registered inside a subcomponent's own module
+only observes that subcomponent's own provisions. There is currently
+no mechanism for a parent listener to observe child provisions or
+vice versa.
+
 # Flutter integration — `ViewModelFactory`
 
-`inject_flutter` adds one typedef and one widget:
+`inject_flutter` adds one typedef and one widget for ViewModels, plus
+`SubcomponentBuilder` (see "Encapsulating subgraphs — `@subcomponent`"
+above) for owning a `@subcomponent` graph's lifecycle from a widget:
 
 - `ViewModelFactory<T extends ChangeNotifier>` — a function that
   returns a `ViewModelBuilder<T>`. Inject it into your widget.
@@ -582,8 +856,11 @@ your sources. The pipeline is declared in
    declares `@assistedInject` constructors (or an explicit
    `@assistedFactory` abstract class), it emits
    `<name>.factory.dart` — a `part` file containing the factory
-   contracts that the component will later implement. Files with no
-   assisted injection get no output.
+   contracts that the component will later implement. A file that
+   declares a `@subcomponent` without an explicit
+   `@subcomponentFactory` gets the same output: the synthesized
+   `<Name>Factory` contract lands there. Files with none of these
+   get no output.
 
 2. **`inject_builder`** runs second. It picks each `@Component` as a
    starting point and walks the dependency graph from there — pulling
@@ -596,12 +873,12 @@ your sources. The pipeline is declared in
 So a given source file may end up with **zero, one, or both** of these
 siblings, depending on what it contains:
 
-| Source file declares…             | Produces                                |
-|-----------------------------------|-----------------------------------------|
-| only `@inject` classes / modules  | nothing — picked up via the component   |
-| `@assistedInject` constructor     | `<name>.factory.dart`                   |
-| `@Component`                      | `<name>.inject.dart`                    |
-| both of the above                 | both siblings                           |
+| Source file declares…                          | Produces                                |
+|------------------------------------------------|-----------------------------------------|
+| only `@inject` classes / modules               | nothing — picked up via the component   |
+| `@assistedInject` constructor / `@subcomponent` | `<name>.factory.dart`                   |
+| `@Component`                                   | `<name>.inject.dart`                    |
+| both of the above                              | both siblings                           |
 
 ```
 What you write                    What the generator produces
@@ -645,24 +922,42 @@ behaves like hand-written code.
 
 ### Can I have more than one component?
 
-Yes. Components are independent values. A common pattern is one root
-component for the app and a per-screen or per-feature component that
-gets its dependencies from the root. The bridge is a module with
-constructor parameters: the feature component lists a module whose
-constructor carries the objects it needs, and you pass a pre-configured
-instance to the feature component's `create` method:
+Yes. Components are independent values. Which mechanism to reach for
+depends on the relationship between the two graphs:
 
-```dart
-final root = RootComponent.create();
-final feature = FeatureComponent.create(
-  featureModule: FeatureModule(root.db),
-);
-```
+- **Encapsulated child graph, scoped to its own instance** — install a
+  `@subcomponent` through a module (see "Encapsulating subgraphs —
+  `@subcomponent`" above). The child reads every parent binding, but its
+  own bindings stay invisible to the parent, and its `@singleton`s live
+  and die with that one subcomponent instance. The natural fit for a
+  session or per-screen scope you create and drop as a unit.
+- **Independent graphs, a handful of shared objects** — the
+  instance-passing bridge: the feature component lists a module whose
+  constructor carries the objects it needs, and you pass a
+  pre-configured instance to the feature component's `create` method:
+
+  ```dart
+  final root = RootComponent.create();
+  final feature = FeatureComponent.create(
+    featureModule: FeatureModule(root.db),
+  );
+  ```
+
+- **Independent graphs, many/async objects, or no parent relationship at
+  all** — the interface bridge: the feature defines a narrow interface
+  for what it needs, the other component `implements` it, and a bridge
+  module consumes only that interface. This is the inject.dart
+  equivalent of Dagger's `@Component(dependencies: [...])`.
 
 Note that `@singleton` is scoped **per component instance** — a second
 component that merely lists the same modules builds *fresh* singletons
-of its own. Passing instances through a module constructor is how you
-share them. The full pattern is described in
+of its own; both bridge variants above obtain objects from the other
+component instance instead of re-listing its modules, precisely to avoid
+that. A library author with several
+internal modules can also fold them behind one public module with
+`@Module(includes: [...])`, so a consuming app only lists that one
+module (see "Umbrella modules" above). The full "which one when"
+guidance is in
 [Composing Components and Multi-Package Projects][book-composing].
 
 ## Module Override Semantics
@@ -862,6 +1157,7 @@ cd packages/inject_generator && \
 Contributions are welcome — feel free to open a PR.
 
 [example-main]: https://github.com/ralph-bergmann/inject.dart/blob/master/examples/example/lib/main.dart
+[bookshelf-readme]: https://github.com/ralph-bergmann/inject.dart/blob/master/examples/bookshelf/README.md
 [agentskills]: https://agentskills.io/specification
 [skills-dir]: https://github.com/ralph-bergmann/inject.dart/tree/master/packages/inject_annotation/skills
 [skill-setup]: https://github.com/ralph-bergmann/inject.dart/blob/master/packages/inject_annotation/skills/inject_annotation-setup-di/SKILL.md

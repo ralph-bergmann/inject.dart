@@ -1,3 +1,19 @@
+## 1.2.0
+
+- Add support for `@subcomponent` and `@Module(subcomponents: ...)` — encapsulated dependency
+  subgraphs with parent-binding inheritance, per-subcomponent-instance singletons, and a
+  synthesized `<Name>Factory` bound in the parent graph. See the README section
+  "Encapsulating subgraphs" for usage.
+- Add support for `@subcomponentFactory` — an explicit factory for a `@subcomponent` that replaces
+  the synthesized `<Name>Factory`. Its method's non-module parameters become instance bindings in
+  the subcomponent graph (Dagger's `@BindsInstance` equivalent), letting runtime values flow into a
+  subcomponent without wrapping them in a module constructor. Requires `inject_annotation ^1.2.0`.
+- Add support for `@Module(includes: [...])` — umbrella modules. Listing a module that `includes`
+  other modules pulls in all of their providers transitively, exactly as if every included module
+  had been listed directly, with cycle detection and dedup-by-type when the same module is
+  reachable through more than one include path. Requires `inject_annotation ^1.2.0`. See the
+  README section "Umbrella modules" for usage.
+
 ## 1.1.1
 
 * fix dependency conflict with flutter_test

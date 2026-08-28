@@ -16,6 +16,5 @@ class IncrementTracker {
 
   final AnalyticsService _analytics;
 
-  void onIncrement(int newValue) =>
-      _analytics.track('counter incremented to $newValue');
+  void onIncrement(int newValue) => _analytics.track('counter incremented to $newValue');
 }

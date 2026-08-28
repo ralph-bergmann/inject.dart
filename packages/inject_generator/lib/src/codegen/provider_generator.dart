@@ -21,12 +21,18 @@ class ProviderGenerator {
   /// Generates a provider class for a module `@provides` method.
   ///
   /// Constructor parameter order: dependency providers first, module last.
+  ///
+  /// [componentPrefix] namespaces the emitted class per owning component —
+  /// see [providerClassName].
   Class generateModuleProvider({
     required ProviderDescriptor descriptor,
     required ClassElement moduleClass,
     required bool isAsynchronous,
     required Map<BindingKey, bool> asyncBindings,
     List<ListenerCallInfo> listenerCalls = const [],
+    String? componentPrefix,
+    Set<BindingKey> parentKeys = const {},
+    String? parentPrefix,
     String? sourceUri,
   }) {
     final DartType returnType = descriptor.returnType;
@@ -37,7 +43,7 @@ class ProviderGenerator {
         ? unwrapped.displayName
         : returnType.displayName;
     final String? qualifier = descriptor.metadata.qualifier;
-    final String className = providerClassName(typeName, qualifier);
+    final String className = providerClassName(typeName, qualifier, componentPrefix: componentPrefix);
 
     final TypeReference generatedReturnTypeRef = _generatedReturnTypeRef(
       returnType: returnType,
@@ -54,6 +60,9 @@ class ProviderGenerator {
 
     final (:List<Field> fields, params: List<Parameter> constructorParams) = buildDependencyProviderFields(
       [for (final dep in descriptor.dependencies) (type: dep.type, qualifier: dep.qualifier)],
+      componentPrefix: componentPrefix,
+      parentKeys: parentKeys,
+      parentPrefix: parentPrefix,
     );
 
     // Listener provider fields (between deps and module)
@@ -97,7 +106,17 @@ class ProviderGenerator {
         .map((dep) {
           final String depTypeName = dep.type.displayName;
           final String? depQualifier = dep.qualifier;
-          final String depFieldName = _providerFieldName(depTypeName, depQualifier);
+          final String depFieldName = _providerFieldName(
+            depTypeName,
+            depQualifier,
+            componentPrefix: _depPrefix(
+              dep.type,
+              depQualifier,
+              componentPrefix: componentPrefix,
+              parentKeys: parentKeys,
+              parentPrefix: parentPrefix,
+            ),
+          );
           final BindingKey? depKey = BindingKey.fromDartType(dep.type, qualifier: dep.qualifier);
           final bool isAsyncDep = depKey != null && asyncBindings[depKey] == true;
           return isAsyncDep ? 'await $depFieldName.get()' : '$depFieldName.get()';
@@ -215,17 +234,23 @@ class ProviderGenerator {
   }
 
   /// Generates a provider class for an `@inject`-annotated constructor.
+  ///
+  /// [componentPrefix] namespaces the emitted class per owning component —
+  /// see [providerClassName].
   Class generateInjectProvider({
     required ClassElement classElement,
     required InjectableData injectable,
     required bool isAsynchronous,
     required Map<BindingKey, bool> asyncBindings,
     List<ListenerCallInfo> listenerCalls = const [],
+    String? componentPrefix,
+    Set<BindingKey> parentKeys = const {},
+    String? parentPrefix,
     String? sourceUri,
   }) {
     final String typeName = classElement.name!;
     final String? qualifier = injectable.key.qualifier;
-    final String className = providerClassName(typeName, qualifier);
+    final String className = providerClassName(typeName, qualifier, componentPrefix: componentPrefix);
     final classTypeRef = classElement.thisType.typeRef(sourceUri: sourceUri) as TypeReference;
     final TypeReference generatedReturnTypeRef = isAsynchronous
         ? classElement.thisType.futureTypeRef(sourceUri: sourceUri)
@@ -242,6 +267,9 @@ class ProviderGenerator {
 
     final (:List<Field> fields, params: List<Parameter> constructorParams) = buildDependencyProviderFields(
       [for (final dep in injectable.dependencies) (type: dep.type, qualifier: dep.qualifier)],
+      componentPrefix: componentPrefix,
+      parentKeys: parentKeys,
+      parentPrefix: parentPrefix,
     );
 
     // Listener provider fields
@@ -273,7 +301,17 @@ class ProviderGenerator {
       // Use nonNullableDisplayName: Foo? widens to the Foo provider (_Foo$Provider)
       final String depTypeName = dep.type.nonNullableDisplayName;
       final String? depQualifier = dep.qualifier;
-      final String depFieldName = _providerFieldName(depTypeName, depQualifier);
+      final String depFieldName = _providerFieldName(
+        depTypeName,
+        depQualifier,
+        componentPrefix: _depPrefix(
+          dep.type,
+          depQualifier,
+          componentPrefix: componentPrefix,
+          parentKeys: parentKeys,
+          parentPrefix: parentPrefix,
+        ),
+      );
       final BindingKey? depKey = BindingKey.fromDartType(dep.type, qualifier: dep.qualifier);
       // A `Provider<T>` parameter receives the provider field directly; every
       // other dependency is resolved with `.get()` (awaited when async).
@@ -402,18 +440,27 @@ class ProviderGenerator {
   /// The type name is Pascal-cased so primitive types (`int`, `double`, `bool`,
   /// etc.) emit `_Int$Provider` / `_Double$Provider` — disambiguating from the
   /// camel-cased field name (`_int$Provider`) emitted by [providerBaseName].
-  static String providerClassName(String typeName, String? qualifier) {
+  ///
+  /// [componentPrefix] is the owning component's name, set only when the
+  /// source file declares more than one `@Component` (`null` otherwise) —
+  /// keeps provider classes unique per component while leaving single-component
+  /// output byte-identical to the unprefixed form.
+  static String providerClassName(String typeName, String? qualifier, {String? componentPrefix}) {
     final String qualifierSuffix = qualifier != null ? qualifier.capitalize : '';
-    return '_${typeName.capitalize}$qualifierSuffix\$Provider';
+    return '_${_classPrefixSegment(componentPrefix)}${typeName.capitalize}$qualifierSuffix\$Provider';
   }
 
   /// Provider base name without leading underscore: `typeName$Provider`.
   ///
   /// Used for local variable names in the component constructor.
-  static String providerBaseName(String typeName, String? qualifier) {
+  ///
+  /// See [providerClassName] for the [componentPrefix] convention; here the
+  /// prefix is lowerCamel-cased so the result stays a valid identifier root.
+  static String providerBaseName(String typeName, String? qualifier, {String? componentPrefix}) {
     final String base = typeName.uncapitalize;
     final String qualifierSuffix = qualifier != null ? qualifier.capitalize : '';
-    return '$base$qualifierSuffix\$Provider';
+    final String prefixSegment = componentPrefix != null ? '${componentPrefix.uncapitalize}\$' : '';
+    return '$prefixSegment$base$qualifierSuffix\$Provider';
   }
 
   /// Builds provider fields and constructor parameters for a list of
@@ -422,9 +469,15 @@ class ProviderGenerator {
   /// When [partFileContext] is `true`, field types use `Provider<T>` generic
   /// references (for `.factory.dart` part files). When `false`, field types
   /// reference the concrete generated provider class name (for `.inject.dart`).
+  ///
+  /// [componentPrefix] is forwarded to the field-name/field-type naming
+  /// helpers — see [providerClassName].
   static ({List<Field> fields, List<Parameter> params}) buildDependencyProviderFields(
     List<({DartType type, String? qualifier})> dependencies, {
     bool partFileContext = false,
+    String? componentPrefix,
+    Set<BindingKey> parentKeys = const {},
+    String? parentPrefix,
   }) {
     final fields = <Field>[];
     final params = <Parameter>[];
@@ -432,10 +485,17 @@ class ProviderGenerator {
       // Use non-nullable display name: the provider for `Foo?` is the same as
       // for `Foo` (nullable-widening), so both map to `_Foo$Provider`.
       final String depTypeName = dep.type.nonNullableDisplayName;
-      final String depFieldName = _providerFieldName(depTypeName, dep.qualifier);
+      final String? depPrefix = _depPrefix(
+        dep.type,
+        dep.qualifier,
+        componentPrefix: componentPrefix,
+        parentKeys: parentKeys,
+        parentPrefix: parentPrefix,
+      );
+      final String depFieldName = _providerFieldName(depTypeName, dep.qualifier, componentPrefix: depPrefix);
       final Reference depFieldType = partFileContext
           ? dep.type.providerTypeRef(partFileContext: true)
-          : refer(providerClassName(depTypeName, dep.qualifier));
+          : refer(providerClassName(depTypeName, dep.qualifier, componentPrefix: depPrefix));
 
       fields.add(
         Field(
@@ -460,13 +520,20 @@ class ProviderGenerator {
   ///
   /// The provider wraps an inline factory class (`_<FactoryName>$Factory`)
   /// and returns a lazily initialized singleton instance via `get()`.
+  ///
+  /// [componentPrefix] namespaces the emitted class per owning component —
+  /// see [providerClassName].
   Class generateFactoryProvider({
     required ClassElement factoryElement,
     required List<AssistedInjectData> injectDataList,
+    String? componentPrefix,
+    Set<BindingKey> parentKeys = const {},
+    String? parentPrefix,
     String? sourceUri,
   }) {
     final String factoryName = factoryElement.name!;
-    final className = '_$factoryName\$Provider';
+    final String prefixSegment = _classPrefixSegment(componentPrefix);
+    final className = '_$prefixSegment$factoryName\$Provider';
     final Reference factoryTypeRef = refer(factoryName, factoryElement.resolvePublicUri(sourceUri: sourceUri));
 
     final providerTypeRef = TypeReference(
@@ -498,10 +565,15 @@ class ProviderGenerator {
       }
     }
 
-    final (:List<Field> fields, params: List<Parameter> constructorParams) = buildDependencyProviderFields(allDeps);
+    final (:List<Field> fields, params: List<Parameter> constructorParams) = buildDependencyProviderFields(
+      allDeps,
+      componentPrefix: componentPrefix,
+      parentKeys: parentKeys,
+      parentPrefix: parentPrefix,
+    );
 
     // Inline factory class name (lives in .inject.dart)
-    final factoryInlineClassName = '_$factoryName\$Factory';
+    final factoryInlineClassName = '_$prefixSegment$factoryName\$Factory';
     final String factoryArgsStr = fields.map((f) => f.name).join(', ');
 
     return Class(
@@ -533,19 +605,166 @@ class ProviderGenerator {
     );
   }
 
+  /// Generates the provider for a subcomponent's synthesized factory.
+  ///
+  /// The provider holds the parent component instance and lazily creates the
+  /// `_<FactoryName>$Factory` implementation (emitted alongside), which in
+  /// turn constructs `<Name>$Subcomponent` instances on demand.
+  ///
+  /// [componentPrefix] is the PARENT component's prefix — the factory
+  /// implementation belongs to the parent's graph.
+  Class generateSubcomponentFactoryProvider({
+    required ClassElement factoryClass,
+    required String parentClassName,
+    String? componentPrefix,
+    String? sourceUri,
+  }) {
+    final String factoryName = factoryClass.name!;
+    final String prefixSegment = _classPrefixSegment(componentPrefix);
+    final className = '_$prefixSegment$factoryName\$Provider';
+    final Reference factoryTypeRef = refer(factoryName, factoryClass.resolvePublicUri(sourceUri: sourceUri));
+
+    final providerTypeRef = TypeReference(
+      (b) => b
+        ..symbol = 'Provider'
+        ..url = 'package:inject_annotation/inject_annotation.dart'
+        ..types.add(factoryTypeRef),
+    );
+
+    final factoryImplClassName = '_$prefixSegment$factoryName\$Factory';
+
+    return Class(
+      (b) => b
+        ..name = className
+        ..implements.add(providerTypeRef)
+        ..constructors.add(
+          Constructor(
+            (b) => b
+              ..requiredParameters.add(
+                Parameter(
+                  (b) => b
+                    ..name = '_parent'
+                    ..toThis = true,
+                ),
+              ),
+          ),
+        )
+        ..fields.addAll([
+          Field(
+            (b) => b
+              ..name = '_parent'
+              ..type = refer(parentClassName)
+              ..modifier = FieldModifier.final$,
+          ),
+          Field(
+            (b) => b
+              ..name = '_factory'
+              ..late = true
+              ..modifier = FieldModifier.final$
+              ..type = factoryTypeRef
+              ..assignment = Code('$factoryImplClassName(_parent)'),
+          ),
+        ])
+        ..methods.add(
+          Method(
+            (b) => b
+              ..name = 'get'
+              ..returns = factoryTypeRef
+              ..annotations.add(refer('override'))
+              ..lambda = true
+              ..body = const Code('_factory'),
+          ),
+        ),
+    );
+  }
+
+  /// Generates a trivial provider that returns an already-materialized value
+  /// verbatim.
+  ///
+  /// Used for `@subcomponentFactory` value parameters (Dagger's
+  /// `@BindsInstance` equivalent): the raw value itself lives as a plain
+  /// `final` field directly on the enclosing `<Name>$Subcomponent` (no
+  /// provider wraps *that* field); this class exists only so the value
+  /// participates in the ordinary `Provider<T>` dependency-resolution
+  /// machinery, exactly like any other binding, letting arbitrary other
+  /// child bindings depend on it.
+  ///
+  /// [componentPrefix] namespaces the emitted class per owning subcomponent —
+  /// see [providerClassName].
+  Class generateValueParameterProvider({
+    required DartType type,
+    required String? qualifier,
+    String? componentPrefix,
+    String? sourceUri,
+  }) {
+    final String typeName = type.nonNullableDisplayName;
+    final String className = providerClassName(typeName, qualifier, componentPrefix: componentPrefix);
+    final Reference typeRef = type.typeRef(sourceUri: sourceUri);
+    final providerTypeRef = TypeReference(
+      (b) => b
+        ..symbol = 'Provider'
+        ..url = 'package:inject_annotation/inject_annotation.dart'
+        ..types.add(typeRef),
+    );
+
+    return Class(
+      (b) => b
+        ..name = className
+        ..implements.add(providerTypeRef)
+        ..constructors.add(
+          Constructor(
+            (b) => b
+              ..constant = true
+              ..requiredParameters.add(
+                Parameter(
+                  (b) => b
+                    ..name = '_value'
+                    ..toThis = true,
+                ),
+              ),
+          ),
+        )
+        ..fields.add(
+          Field(
+            (b) => b
+              ..name = '_value'
+              ..type = typeRef
+              ..modifier = FieldModifier.final$,
+          ),
+        )
+        ..methods.add(
+          Method(
+            (b) => b
+              ..name = 'get'
+              ..returns = typeRef
+              ..annotations.add(refer('override'))
+              ..lambda = true
+              ..body = const Code('_value'),
+          ),
+        ),
+    );
+  }
+
   /// Generates an inline factory class for `.inject.dart` that implements
   /// the abstract factory type and delegates to the target constructor(s).
   ///
   /// This class lives in `.inject.dart` (not `.factory.dart`) so that
   /// the provider can reference it directly. The `.factory.dart` part file's
   /// private `_$Impl` class would be invisible from `.inject.dart`.
+  ///
+  /// [componentPrefix] namespaces the emitted class per owning component —
+  /// see [providerClassName].
   Class generateInlineFactory({
     required ClassElement factoryElement,
     required List<({AssistedInjectData injectData, AssistedFactoryData factoryData})> entries,
+    String? componentPrefix,
+    Set<BindingKey> parentKeys = const {},
+    String? parentPrefix,
     String? sourceUri,
   }) {
     final String factoryName = factoryElement.name!;
-    final className = '_$factoryName\$Factory';
+    final String prefixSegment = _classPrefixSegment(componentPrefix);
+    final className = '_$prefixSegment$factoryName\$Factory';
     final Reference factoryTypeRef = refer(factoryName, factoryElement.resolvePublicUri(sourceUri: sourceUri));
 
     // Unify deps from all constructors (dedup by BindingKey).
@@ -564,7 +783,12 @@ class ProviderGenerator {
       }
     }
 
-    final (:List<Field> fields, params: List<Parameter> constructorParams) = buildDependencyProviderFields(allDeps);
+    final (:List<Field> fields, params: List<Parameter> constructorParams) = buildDependencyProviderFields(
+      allDeps,
+      componentPrefix: componentPrefix,
+      parentKeys: parentKeys,
+      parentPrefix: parentPrefix,
+    );
 
     // Generate one method per entry.
     final methods = <Method>[];
@@ -573,6 +797,9 @@ class ProviderGenerator {
         _buildInlineFactoryMethod(
           injectData: injectData,
           factoryData: factoryData,
+          componentPrefix: componentPrefix,
+          parentKeys: parentKeys,
+          parentPrefix: parentPrefix,
           sourceUri: sourceUri,
         ),
       );
@@ -598,6 +825,9 @@ class ProviderGenerator {
   Method _buildInlineFactoryMethod({
     required AssistedInjectData injectData,
     required AssistedFactoryData factoryData,
+    String? componentPrefix,
+    Set<BindingKey> parentKeys = const {},
+    String? parentPrefix,
     String? sourceUri,
   }) {
     // Partition create() params by Dart parameter kind so optional-positional
@@ -659,7 +889,17 @@ class ProviderGenerator {
         final ParameterDependency injectedDep = injectData.injectedDependencies.firstWhere(
           (ip) => ip.parameter == param,
         );
-        final String depFieldName = _providerFieldName(injectedDep.type.nonNullableDisplayName, injectedDep.qualifier);
+        final String depFieldName = _providerFieldName(
+          injectedDep.type.nonNullableDisplayName,
+          injectedDep.qualifier,
+          componentPrefix: _depPrefix(
+            injectedDep.type,
+            injectedDep.qualifier,
+            componentPrefix: componentPrefix,
+            parentKeys: parentKeys,
+            parentPrefix: parentPrefix,
+          ),
+        );
         final Expression expr = refer(depFieldName).property('get').call([]);
         if (param.isNamed) {
           namedArgs[param.name!] = expr;
@@ -708,10 +948,19 @@ class ProviderGenerator {
   ///       );
   /// }
   /// ```
-  Class generateTypedefProvider({required TypedefProviderData typedefData, String? sourceUri}) {
+  ///
+  /// [componentPrefix] namespaces the emitted class per owning component —
+  /// see [providerClassName].
+  Class generateTypedefProvider({
+    required TypedefProviderData typedefData,
+    String? componentPrefix,
+    Set<BindingKey> parentKeys = const {},
+    String? parentPrefix,
+    String? sourceUri,
+  }) {
     final DartType typedefType = typedefData.typedefType;
     final String typeName = typedefType.displayName;
-    final String className = providerClassName(typeName, null);
+    final String className = providerClassName(typeName, null, componentPrefix: componentPrefix);
     final Reference typedefTypeRef = typedefType.typeRef(sourceUri: sourceUri);
 
     final providerTypeRef = TypeReference(
@@ -723,6 +972,9 @@ class ProviderGenerator {
 
     final (:List<Field> fields, params: List<Parameter> constructorParams) = buildDependencyProviderFields(
       [for (final injected in typedefData.injectedParams) (type: injected.depType, qualifier: injected.qualifier)],
+      componentPrefix: componentPrefix,
+      parentKeys: parentKeys,
+      parentPrefix: parentPrefix,
     );
 
     // Build the closure as a code_builder Method so the scoped emitter
@@ -765,7 +1017,17 @@ class ProviderGenerator {
         // Injected parameter — look up the provider field
         final ({DartType depType, FormalParameterElement param, String? qualifier, bool passProvider}) injected =
             typedefData.injectedParams.firstWhere((ip) => ip.param == ctorParam);
-        final String depFieldName = _providerFieldName(injected.depType.displayName, injected.qualifier);
+        final String depFieldName = _providerFieldName(
+          injected.depType.displayName,
+          injected.qualifier,
+          componentPrefix: _depPrefix(
+            injected.depType,
+            injected.qualifier,
+            componentPrefix: componentPrefix,
+            parentKeys: parentKeys,
+            parentPrefix: parentPrefix,
+          ),
+        );
         final Expression expr = injected.passProvider
             ? refer(depFieldName)
             : refer(depFieldName).property('get').call([]);
@@ -815,8 +1077,35 @@ class ProviderGenerator {
 
   // --- Private helpers ---
 
+  /// PascalCase component-prefix segment (including its trailing `$`) shared
+  /// by every provider/factory **class**-name builder; empty when
+  /// [componentPrefix] is null. See [providerClassName].
+  static String _classPrefixSegment(String? componentPrefix) => componentPrefix != null ? '$componentPrefix\$' : '';
+
   /// Provider field name with leading underscore: `_typeName$Provider`.
-  static String _providerFieldName(String typeName, String? qualifier) => '_${providerBaseName(typeName, qualifier)}';
+  static String _providerFieldName(String typeName, String? qualifier, {String? componentPrefix}) =>
+      '_${providerBaseName(typeName, qualifier, componentPrefix: componentPrefix)}';
+
+  /// Selects the naming prefix for one dependency: dependencies satisfied by
+  /// the parent graph (subcomponent codegen) are named with the parent's
+  /// prefix so that the generated field type matches the parent's provider
+  /// class; every other dependency uses the local [componentPrefix].
+  static String? _depPrefix(
+    DartType type,
+    String? qualifier, {
+    required String? componentPrefix,
+    required Set<BindingKey> parentKeys,
+    required String? parentPrefix,
+  }) {
+    if (parentKeys.isEmpty) {
+      return componentPrefix;
+    }
+    final BindingKey? key = BindingKey.fromDartType(type, qualifier: qualifier);
+    if (key != null && (parentKeys.contains(key) || (key.isNullable && parentKeys.contains(key.nonNullable)))) {
+      return parentPrefix;
+    }
+    return componentPrefix;
+  }
 
   TypeReference _generatedReturnTypeRef({
     required DartType returnType,

@@ -4,6 +4,7 @@ import 'package:build_test/build_test.dart';
 import 'package:inject_generator/src/analysis/annotation_reader.dart';
 import 'package:inject_generator/src/logging/diagnostic_reporter.dart';
 import 'package:inject_generator/src/validation/async_propagator.dart';
+import 'package:inject_generator/src/validation/binding_graph_result.dart';
 import 'package:inject_generator/src/validation/binding_resolver.dart';
 import 'package:inject_generator/src/validation/entry_point_validator.dart';
 import 'package:test/test.dart';
@@ -669,6 +670,142 @@ void main() {
         msg.suggestion,
         equals("Change the getter return type from 'Repository' to 'Future<Repository>'."),
         reason: 'Qualifier suffix must not leak into user-facing suggestion',
+      );
+    });
+
+    // Story 8.1 (subcomponents): the same sync-entry-point-on-async-chain
+    // rules apply unchanged when the chain crosses a component/subcomponent
+    // boundary, or when the async provider is the subcomponent's *own*
+    // module rather than the parent's — no special-casing (Architecture
+    // Decision 2 in the story's Dev Agent Record).
+    group('across a component/subcomponent boundary', () {
+      test('reports error for sync subcomponent getter whose chain reaches an async parent binding', () async {
+        final library = await _resolveLibrary('''
+          import 'package:inject_annotation/inject_annotation.dart';
+
+          @module
+          class ParentModule {
+            @provides
+            @asynchronous
+            Future<int> provideAsyncInt() => Future.value(42);
+          }
+
+          @module
+          class ChildModule {
+            @provides
+            String provideString(int value) => value.toString();
+          }
+
+          @Subcomponent([ChildModule])
+          abstract class ChildSubcomponent {
+            String get value;
+          }
+        ''');
+
+        final reader = AnnotationReader(reporter: reporter);
+        final parentModuleClass = library.getClass('ParentModule')!;
+        final childModuleClass = library.getClass('ChildModule')!;
+        final parentModuleData = reader.readModule(parentModuleClass);
+        final childModuleData = reader.readModule(childModuleClass);
+        final subcomponentClass = library.getClass('ChildSubcomponent')!;
+        final subcomponentData = reader.readSubcomponent(subcomponentClass)!;
+
+        final parentGraphResult = resolver.resolve(
+          modules: [(moduleClass: parentModuleClass, moduleData: parentModuleData)],
+          injectables: [],
+        );
+
+        final childResolver = BindingResolver(reporter: reporter);
+        final childGraphResult = childResolver.resolve(
+          modules: [(moduleClass: childModuleClass, moduleData: childModuleData)],
+          injectables: [],
+          entryPoints: subcomponentData.entryPoints,
+          parentBindings: ParentBindings(parentGraphResult.bindingMap),
+        );
+
+        final mergedGraphResult = BindingGraphResult(
+          bindingMap: {...parentGraphResult.bindingMap, ...childGraphResult.bindingMap},
+          dependencyEdges: {...parentGraphResult.dependencyEdges, ...childGraphResult.dependencyEdges},
+          duplicateBindings: childGraphResult.duplicateBindings,
+          parentBindingsUsed: childGraphResult.parentBindingsUsed,
+        );
+        final asyncResult = propagator.propagate(mergedGraphResult);
+        validator.validate(asyncResult, subcomponentData.entryPoints);
+
+        expect(reporter.hasErrors, isTrue, reason: 'the async root lives in the parent, not the subcomponent');
+        final msg = reporter.messages.single;
+        expect(
+          msg.message,
+          equals(
+            "Component getter 'value' is declared synchronous but its dependency chain is asynchronous."
+            " The async provider 'ParentModule.provideAsyncInt' in the dependency chain"
+            ' causes transitive async propagation.',
+          ),
+        );
+      });
+
+      test(
+        'allows Future<T> subcomponent getter whose chain reaches the subcomponent\'s own async '
+        'module, with a fully synchronous parent',
+        () async {
+          final library = await _resolveLibrary('''
+          import 'package:inject_annotation/inject_annotation.dart';
+
+          @module
+          class ParentModule {
+            @provides
+            int provideInt() => 42;
+          }
+
+          @module
+          class ChildModule {
+            @provides
+            @asynchronous
+            Future<String> provideAsyncString(int value) => Future.value(value.toString());
+          }
+
+          @Subcomponent([ChildModule])
+          abstract class ChildSubcomponent {
+            Future<String> get value;
+          }
+        ''');
+
+          final reader = AnnotationReader(reporter: reporter);
+          final parentModuleClass = library.getClass('ParentModule')!;
+          final childModuleClass = library.getClass('ChildModule')!;
+          final parentModuleData = reader.readModule(parentModuleClass);
+          final childModuleData = reader.readModule(childModuleClass);
+          final subcomponentClass = library.getClass('ChildSubcomponent')!;
+          final subcomponentData = reader.readSubcomponent(subcomponentClass)!;
+
+          final parentGraphResult = resolver.resolve(
+            modules: [(moduleClass: parentModuleClass, moduleData: parentModuleData)],
+            injectables: [],
+          );
+
+          final childResolver = BindingResolver(reporter: reporter);
+          final childGraphResult = childResolver.resolve(
+            modules: [(moduleClass: childModuleClass, moduleData: childModuleData)],
+            injectables: [],
+            entryPoints: subcomponentData.entryPoints,
+            parentBindings: ParentBindings(parentGraphResult.bindingMap),
+          );
+
+          final mergedGraphResult = BindingGraphResult(
+            bindingMap: {...parentGraphResult.bindingMap, ...childGraphResult.bindingMap},
+            dependencyEdges: {...parentGraphResult.dependencyEdges, ...childGraphResult.dependencyEdges},
+            duplicateBindings: childGraphResult.duplicateBindings,
+            parentBindingsUsed: childGraphResult.parentBindingsUsed,
+          );
+          final asyncResult = propagator.propagate(mergedGraphResult);
+          validator.validate(asyncResult, subcomponentData.entryPoints);
+
+          expect(
+            reporter.hasErrors,
+            isFalse,
+            reason: 'the subcomponent declared its own async boundary correctly with Future<T>',
+          );
+        },
       );
     });
   });

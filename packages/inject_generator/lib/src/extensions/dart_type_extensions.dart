@@ -156,10 +156,12 @@ extension FutureUnwrapExt on DartType {
     var isProvider = false;
     var resolvedType = this;
 
-    if (resolvedType case InterfaceType(
-      element: final el,
-      typeArguments: [final inner],
-    ) when el.name == 'Provider' && el.library.identifier.startsWith('package:inject_annotation/')) {
+    if (resolvedType
+        case InterfaceType(
+          element: final el,
+          typeArguments: [final inner],
+        )
+        when el.name == 'Provider' && el.library.identifier.startsWith('package:inject_annotation/')) {
       isProvider = true;
       resolvedType = inner;
     }

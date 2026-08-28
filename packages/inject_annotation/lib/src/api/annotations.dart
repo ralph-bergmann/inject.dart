@@ -51,8 +51,106 @@ class Component {
   final List<Type> modules;
 }
 
+/// Convenience [Subcomponent] annotation with no included modules.
+const subcomponent = Subcomponent();
+
+/// Annotates an abstract class used as a blueprint to generate a subcomponent.
+///
+/// A subcomponent is an encapsulated child graph of a parent [Component]: it
+/// can read every binding of its parent, but its own bindings stay invisible
+/// to the parent. Use it to hide implementation details (for example an HTTP
+/// client that must only be reachable through a public service) or to create
+/// object graphs with a shorter lifetime than the parent component (for
+/// example a session graph created after login).
+///
+/// Unlike a [Component], a subcomponent is never listed on the parent
+/// directly. It is installed through a module's [Module.subcomponents]
+/// parameter, so installing the module is the single integration point:
+///
+/// ```dart
+/// @Subcomponent([HttpModule])
+/// abstract class HttpSubcomponent {
+///   RestApiService get apiService;
+/// }
+///
+/// @Module(subcomponents: [HttpSubcomponent])
+/// class NetworkModule {}
+///
+/// @Component([NetworkModule])
+/// abstract class AppComponent {
+///   @inject
+///   HttpSubcomponentFactory get httpFactory;
+/// }
+/// ```
+///
+/// Installing `NetworkModule` into a component makes the generated
+/// `HttpSubcomponentFactory` available as a binding in the parent graph —
+/// inject it anywhere, or expose it as an entry point as `AppComponent`
+/// does above. Every call to its `create(...)` method produces a fresh
+/// subcomponent instance; `@singleton` bindings declared inside the
+/// subcomponent live once per subcomponent instance.
+///
+/// A subcomponent must not re-declare a binding key its parent already
+/// provides — that fails the build; it is not an override. In particular,
+/// re-exporting one child binding through a parent module provider
+/// requires the child to bind it under a different key (typically with a
+/// [Qualifier]), with the parent provider binding the plain type.
+class Subcomponent {
+  const factory Subcomponent([List<Type> modules]) = Subcomponent._;
+
+  const Subcomponent._([this.modules = const <Type>[]]);
+
+  /// Modules supplying providers for the subcomponent.
+  ///
+  /// Each [Type] must be a `class` definition annotated with [module].
+  ///
+  /// **Order matters:** later modules override earlier ones for shared
+  /// provider keys (same type + same qualifier), exactly like
+  /// [Component.modules].
+  final List<Type> modules;
+}
+
 /// Convenience [Component] annotation with no included modules.
 const component = Component();
+
+/// Annotates an abstract class that serves as an explicit factory for a
+/// [Subcomponent], replacing the synthesized `<Name>Factory`.
+///
+/// - The annotated class must be abstract, with exactly one abstract method.
+/// - That method's return type must be an installed [Subcomponent] type.
+/// - Parameters whose type is one of the subcomponent's own [Module]s are
+///   passed through exactly like the synthesized factory's module parameters.
+/// - Every other parameter is a **value parameter**: it becomes an instance
+///   binding in the subcomponent graph, injectable by any binding declared
+///   inside it — the equivalent of Dagger's `@BindsInstance` / Metro's
+///   `@Provides` factory parameters. Honors `@Qualifier` and nullability
+///   exactly like an ordinary binding.
+///
+/// Example:
+/// ```dart
+/// @Subcomponent([ApiModule])
+/// abstract class ApiSubcomponent {
+///   RestApiService get apiService;
+/// }
+///
+/// @subcomponentFactory
+/// abstract class ApiSubcomponentFactory {
+///   ApiSubcomponent create(String userId);
+/// }
+///
+/// @Module(subcomponents: [ApiSubcomponent])
+/// class NetworkModule {}
+/// ```
+///
+/// Installing `NetworkModule` makes `ApiSubcomponentFactory` a binding in
+/// the parent graph. Each `create(userId)` call builds a fresh
+/// `ApiSubcomponent` in which `userId` is injectable as an ordinary
+/// `String` binding.
+const subcomponentFactory = SubcomponentFactory._();
+
+class SubcomponentFactory {
+  const SubcomponentFactory._();
+}
 
 /// Annotates a class as a collection of providers for dependency injection.
 ///
@@ -77,7 +175,49 @@ const component = Component();
 const module = Module._();
 
 class Module {
-  const Module._();
+  const factory Module({List<Type> subcomponents, List<Type> includes}) = Module._;
+
+  const Module._({this.subcomponents = const <Type>[], this.includes = const <Type>[]});
+
+  /// Subcomponents installed by this module.
+  ///
+  /// Each [Type] must be an `abstract class` annotated with [subcomponent].
+  /// Installing this module into a component makes the generated
+  /// `<Name>Factory` of every listed subcomponent available as a binding in
+  /// that component's graph. See [Subcomponent] for the full pattern.
+  final List<Type> subcomponents;
+
+  /// Other `@module` classes whose providers are folded into this module.
+  ///
+  /// Listing a module on a [Component]/[Subcomponent] pulls in every module
+  /// it `includes`, transitively — as if every included module had been
+  /// listed directly. This is meant for library authors who want to ship one
+  /// public "umbrella" module backed by several internal modules, so a
+  /// consuming app only has to list the umbrella module:
+  ///
+  /// ```dart
+  /// @module
+  /// class ApiModule { ... }
+  ///
+  /// @module
+  /// class DbModule { ... }
+  ///
+  /// @Module(includes: [ApiModule, DbModule])
+  /// class UmbrellaModule {}
+  ///
+  /// @Component([UmbrellaModule])
+  /// abstract class AppComponent { ... }
+  /// ```
+  ///
+  /// Each [Type] must be a class annotated with [module]. A module reachable
+  /// through more than one include path is installed exactly once. A cycle
+  /// (a module that transitively includes itself) is a compile-time error.
+  ///
+  /// **Order matters** among sibling entries, exactly like [Component.modules]:
+  /// later entries override earlier ones for shared provider keys. A
+  /// component's (or subcomponent's) own directly-listed modules always take
+  /// precedence over anything pulled in through `includes`.
+  final List<Type> includes;
 }
 
 /// Annotation for a method (in a [Component]), class, or

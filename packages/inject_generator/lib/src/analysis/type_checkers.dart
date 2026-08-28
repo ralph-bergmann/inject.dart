@@ -9,6 +9,12 @@ const componentChecker = TypeChecker.typeNamed(Component, inPackage: _injectAnno
 /// Checks for `@module` annotations.
 const moduleChecker = TypeChecker.typeNamed(Module, inPackage: _injectAnnotationPackage);
 
+/// Checks for `@subcomponent` / `@Subcomponent(...)` annotations.
+const subcomponentChecker = TypeChecker.typeNamed(Subcomponent, inPackage: _injectAnnotationPackage);
+
+/// Checks for `@subcomponentFactory` annotations.
+const subcomponentFactoryChecker = TypeChecker.typeNamed(SubcomponentFactory, inPackage: _injectAnnotationPackage);
+
 /// Checks for `@inject` annotations.
 const injectChecker = TypeChecker.typeNamed(Inject, inPackage: _injectAnnotationPackage);
 

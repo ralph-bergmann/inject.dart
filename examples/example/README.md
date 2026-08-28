@@ -2,7 +2,7 @@
 
 The minimal inject.dart + inject_flutter example for pub.dev.
 
-A counter app in a single file (`lib/main.dart`) that shows the five
+A counter app in a single file (`lib/main.dart`) that shows the six
 concepts you need to get started:
 
 1. **`@Component` + `@module`** — declare the DI graph and provide
@@ -12,6 +12,9 @@ concepts you need to get started:
 4. **`@assistedInject`** — compile-time DI combined with runtime parameters.
 5. **`ViewModelFactory<T>`** — the `inject_flutter` bridge between DI and
    Flutter's widget lifecycle.
+6. **`@subcomponent`** — an encapsulated child graph (a private backup
+   stack) whose bindings stay invisible to the parent; only a re-exported
+   service crosses the boundary.
 
 This file is intentionally small: it uses the same class names and domain
 as the full reference example (`flutter_demo`) so that cross-references

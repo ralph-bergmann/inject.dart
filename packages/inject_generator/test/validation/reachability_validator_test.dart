@@ -3,6 +3,7 @@ import 'package:build/build.dart';
 import 'package:build_test/build_test.dart';
 import 'package:inject_generator/src/analysis/annotation_reader.dart';
 import 'package:inject_generator/src/analysis/component_reader.dart';
+import 'package:inject_generator/src/analysis/entry_point_collector.dart';
 import 'package:inject_generator/src/analysis/inject_reader.dart';
 import 'package:inject_generator/src/analysis/module_reader.dart';
 import 'package:inject_generator/src/logging/diagnostic_reporter.dart';
@@ -24,8 +25,9 @@ void _validateReachability({
   required List<EntryPoint> entryPoints,
   Set<BindingKey> exemptKeys = const {},
 }) {
-  final result = BindingResolver(reporter: reporter)
-      .resolve(modules: modules, injectables: injectables, entryPoints: entryPoints);
+  final result = BindingResolver(
+    reporter: reporter,
+  ).resolve(modules: modules, injectables: injectables, entryPoints: entryPoints);
 
   ReachabilityValidator(reporter: reporter).validate(
     bindingMap: result.bindingMap,

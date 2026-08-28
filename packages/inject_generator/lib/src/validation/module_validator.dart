@@ -45,7 +45,8 @@ class ModuleValidator {
       if (name.startsWith('_')) {
         _reporter.errorForElement(
           moduleClass,
-          message: "Module class '$name' must be public. "
+          message:
+              "Module class '$name' must be public. "
               'Remove the leading underscore or make the class public.',
           suggestion: "Rename '$name' to '${name.substring(1)}' or move it to a public library.",
         );
@@ -58,9 +59,11 @@ class ModuleValidator {
       if (_dartReservedAndBuiltinIdentifiers.contains(name.uncapitalize)) {
         _reporter.errorForElement(
           moduleClass,
-          message: "Module class name '$name' is a Dart reserved word. "
+          message:
+              "Module class name '$name' is a Dart reserved word. "
               'Rename the class to avoid invalid generated code.',
-          suggestion: 'Choose a name that does not conflict with Dart keywords, '
+          suggestion:
+              'Choose a name that does not conflict with Dart keywords, '
               'e.g. rename to ${name}Module.',
         );
       }
@@ -83,7 +86,8 @@ class ModuleValidator {
       if (_dartReservedAndBuiltinIdentifiers.contains(name.uncapitalize)) {
         _reporter.errorForElement(
           classElement,
-          message: "Type name '$name' is a Dart reserved word. "
+          message:
+              "Type name '$name' is a Dart reserved word. "
               'Rename the class to avoid invalid generated code.',
           suggestion: 'Choose a name that does not conflict with Dart keywords.',
         );
@@ -110,8 +114,9 @@ class ModuleValidator {
       }
 
       final bool hasUnqualified = entries.any((e) => e.qualifier == null);
-      final List<({String? qualifier, String displayKey})> qualifiedEntries =
-          entries.where((e) => e.qualifier != null).toList();
+      final List<({String? qualifier, String displayKey})> qualifiedEntries = entries
+          .where((e) => e.qualifier != null)
+          .toList();
 
       if (!hasUnqualified || qualifiedEntries.isEmpty) {
         continue;
@@ -121,10 +126,12 @@ class ModuleValidator {
       final String qualifiedList = qualifiedEntries.map((e) => "'${e.displayKey}'").join(', ');
       _reporter.warningForElement(
         moduleClass,
-        message: "Module '${moduleClass.name}' provides both a qualified "
+        message:
+            "Module '${moduleClass.name}' provides both a qualified "
             "($qualifiedList) and an unqualified ('$unqualifiedLabel') "
             'binding for the same type. This is usually a mistake.',
-        suggestion: 'If this is intentional, ignore this warning. '
+        suggestion:
+            'If this is intentional, ignore this warning. '
             'Otherwise, remove one of the providers or add a qualifier to the unqualified one.',
       );
     }

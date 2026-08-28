@@ -285,7 +285,9 @@ void main() {
           },
           rootPackage: 'pkg',
           visibleOutputBuilders: {factoryBld},
-          appliesBuilders: {factoryBld: ['inject_generator|inject_builder']},
+          appliesBuilders: {
+            factoryBld: ['inject_generator|inject_builder'],
+          },
           flattenOutput: true,
         );
 

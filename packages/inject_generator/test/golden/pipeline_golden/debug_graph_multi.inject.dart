@@ -17,14 +17,19 @@ class CoffeeShop$Component implements _i1.CoffeeShop {
       CoffeeShop$Component._(coffeeModule ?? _i1.CoffeeModule());
 
   CoffeeShop$Component._(_i1.CoffeeModule coffeeModule) {
-    final heater$Provider = _Heater$Provider(coffeeModule);
-    _brewer$Provider = _Brewer$Provider(heater$Provider, coffeeModule);
+    final coffeeShop$heater$Provider = _CoffeeShop$Heater$Provider(
+      coffeeModule,
+    );
+    _coffeeShop$brewer$Provider = _CoffeeShop$Brewer$Provider(
+      coffeeShop$heater$Provider,
+      coffeeModule,
+    );
   }
 
-  late final _Brewer$Provider _brewer$Provider;
+  late final _CoffeeShop$Brewer$Provider _coffeeShop$brewer$Provider;
 
   @override
-  _i1.Brewer get brewer => _brewer$Provider.get();
+  _i1.Brewer get brewer => _coffeeShop$brewer$Provider.get();
 }
 
 class TeaShop$Component implements _i1.TeaShop {
@@ -32,29 +37,35 @@ class TeaShop$Component implements _i1.TeaShop {
       TeaShop$Component._(teaModule ?? _i1.TeaModule());
 
   TeaShop$Component._(_i1.TeaModule teaModule) {
-    final kettle$Provider = _Kettle$Provider(teaModule);
-    _steeper$Provider = _Steeper$Provider(kettle$Provider, teaModule);
+    final teaShop$kettle$Provider = _TeaShop$Kettle$Provider(teaModule);
+    _teaShop$steeper$Provider = _TeaShop$Steeper$Provider(
+      teaShop$kettle$Provider,
+      teaModule,
+    );
   }
 
-  late final _Steeper$Provider _steeper$Provider;
+  late final _TeaShop$Steeper$Provider _teaShop$steeper$Provider;
 
   @override
-  _i1.Steeper get steeper => _steeper$Provider.get();
+  _i1.Steeper get steeper => _teaShop$steeper$Provider.get();
 }
 
-class _Brewer$Provider implements _i2.Provider<_i1.Brewer> {
-  const _Brewer$Provider(this._heater$Provider, this._module);
+class _CoffeeShop$Brewer$Provider implements _i2.Provider<_i1.Brewer> {
+  const _CoffeeShop$Brewer$Provider(
+    this._coffeeShop$heater$Provider,
+    this._module,
+  );
 
-  final _Heater$Provider _heater$Provider;
+  final _CoffeeShop$Heater$Provider _coffeeShop$heater$Provider;
 
   final _i1.CoffeeModule _module;
 
   @override
-  _i1.Brewer get() => _module.provideBrewer(_heater$Provider.get());
+  _i1.Brewer get() => _module.provideBrewer(_coffeeShop$heater$Provider.get());
 }
 
-class _Heater$Provider implements _i2.Provider<_i1.Heater> {
-  _Heater$Provider(this._module);
+class _CoffeeShop$Heater$Provider implements _i2.Provider<_i1.Heater> {
+  _CoffeeShop$Heater$Provider(this._module);
 
   final _i1.CoffeeModule _module;
 
@@ -66,8 +77,8 @@ class _Heater$Provider implements _i2.Provider<_i1.Heater> {
   _i1.Heater get() => _singleton;
 }
 
-class _Kettle$Provider implements _i2.Provider<_i1.Kettle> {
-  const _Kettle$Provider(this._module);
+class _TeaShop$Kettle$Provider implements _i2.Provider<_i1.Kettle> {
+  const _TeaShop$Kettle$Provider(this._module);
 
   final _i1.TeaModule _module;
 
@@ -75,13 +86,13 @@ class _Kettle$Provider implements _i2.Provider<_i1.Kettle> {
   _i1.Kettle get() => _module.provideKettle();
 }
 
-class _Steeper$Provider implements _i2.Provider<_i1.Steeper> {
-  const _Steeper$Provider(this._kettle$Provider, this._module);
+class _TeaShop$Steeper$Provider implements _i2.Provider<_i1.Steeper> {
+  const _TeaShop$Steeper$Provider(this._teaShop$kettle$Provider, this._module);
 
-  final _Kettle$Provider _kettle$Provider;
+  final _TeaShop$Kettle$Provider _teaShop$kettle$Provider;
 
   final _i1.TeaModule _module;
 
   @override
-  _i1.Steeper get() => _module.provideSteeper(_kettle$Provider.get());
+  _i1.Steeper get() => _module.provideSteeper(_teaShop$kettle$Provider.get());
 }

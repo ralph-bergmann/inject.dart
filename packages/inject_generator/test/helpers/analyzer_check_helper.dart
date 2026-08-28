@@ -156,9 +156,7 @@ Future<List<Diagnostic>> _analyzeSource(
         'got ${result.runtimeType} instead of ErrorsResult.',
       );
     }
-    return result.diagnostics
-        .where((Diagnostic d) => d.diagnosticCode.severity == DiagnosticSeverity.ERROR)
-        .toList();
+    return result.diagnostics.where((Diagnostic d) => d.diagnosticCode.severity == DiagnosticSeverity.ERROR).toList();
   } finally {
     await collection.dispose();
   }

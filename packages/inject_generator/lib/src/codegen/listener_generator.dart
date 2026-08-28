@@ -29,6 +29,7 @@ class ListenerGenerator {
     required DartType provisionedType,
     required List<({ClassElement moduleClass, ProviderDescriptor descriptor})> listenerProviders,
     BindingKey? selfKey,
+    String? componentPrefix,
   }) {
     final matches = <ListenerCallInfo>[];
     for (final listener in listenerProviders) {
@@ -42,8 +43,16 @@ class ListenerGenerator {
             ? unwrapped.displayName
             : returnType.displayName;
         final String? qualifier = listener.descriptor.metadata.qualifier;
-        final String className = ProviderGenerator.providerClassName(typeName, qualifier);
-        final String baseName = ProviderGenerator.providerBaseName(typeName, qualifier);
+        final String className = ProviderGenerator.providerClassName(
+          typeName,
+          qualifier,
+          componentPrefix: componentPrefix,
+        );
+        final String baseName = ProviderGenerator.providerBaseName(
+          typeName,
+          qualifier,
+          componentPrefix: componentPrefix,
+        );
         matches.add((providerClassName: className, fieldName: '_$baseName'));
       }
     }

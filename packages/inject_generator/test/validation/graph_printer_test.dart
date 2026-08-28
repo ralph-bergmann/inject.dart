@@ -1,7 +1,7 @@
 import 'package:analyzer/dart/element/element.dart';
 import 'package:build/build.dart';
 import 'package:build_test/build_test.dart';
-import 'package:inject_generator/src/analysis/component_reader.dart';
+import 'package:inject_generator/src/analysis/entry_point_collector.dart';
 import 'package:inject_generator/src/validation/async_propagation_result.dart';
 import 'package:inject_generator/src/validation/binding_graph_result.dart';
 import 'package:inject_generator/src/validation/binding_key.dart';
@@ -14,8 +14,7 @@ Future<LibraryElement> _resolveLibrary(String source) => resolveSource(
   readAllSourcesFromFilesystem: true,
 );
 
-BindingKey _key(ClassElement cls, {String? qualifier}) =>
-    BindingKey.fromDartType(cls.thisType, qualifier: qualifier)!;
+BindingKey _key(ClassElement cls, {String? qualifier}) => BindingKey.fromDartType(cls.thisType, qualifier: qualifier)!;
 
 BindingSource _source(
   BindingKey key,
@@ -305,8 +304,11 @@ void main() {
       expect(repoIndex, greaterThanOrEqualTo(0));
       // Look for `└── HttpClient...` (sub-tree connector + pub-style ref) after the Repository line.
       final subTreeRef = output.indexOf(RegExp(r'└── HttpClient\.\.\.'), repoIndex);
-      expect(subTreeRef, greaterThan(repoIndex),
-          reason: 'Repository sub-tree must reference HttpClient as <name>... not fully expand it');
+      expect(
+        subTreeRef,
+        greaterThan(repoIndex),
+        reason: 'Repository sub-tree must reference HttpClient as <name>... not fully expand it',
+      );
     });
 
     test('alphabetical sorting in shared block — multiple shared nodes', () {
@@ -424,11 +426,28 @@ void main() {
       // depth 0 and 21 descendants, so the 21st descendant at depth 21 fires
       // the depth-limit marker).
       final nodes = [
-        cls('L1'), cls('L2'), cls('L3'), cls('L4'), cls('L5'),
-        cls('L6'), cls('L7'), cls('L8'), cls('L9'), cls('L10'),
-        cls('L11'), cls('L12'), cls('L13'), cls('L14'), cls('L15'),
-        cls('L16'), cls('L17'), cls('L18'), cls('L19'), cls('L20'),
-        cls('L21'), cls('L22'),
+        cls('L1'),
+        cls('L2'),
+        cls('L3'),
+        cls('L4'),
+        cls('L5'),
+        cls('L6'),
+        cls('L7'),
+        cls('L8'),
+        cls('L9'),
+        cls('L10'),
+        cls('L11'),
+        cls('L12'),
+        cls('L13'),
+        cls('L14'),
+        cls('L15'),
+        cls('L16'),
+        cls('L17'),
+        cls('L18'),
+        cls('L19'),
+        cls('L20'),
+        cls('L21'),
+        cls('L22'),
       ];
       final keys = nodes.map((c) => _key(c)).toList();
       final bindingMap = {for (var i = 0; i < nodes.length; i++) keys[i]: _source(keys[i], nodes[i])};
@@ -496,11 +515,13 @@ void main() {
 
       // The back-edge must short-circuit as a `...`-reference, not stack-recurse.
       // Count `… (depth limit reached)` markers — must be zero.
-      expect(output, isNot(contains('… (depth limit reached)')),
-          reason: 'cycle inside shared sub-tree must be caught by seen, not depth-limit');
+      expect(
+        output,
+        isNot(contains('… (depth limit reached)')),
+        reason: 'cycle inside shared sub-tree must be caught by seen, not depth-limit',
+      );
       // The cycle target B must appear at least once as a back-edge reference.
-      expect(output, contains('B...'),
-          reason: 'B must short-circuit on the back-edge visit');
+      expect(output, contains('B...'), reason: 'B must short-circuit on the back-edge visit');
     });
 
     test('deterministic output — two renders produce identical strings', () {

@@ -7,12 +7,15 @@ import '../codegen/code_generator.dart' show CodeGenerator;
 import '../codegen/naming.dart';
 import '../extensions/dart_type_extensions.dart';
 import '../extensions/element_extensions.dart';
+import '../logging/diagnostic_reporter.dart';
 import '../validation/binding_key.dart';
 import 'annotation_reader.dart';
 import 'assisted_reader.dart';
 import 'component_reader.dart';
+import 'entry_point_collector.dart';
 import 'inject_reader.dart';
 import 'module_reader.dart';
+import 'subcomponent_reader.dart';
 
 /// Collects all [BindingKey]s provided by [modules].
 ///
@@ -55,9 +58,12 @@ void discoverInjectables({
   required List<({ClassElement classElement, InjectableData injectable})> injectables,
   List<({ClassElement factoryElement, AssistedInjectData injectData, AssistedFactoryData factoryData})> factories =
       const [],
+  Set<BindingKey> parentProvidedKeys = const {},
 }) {
-  // Collect all types provided by modules
-  final Set<BindingKey> moduleProvidedKeys = collectModuleProvidedKeys(modules);
+  // Collect all types provided by modules. Keys already provided by a parent
+  // graph are treated the same way: the subcomponent consumes them through
+  // the parent reference instead of re-instantiating them (scope separation).
+  final Set<BindingKey> moduleProvidedKeys = {...collectModuleProvidedKeys(modules), ...parentProvidedKeys};
 
   // Check entry point types not covered by modules
   for (final EntryPoint ep in componentData.entryPoints) {
@@ -144,8 +150,9 @@ void discoverAssistedFactories({
   required List<({ClassElement classElement, InjectableData injectable})> injectables,
   required List<({ClassElement factoryElement, AssistedInjectData injectData, AssistedFactoryData factoryData})>
   factories,
+  Set<BindingKey> parentProvidedKeys = const {},
 }) {
-  final Set<BindingKey> moduleProvidedKeys = collectModuleProvidedKeys(modules);
+  final Set<BindingKey> moduleProvidedKeys = {...collectModuleProvidedKeys(modules), ...parentProvidedKeys};
 
   // Scan entry points for factories (explicit and synthesized)
   for (final EntryPoint ep in componentData.entryPoints) {
@@ -501,11 +508,12 @@ void discoverTypedefProviders({
   required List<({ClassElement classElement, InjectableData injectable})> injectables,
   required List<({ClassElement moduleClass, ModuleData moduleData})> modules,
   required List<TypedefProviderData> typedefProviders,
+  Set<BindingKey> parentProvidedKeys = const {},
 }) {
   // Use BindingKey collection here. provider.key already contains the
   // unwrapped type for async providers, which is sufficient for typedef
   // discovery that only checks raw return types.
-  final moduleProvidedKeys = <BindingKey>{};
+  final moduleProvidedKeys = <BindingKey>{...parentProvidedKeys};
   for (final m in modules) {
     for (final ProviderDescriptor provider in m.moduleData.providers) {
       moduleProvidedKeys.add(provider.key);
@@ -672,4 +680,260 @@ void _findAndAddInjectable({
       }
     }
   }
+}
+
+/// Collects every [BindingKey] a graph provides, across all binding sources.
+///
+/// Used as the `parentProvidedKeys` input for subcomponent discovery: any
+/// dependency of the child graph whose key is in this set is consumed from
+/// the parent instead of being (re-)discovered into the child graph.
+Set<BindingKey> collectAllProvidedKeys({
+  required List<({ClassElement moduleClass, ModuleData moduleData})> modules,
+  required List<({ClassElement classElement, InjectableData injectable})> injectables,
+  List<({ClassElement factoryElement, AssistedInjectData injectData, AssistedFactoryData factoryData})> factories =
+      const [],
+  List<TypedefProviderData> typedefProviders = const [],
+}) {
+  final Set<BindingKey> result = collectModuleProvidedKeys(modules);
+  for (final injectable in injectables) {
+    result.add(injectable.injectable.key);
+  }
+  for (final factory in factories) {
+    final BindingKey? key = BindingKey.fromDartType(factory.factoryElement.thisType);
+    if (key != null) {
+      result.add(key);
+    }
+  }
+  for (final typedefData in typedefProviders) {
+    final BindingKey? key = BindingKey.fromDartType(typedefData.typedefType);
+    if (key != null) {
+      result.add(key);
+    }
+  }
+  return result;
+}
+
+/// Fully analysed subgraph of one installed subcomponent, plus the identity
+/// of its factory binding in the parent graph.
+///
+/// `factoryClass` is the abstract `<Name>Factory` class emitted by the
+/// `factory_builder` into the `.factory.dart` part file of the library that
+/// declares the subcomponent; `factoryBindingKey` is its binding identity,
+/// registered as a parent binding.
+typedef SubcomponentFactoryDescriptor = ({
+  ClassElement subcomponentClass,
+  SubcomponentData subcomponentData,
+  List<({ClassElement moduleClass, ModuleData moduleData})> subcomponentModules,
+  List<({ClassElement classElement, InjectableData injectable})> subcomponentInjectables,
+  List<({ClassElement factoryElement, AssistedInjectData injectData, AssistedFactoryData factoryData})>
+  subcomponentFactories,
+  List<TypedefProviderData> subcomponentTypedefProviders,
+  ClassElement factoryClass,
+  BindingKey factoryBindingKey,
+
+  /// Non-null when [factoryClass] is an explicit `@subcomponentFactory`
+  /// (rather than the synthesized `<Name>Factory`) — carries the module/value
+  /// parameter split needed by codegen and by [valueParameters] below.
+  SubcomponentFactoryData? explicitFactory,
+
+  /// Instance bindings contributed by an explicit factory's value
+  /// parameters (Dagger's `@BindsInstance` equivalent). Always empty when
+  /// [explicitFactory] is `null`.
+  List<({BindingKey key, FormalParameterElement parameter})> valueParameters,
+});
+
+/// Discovers all subcomponents installed by [modules] and analyses each
+/// child graph (modules, injectables, assisted factories, typedef providers).
+///
+/// [parentProvidedKeys] must contain every key the parent graph provides
+/// (see [collectAllProvidedKeys]); child discovery skips those keys so the
+/// child consumes them through the parent reference (scope separation,
+/// no re-instantiation).
+///
+/// The same subcomponent installed by multiple modules yields a single
+/// descriptor here — the duplicate-installation *error* is raised by the
+/// validation phase, which sees the per-module installation lists.
+List<SubcomponentFactoryDescriptor> discoverSubcomponentFactories({
+  required AnnotationReader reader,
+  required DiagnosticReporter reporter,
+  required List<({ClassElement moduleClass, ModuleData moduleData})> modules,
+  required Set<BindingKey> parentProvidedKeys,
+}) {
+  final descriptors = <SubcomponentFactoryDescriptor>[];
+  final seenSubcomponents = <ClassElement>{};
+
+  for (final module in modules) {
+    for (final DartType subcomponentType in module.moduleData.installedSubcomponents) {
+      final Element? element = subcomponentType.element;
+      if (element is! ClassElement) {
+        reporter.errorForElement(
+          module.moduleClass,
+          message:
+              "Subcomponent '${subcomponentType.getDisplayString()}' installed by "
+              "'${module.moduleClass.name}' does not resolve to a class and cannot be used as a "
+              'subcomponent.',
+          suggestion:
+              'Reference a concrete class annotated with @subcomponent directly, not a typedef '
+              'or type alias.',
+        );
+        continue;
+      }
+      if (!seenSubcomponents.add(element)) {
+        continue;
+      }
+
+      // `validate: false` — the factory builder already validated this same
+      // `@Subcomponent([...])` annotation (unresolved types, duplicate
+      // modules) in an earlier build phase; re-reading it here only to
+      // collect entry points must not re-report the same problems a second
+      // time (see `SubcomponentReader.readSubcomponentModules`).
+      final SubcomponentData? subcomponentData = reader.readSubcomponent(element, validate: false);
+      if (subcomponentData == null) {
+        continue;
+      }
+
+      // Read the subcomponent's own modules. `expandModules` follows each
+      // directly-listed module's own `@Module(includes: ...)` list
+      // transitively (cycle detection + dedup-by-type) — see the matching
+      // comment in `inject_builder.dart`. Note this only expands the
+      // subcomponent's *own* module list for its provider graph; the
+      // synthesized `<Name>Factory.create(...)` signature (built earlier, in
+      // `FactoryCodeGenerator`) intentionally keeps exposing only the
+      // subcomponent's directly-declared modules, not the transitively
+      // included ones — Dart allows the private factory implementation
+      // (built from this expanded list) to accept additional optional
+      // parameters beyond what the public abstract factory declares, which
+      // keeps included modules exactly as encapsulated as any other
+      // subcomponent-private detail.
+      final directSubcomponentModuleClasses = <ClassElement>[];
+      for (final DartType moduleType in subcomponentData.modules) {
+        if (moduleType case InterfaceType(element: final ClassElement moduleClass)) {
+          directSubcomponentModuleClasses.add(moduleClass);
+        } else {
+          reporter.errorForElement(
+            element,
+            message:
+                "Module '${moduleType.getDisplayString()}' in @Subcomponent on "
+                "'${element.name}' is not a class — @module requires a class declaration.",
+            suggestion: 'Change the @module declaration to a class, or remove it from @Subcomponent.',
+          );
+        }
+      }
+      final subcomponentModules = reader.expandModules(directSubcomponentModuleClasses);
+
+      // Analyse the child graph. Order mirrors the component pipeline:
+      // assisted factories first so synthesized factory types are not added
+      // as injectables.
+      final subcomponentInjectables = <({ClassElement classElement, InjectableData injectable})>[];
+      final subcomponentFactories =
+          <({ClassElement factoryElement, AssistedInjectData injectData, AssistedFactoryData factoryData})>[];
+      discoverAssistedFactories(
+        reader: reader,
+        componentData: subcomponentData,
+        modules: subcomponentModules,
+        injectables: subcomponentInjectables,
+        factories: subcomponentFactories,
+        parentProvidedKeys: parentProvidedKeys,
+      );
+      discoverInjectables(
+        reader: reader,
+        componentData: subcomponentData,
+        modules: subcomponentModules,
+        injectables: subcomponentInjectables,
+        factories: subcomponentFactories,
+        parentProvidedKeys: parentProvidedKeys,
+      );
+      final subcomponentTypedefProviders = <TypedefProviderData>[];
+      discoverTypedefProviders(
+        reader: reader,
+        factories: subcomponentFactories,
+        injectables: subcomponentInjectables,
+        modules: subcomponentModules,
+        typedefProviders: subcomponentTypedefProviders,
+        parentProvidedKeys: parentProvidedKeys,
+      );
+
+      // An explicit `@subcomponentFactory` targeting this subcomponent, if
+      // any, replaces the synthesized `<Name>Factory` (mirrors the
+      // `@assistedFactory` precedence over a synthesized factory). It is
+      // user-written source, already resolvable — no part-file generation
+      // needed. `validate: false`: a prior, authoritative pass
+      // (`FactoryCodeGenerator.generate`) already validated it, including
+      // the "more than one explicit factory for this subcomponent" case.
+      SubcomponentFactoryData? explicitFactoryData;
+      for (final ClassElement candidate in element.library.classes) {
+        if (!reader.isSubcomponentFactory(candidate)) {
+          continue;
+        }
+        final SubcomponentFactoryData? data = reader.readSubcomponentFactory(candidate, validate: false);
+        if (data != null && data.subcomponentClass == element) {
+          explicitFactoryData = data;
+          break;
+        }
+      }
+
+      final ClassElement factoryClass;
+      if (explicitFactoryData != null) {
+        factoryClass = explicitFactoryData.factoryElement;
+      } else {
+        // Resolve the abstract factory class emitted by the factory_builder
+        // into the subcomponent library's `.factory.dart` part file.
+        final String factoryName = subcomponentFactoryClassName(element.name!);
+        final ClassElement? synthesized = element.library.getClass(factoryName);
+        if (synthesized == null) {
+          reporter.errorForElement(
+            element,
+            message:
+                "The factory class '$factoryName' for subcomponent '${element.name}' was not found "
+                'in its library.',
+            suggestion:
+                "Ensure the library declaring '${element.name}' contains a "
+                "`part '<file>.factory.dart';` directive so the factory_builder can emit the "
+                'factory class, then rebuild.',
+          );
+          continue;
+        }
+        factoryClass = synthesized;
+      }
+
+      final BindingKey? factoryBindingKey = BindingKey.fromDartType(factoryClass.thisType);
+      if (factoryBindingKey == null) {
+        continue;
+      }
+
+      final valueParameters = <({BindingKey key, FormalParameterElement parameter})>[];
+      if (explicitFactoryData != null) {
+        for (final (:parameter, :type, :qualifier) in explicitFactoryData.valueParameters) {
+          final BindingKey? key = BindingKey.fromDartType(type, qualifier: qualifier);
+          if (key == null) {
+            reporter.errorForElement(
+              parameter,
+              message:
+                  "Value parameter '${parameter.name}' of '${explicitFactoryData.factoryElement.name}."
+                  "${explicitFactoryData.createMethod.name}' has an unsupported binding type "
+                  "'${type.getDisplayString()}'.",
+              suggestion: 'Use an interface type or wrap the dependency in a typedef or class.',
+            );
+            continue;
+          }
+          valueParameters.add((key: key, parameter: parameter));
+        }
+      }
+
+      descriptors.add((
+        subcomponentClass: element,
+        subcomponentData: subcomponentData,
+        subcomponentModules: subcomponentModules,
+        subcomponentInjectables: subcomponentInjectables,
+        subcomponentFactories: subcomponentFactories,
+        subcomponentTypedefProviders: subcomponentTypedefProviders,
+        factoryClass: factoryClass,
+        factoryBindingKey: factoryBindingKey,
+        explicitFactory: explicitFactoryData,
+        valueParameters: valueParameters,
+      ));
+    }
+  }
+
+  return descriptors;
 }

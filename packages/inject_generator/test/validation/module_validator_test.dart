@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/element/element.dart';
+import 'package:analyzer/dart/element/type.dart';
 import 'package:build/build.dart';
 import 'package:build_test/build_test.dart';
 import 'package:inject_generator/src/analysis/inject_reader.dart';
@@ -15,7 +16,12 @@ Future<LibraryElement> _resolveLibrary(String source) => resolveSource(
 );
 
 /// Minimal [ModuleData] with no providers — sufficient for name-only checks.
-const ModuleData _emptyModuleData = (providers: <ProviderDescriptor>[], hasDefaultConstructor: true);
+const ModuleData _emptyModuleData = (
+  providers: <ProviderDescriptor>[],
+  hasDefaultConstructor: true,
+  installedSubcomponents: <DartType>[],
+  includes: <DartType>[],
+);
 
 void main() {
   late DiagnosticReporter reporter;
@@ -173,6 +179,8 @@ void main() {
             ),
           ],
           hasDefaultConstructor: true,
+          installedSubcomponents: const <DartType>[],
+          includes: const <DartType>[],
         );
 
         validator.validateModules([(moduleClass: classElement, moduleData: moduleData)]);
@@ -225,6 +233,8 @@ void main() {
             ),
           ],
           hasDefaultConstructor: true,
+          installedSubcomponents: const <DartType>[],
+          includes: const <DartType>[],
         );
 
         validator.validateModules([(moduleClass: classElement, moduleData: moduleData)]);
@@ -293,11 +303,17 @@ void main() {
             ),
           ],
           hasDefaultConstructor: true,
+          installedSubcomponents: const <DartType>[],
+          includes: const <DartType>[],
         );
 
         validator.validateModules([(moduleClass: classElement, moduleData: moduleData)]);
 
-        expect(reporter.warningCount, equals(1), reason: 'Conflict cluster must produce exactly one aggregated warning');
+        expect(
+          reporter.warningCount,
+          equals(1),
+          reason: 'Conflict cluster must produce exactly one aggregated warning',
+        );
         expect(reporter.messages.first.message, contains('#a'));
         expect(reporter.messages.first.message, contains('#b'));
         expect(reporter.messages.first.message, contains('unqualified'));
@@ -345,6 +361,8 @@ void main() {
             ),
           ],
           hasDefaultConstructor: true,
+          installedSubcomponents: const <DartType>[],
+          includes: const <DartType>[],
         );
 
         validator.validateModules([(moduleClass: classElement, moduleData: moduleData)]);

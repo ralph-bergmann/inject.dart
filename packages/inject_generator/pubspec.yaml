@@ -3,7 +3,7 @@ description: >-
   Source code generator for inject_annotation. Reads @inject, @component, and
   @module annotations and generates fully wired dependency components at build
   time.
-version: 1.1.1
+version: 1.2.0
 documentation: https://ralph-bergmann.github.io/inject.dart/
 repository: https://github.com/ralph-bergmann/inject.dart
 issue_tracker: https://github.com/ralph-bergmann/inject.dart/issues
@@ -15,26 +15,27 @@ topics:
   - generator
 
 environment:
-  sdk: ^3.12.0
+  sdk: ^3.13.1
 resolution: workspace
 
 dependencies:
-  analyzer: ^12.1.0
-  build: ^4.0.6
+  analyzer: ^13.3.0
+  build: ^4.0.10
   code_builder: ^4.11.1
   collection: ^1.19.1
-  dart_style: ^3.1.8
-  inject_annotation: ^1.1.0
+  dart_style: ^3.1.13
+  glob: ^2.1.3
+  inject_annotation: ^1.2.0
   logging: ^1.3.0
-  meta: ^1.18.0
+  meta: ^1.19.0
   path: ^1.9.1
   pub_semver: ^2.2.0
   quiver: ^3.2.2
-  source_gen: ^4.2.3
+  source_gen: ^4.2.4
   stack_trace: ^1.12.1
 
 dev_dependencies:
-  build_test: ^3.5.15
+  build_test: ^3.5.19
   lints: ^6.1.0
-  test: ^1.31.0
+  test: ^1.31.1
   yaml: ^3.1.3

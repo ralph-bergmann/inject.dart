@@ -15,6 +15,91 @@ const _goldenDir = 'test/golden/pipeline_golden';
 
 void main() {
   group('Pipeline goldens', () {
+    test('component_with_subcomp_encapsulation golden', () async {
+      await runPipelineGolden(
+        fixtureName: 'component_with_subcomp_encapsulation',
+        goldenDir: _goldenDir,
+        expectFactory: true,
+      );
+    });
+
+    test('component_with_async_subcomp golden', () async {
+      await runPipelineGolden(
+        fixtureName: 'component_with_async_subcomp',
+        goldenDir: _goldenDir,
+        expectFactory: true,
+      );
+    });
+
+    test('assisted_inject_in_subcomp golden', () async {
+      await runPipelineGolden(
+        fixtureName: 'assisted_inject_in_subcomp',
+        goldenDir: _goldenDir,
+        expectFactory: true,
+      );
+    });
+
+    test('sync_subcomp_no_parent_deps golden', () async {
+      await runPipelineGolden(
+        fixtureName: 'sync_subcomp_no_parent_deps',
+        goldenDir: _goldenDir,
+        expectFactory: true,
+      );
+    });
+
+    test('subcomp_test_parent_override golden', () async {
+      await runPipelineGolden(
+        fixtureName: 'subcomp_test_parent_override',
+        goldenDir: _goldenDir,
+        expectFactory: true,
+      );
+    });
+
+    test('multi_parent_shared_subcomp golden', () async {
+      await runPipelineGolden(
+        fixtureName: 'multi_parent_shared_subcomp',
+        goldenDir: _goldenDir,
+        expectFactory: true,
+      );
+    });
+
+    test('subcomp_provision_listener_scope golden', () async {
+      await runPipelineGolden(
+        fixtureName: 'subcomp_provision_listener_scope',
+        goldenDir: _goldenDir,
+        expectFactory: true,
+      );
+    });
+
+    test('subcomp_provider_and_method_entry_points golden', () async {
+      await runPipelineGolden(
+        fixtureName: 'subcomp_provider_and_method_entry_points',
+        goldenDir: _goldenDir,
+        expectFactory: true,
+      );
+    });
+
+    test('subcomponent_factory_value_param_only golden', () async {
+      await runPipelineGolden(
+        fixtureName: 'subcomponent_factory_value_param_only',
+        goldenDir: _goldenDir,
+      );
+    });
+
+    test('subcomponent_factory_mixed_module_and_value golden', () async {
+      await runPipelineGolden(
+        fixtureName: 'subcomponent_factory_mixed_module_and_value',
+        goldenDir: _goldenDir,
+      );
+    });
+
+    test('subcomponent_factory_async_value_param golden', () async {
+      await runPipelineGolden(
+        fixtureName: 'subcomponent_factory_async_value_param',
+        goldenDir: _goldenDir,
+      );
+    });
+
     test('synthesized_factory_component golden', () async {
       await runPipelineGolden(
         fixtureName: 'synthesized_factory_component',
@@ -116,6 +201,49 @@ void main() {
       await runPipelineGolden(
         fixtureName: 'module_override_reversed',
         goldenDir: _goldenDir,
+      );
+    });
+
+    // Umbrella modules (`@Module(includes: [...])`) — see the I/O matrix in
+    // spec-8-4-umbrella-modules-via-module-includes.md.
+    test('umbrella_module_include golden', () async {
+      await runPipelineGolden(
+        fixtureName: 'umbrella_module_include',
+        goldenDir: _goldenDir,
+      );
+    });
+
+    test('umbrella_module_transitive_include golden', () async {
+      await runPipelineGolden(
+        fixtureName: 'umbrella_module_transitive_include',
+        goldenDir: _goldenDir,
+      );
+    });
+
+    test('umbrella_module_diamond_include golden', () async {
+      await runPipelineGolden(
+        fixtureName: 'umbrella_module_diamond_include',
+        goldenDir: _goldenDir,
+      );
+    });
+
+    test('umbrella_module_includes_and_subcomponents golden', () async {
+      await runPipelineGolden(
+        fixtureName: 'umbrella_module_includes_and_subcomponents',
+        goldenDir: _goldenDir,
+        expectFactory: true,
+      );
+    });
+
+    // Subcomponent installation through a module that the component reaches
+    // ONLY via `@Module(includes: [...])` — expansion runs before discovery,
+    // so it must behave exactly as if the installing module were listed
+    // directly on the component.
+    test('subcomp_installed_via_include golden', () async {
+      await runPipelineGolden(
+        fixtureName: 'subcomp_installed_via_include',
+        goldenDir: _goldenDir,
+        expectFactory: true,
       );
     });
 
@@ -265,10 +393,7 @@ void main() {
         reason: 'Graph validation error must suppress .inject.dart output',
       );
 
-      final List<String> severeMessages = logs
-          .where((l) => l.level == Level.SEVERE)
-          .map((l) => l.message)
-          .toList();
+      final List<String> severeMessages = logs.where((l) => l.level == Level.SEVERE).map((l) => l.message).toList();
       expect(
         severeMessages,
         isNotEmpty,
@@ -289,7 +414,8 @@ void main() {
       expect(
         severeMessages.any((m) => m.contains('also tried')),
         isFalse,
-        reason: 'When a qualified non-nullable binding exists, validator should emit '
+        reason:
+            'When a qualified non-nullable binding exists, validator should emit '
             'qualifier-mismatch instead of "(also tried)" generic widening hint',
       );
     });
@@ -325,8 +451,7 @@ void main() {
         reason: 'Nullable-duplicate error must suppress .inject.dart output',
       );
 
-      final List<String> severeMessages =
-          logs.where((l) => l.level == Level.SEVERE).map((l) => l.message).toList();
+      final List<String> severeMessages = logs.where((l) => l.level == Level.SEVERE).map((l) => l.message).toList();
       expect(
         severeMessages,
         isNotEmpty,
@@ -393,8 +518,7 @@ void main() {
       expectMatchesGolden(injectOutput, '$_goldenDir/nullable_duplicate_binding_warn.inject.dart');
 
       // WARNING-level log must contain the duplicate diagnostic.
-      final List<String> warnMessages =
-          logs.where((l) => l.level == Level.WARNING).map((l) => l.message).toList();
+      final List<String> warnMessages = logs.where((l) => l.level == Level.WARNING).map((l) => l.message).toList();
       expect(
         warnMessages,
         isNotEmpty,
@@ -449,8 +573,7 @@ void main() {
       expectMatchesGolden(injectOutput, '$_goldenDir/qualified_unqualified_same_module.inject.dart');
 
       // WARNING-level log must contain the qualified/unqualified diagnostic.
-      final List<String> warnMessages =
-          logs.where((l) => l.level == Level.WARNING).map((l) => l.message).toList();
+      final List<String> warnMessages = logs.where((l) => l.level == Level.WARNING).map((l) => l.message).toList();
       expect(
         warnMessages,
         isNotEmpty,
@@ -511,11 +634,18 @@ void main() {
       // print() output must contain the tree.
       final String allPrinted = printed.join('\n');
 
-      expect(allPrinted, contains('[inject_generator] Dependency graph for CoffeeShop:'),
-          reason: 'Tree header must be present in printed output');
+      expect(
+        allPrinted,
+        contains('[inject_generator] Dependency graph for CoffeeShop:'),
+        reason: 'Tree header must be present in printed output',
+      );
       expect(allPrinted, contains('Heater...'), reason: 'Shared node reference must appear in main tree');
       expect(allPrinted, contains('shared bindings'), reason: 'Shared-block sub-header must appear');
-      expect(allPrinted, contains('injected by: Brewer, Grinder'), reason: 'Receiver annotation must appear in shared block');
+      expect(
+        allPrinted,
+        contains('injected by: Brewer, Grinder'),
+        reason: 'Receiver annotation must appear in shared block',
+      );
       expect(allPrinted, contains('@singleton'), reason: 'Singleton annotation must appear');
       expect(allPrinted, contains('@async'), reason: 'Async annotation must appear');
     });
@@ -547,8 +677,11 @@ void main() {
       );
 
       expect(result.succeeded, isTrue);
-      expect(printed.join('\n'), isNot(contains('Dependency graph for')),
-          reason: 'No tree output when debug_graph is not set');
+      expect(
+        printed.join('\n'),
+        isNot(contains('Dependency graph for')),
+        reason: 'No tree output when debug_graph is not set',
+      );
     });
 
     // Multi-component debug_graph: two @components in one library produce two
@@ -592,10 +725,16 @@ void main() {
       final String allPrinted = printed.join('\n');
 
       // Both component trees must be present, each with its own header.
-      expect(allPrinted, contains('[inject_generator] Dependency graph for CoffeeShop:'),
-          reason: 'CoffeeShop tree header must be printed');
-      expect(allPrinted, contains('[inject_generator] Dependency graph for TeaShop:'),
-          reason: 'TeaShop tree header must be printed');
+      expect(
+        allPrinted,
+        contains('[inject_generator] Dependency graph for CoffeeShop:'),
+        reason: 'CoffeeShop tree header must be printed',
+      );
+      expect(
+        allPrinted,
+        contains('[inject_generator] Dependency graph for TeaShop:'),
+        reason: 'TeaShop tree header must be printed',
+      );
 
       // Each component's body must appear under the correct header. Verify
       // by checking that the entry-point appears AFTER its component's header
@@ -610,28 +749,61 @@ void main() {
       // before the TeaShop header.
       final coffeeBody = allPrinted.substring(coffeeHeaderIdx, teaHeaderIdx);
       expect(coffeeBody, contains('Brewer'), reason: 'CoffeeShop body must contain its entry-point');
-      expect(coffeeBody, contains('Heater (@singleton)'),
-          reason: 'CoffeeShop body must contain its Heater binding with singleton annotation');
-      expect(coffeeBody, isNot(contains('Steeper')),
-          reason: 'CoffeeShop body must NOT leak TeaShop bindings (snapshot isolation)');
-      expect(coffeeBody, isNot(contains('Kettle')),
-          reason: 'CoffeeShop body must NOT leak TeaShop bindings (snapshot isolation)');
+      expect(
+        coffeeBody,
+        contains('Heater (@singleton)'),
+        reason: 'CoffeeShop body must contain its Heater binding with singleton annotation',
+      );
+      expect(
+        coffeeBody,
+        isNot(contains('Steeper')),
+        reason: 'CoffeeShop body must NOT leak TeaShop bindings (snapshot isolation)',
+      );
+      expect(
+        coffeeBody,
+        isNot(contains('Kettle')),
+        reason: 'CoffeeShop body must NOT leak TeaShop bindings (snapshot isolation)',
+      );
 
       // TeaShop's tree contains Steeper and Kettle — and no CoffeeShop deps.
       final teaBody = allPrinted.substring(teaHeaderIdx);
       expect(teaBody, contains('Steeper'), reason: 'TeaShop body must contain its entry-point');
       expect(teaBody, contains('Kettle'), reason: 'TeaShop body must contain its Kettle binding');
-      expect(teaBody, isNot(contains('Brewer')),
-          reason: 'TeaShop body must NOT leak CoffeeShop bindings (snapshot isolation)');
-      expect(teaBody, isNot(contains('Heater')),
-          reason: 'TeaShop body must NOT leak CoffeeShop bindings (snapshot isolation)');
+      expect(
+        teaBody,
+        isNot(contains('Brewer')),
+        reason: 'TeaShop body must NOT leak CoffeeShop bindings (snapshot isolation)',
+      );
+      expect(
+        teaBody,
+        isNot(contains('Heater')),
+        reason: 'TeaShop body must NOT leak CoffeeShop bindings (snapshot isolation)',
+      );
 
       // Trees must be separated by a blank-string print() call (visual gap).
       final coffeePrintIdx = printed.indexWhere((line) => line.contains('Dependency graph for CoffeeShop:'));
       final teaPrintIdx = printed.indexWhere((line) => line.contains('Dependency graph for TeaShop:'));
       final between = printed.sublist(coffeePrintIdx + 1, teaPrintIdx);
-      expect(between, contains(''),
-          reason: 'Blank-line entry must separate the two component trees in the print buffer');
+      expect(
+        between,
+        contains(''),
+        reason: 'Blank-line entry must separate the two component trees in the print buffer',
+      );
+    });
+
+    // Two components in one file bind the same type (Database) through
+    // different binding kinds: RootComponent via an @inject class (zero-arg
+    // provider ctor), FeatureComponent via a module provider (module-arg
+    // provider ctor). Without per-component provider namespacing, both
+    // compute the same provider class name and the file-global dedup in
+    // CodeGenerator silently drops one — the surviving class is then called
+    // with the wrong constructor arity by the other component. The pipeline
+    // golden's analyzer pass (runAnalyzer: true) is the correctness gate.
+    test('components_same_type_different_binding golden', () async {
+      await runPipelineGolden(
+        fixtureName: 'components_same_type_different_binding',
+        goldenDir: _goldenDir,
+      );
     });
 
     // loud failure with "also tried" when neither Foo? nor Foo is bound
@@ -664,10 +836,7 @@ void main() {
         reason: 'Graph validation error must suppress .inject.dart output',
       );
 
-      final List<String> severeMessages = logs
-          .where((l) => l.level == Level.SEVERE)
-          .map((l) => l.message)
-          .toList();
+      final List<String> severeMessages = logs.where((l) => l.level == Level.SEVERE).map((l) => l.message).toList();
       expect(
         severeMessages,
         isNotEmpty,

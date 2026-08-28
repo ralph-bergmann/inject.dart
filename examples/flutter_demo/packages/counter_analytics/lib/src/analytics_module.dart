@@ -39,6 +39,5 @@ class AnalyticsModule {
   /// package.
   @provides
   @singleton
-  AnalyticsService provideAnalyticsService() =>
-      ConsoleAnalyticsService(appName: _appName);
+  AnalyticsService provideAnalyticsService() => ConsoleAnalyticsService(appName: _appName);
 }

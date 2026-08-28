@@ -48,8 +48,7 @@ class CoffeeMaker {
   // time and suppress only this ctor's $Impl.
   @deluxe
   @assistedInject
-  CoffeeMaker.deluxe(this.grinder, LatteFactory? latteFactory, @assisted this.beans)
-      : latteFactory = latteFactory;
+  CoffeeMaker.deluxe(this.grinder, LatteFactory? latteFactory, @assisted this.beans) : latteFactory = latteFactory;
 
   final Grinder grinder;
   final LatteFactory? latteFactory;

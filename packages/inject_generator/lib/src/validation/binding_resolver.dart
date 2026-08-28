@@ -2,7 +2,7 @@ import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
 
 import '../analysis/assisted_reader.dart';
-import '../analysis/component_reader.dart';
+import '../analysis/entry_point_collector.dart';
 import '../analysis/dependency_discovery.dart';
 import '../analysis/inject_reader.dart';
 import '../analysis/module_reader.dart';
@@ -42,9 +42,37 @@ class BindingResolver {
   var _dependencyEdges = <BindingKey, List<BindingKey>>{};
   var _duplicateBindings = <BindingKey, List<BindingSource>>{};
   var _reportedNullableDuplicates = <({String typeIdentity, String? qualifier})>{};
+  ParentBindings? _parentBindings;
+  var _parentBindingsUsed = <BindingKey>{};
+  var _subcomponentProvidedKeyHints = <BindingKey, String>{};
+  String? _subcomponentName;
+
+  /// Child-graph bindings that redeclare a parent-provided key, collected
+  /// (not reported immediately) so that two or more child modules rebinding
+  /// the same key are reported as a single aggregated diagnostic — see
+  /// `_flushParentRebindErrors`, called once at the end of [resolve].
+  var _parentRebinds = <BindingKey, List<BindingSource>>{};
 
   /// Registers all bindings, verifies dependency resolution, and returns
   /// the resulting [BindingGraphResult].
+  ///
+  /// When [parentBindings] is given, the graph is resolved as a subcomponent
+  /// graph: dependency lookups fall back to the parent bindings (child sees
+  /// parent), consumed parent keys are recorded in
+  /// [BindingGraphResult.parentBindingsUsed], and re-declaring a parent key
+  /// inside the child graph is reported as an error.
+  ///
+  /// [subcomponentFactories] registers the synthesized factory of each
+  /// installed subcomponent as a binding of THIS graph (parent side).
+  ///
+  /// [subcomponentProvidedKeyHints] maps keys that are provided privately
+  /// inside an installed subcomponent to that subcomponent's name — used to
+  /// enrich missing-binding diagnostics with a "nearby source" note.
+  ///
+  /// [subcomponentName] names the subcomponent whose child graph is being
+  /// resolved (subcomponent mode only) — missing-binding diagnostics mention
+  /// it so the reader knows which graph the resolution happened in. Leave it
+  /// `null` for component (parent) graphs so their diagnostics are unchanged.
   BindingGraphResult resolve({
     required List<({ClassElement moduleClass, ModuleData moduleData})> modules,
     required List<({ClassElement classElement, InjectableData injectable})> injectables,
@@ -54,6 +82,11 @@ class BindingResolver {
     List<EntryPoint> entryPoints = const [],
     bool allowModuleOverrides = false,
     NullableDuplicatePolicy nullableDuplicatePolicy = NullableDuplicatePolicy.error,
+    ParentBindings? parentBindings,
+    List<({BindingKey key, ClassElement factoryClass})> subcomponentFactories = const [],
+    Map<BindingKey, String> subcomponentProvidedKeyHints = const {},
+    List<({BindingKey key, FormalParameterElement parameter})> subcomponentFactoryValueParameters = const [],
+    String? subcomponentName,
   }) {
     _allowModuleOverrides = allowModuleOverrides;
     _nullableDuplicatePolicy = nullableDuplicatePolicy;
@@ -61,12 +94,20 @@ class BindingResolver {
     _dependencyEdges = {};
     _duplicateBindings = {};
     _reportedNullableDuplicates = {};
+    _parentBindings = parentBindings;
+    _parentBindingsUsed = {};
+    _subcomponentProvidedKeyHints = Map.of(subcomponentProvidedKeyHints);
+    _subcomponentName = subcomponentName;
+    _parentRebinds = {};
 
     // Phase 1: Build the binding map from all known sources.
     _registerModuleProviders(modules);
     _registerInjectables(injectables);
     _registerFactories(factories);
     _registerTypedefProviders(typedefProviders);
+    _registerSubcomponentFactories(subcomponentFactories);
+    _registerValueParameters(subcomponentFactoryValueParameters);
+    _flushParentRebindErrors();
 
     // Phase 2: Check all dependencies and entry points have matching bindings.
     _validateDependencies(modules, injectables, factories, typedefProviders, entryPoints);
@@ -75,7 +116,103 @@ class BindingResolver {
       bindingMap: _bindingMap,
       dependencyEdges: _dependencyEdges,
       duplicateBindings: _duplicateBindings,
+      parentBindingsUsed: _parentBindingsUsed,
     );
+  }
+
+  /// Registers the synthesized `<Name>Factory` binding of each installed
+  /// subcomponent (parent side of the hierarchy).
+  ///
+  /// The factory has no graph dependencies — the generated implementation is
+  /// constructed with the component instance itself.
+  void _registerSubcomponentFactories(List<({BindingKey key, ClassElement factoryClass})> subcomponentFactories) {
+    for (final factory in subcomponentFactories) {
+      final BindingKey key = factory.key;
+      final ({ClassElement element, bool isAsync, bool isSingleton, BindingKey key, String origin}) newSource = (
+        key: key,
+        origin: '${factory.factoryClass.name} (subcomponent factory)',
+        isAsync: false,
+        isSingleton: false,
+        element: factory.factoryClass,
+      );
+
+      if (_bindingMap.containsKey(key)) {
+        _duplicateBindings.putIfAbsent(key, () => [_bindingMap[key]!]).add(newSource);
+      }
+
+      if (_discardIfParentRebind(key, newSource)) continue;
+      if (_discardIfNullabilityDuplicate(key, newSource)) continue;
+
+      _bindingMap[key] = newSource;
+      _dependencyEdges[key] = const [];
+    }
+  }
+
+  /// Registers each `@subcomponentFactory` value parameter as an instance
+  /// binding of the child graph (Dagger's `@BindsInstance` equivalent).
+  ///
+  /// A value parameter has no graph dependencies of its own — the value is
+  /// already materialized when the factory's `create(...)` method is called.
+  void _registerValueParameters(
+    List<({BindingKey key, FormalParameterElement parameter})> subcomponentFactoryValueParameters,
+  ) {
+    for (final valueParameter in subcomponentFactoryValueParameters) {
+      final BindingKey key = valueParameter.key;
+      final ({FormalParameterElement element, bool isAsync, bool isSingleton, BindingKey key, String origin})
+      newSource = (
+        key: key,
+        origin: '${valueParameter.parameter.name} (subcomponentFactory value parameter)',
+        isAsync: false,
+        isSingleton: false,
+        element: valueParameter.parameter,
+      );
+
+      if (_bindingMap.containsKey(key)) {
+        _duplicateBindings.putIfAbsent(key, () => [_bindingMap[key]!]).add(newSource);
+      }
+
+      if (_discardIfParentRebind(key, newSource)) continue;
+      if (_discardIfNullabilityDuplicate(key, newSource)) continue;
+
+      _bindingMap[key] = newSource;
+      _dependencyEdges[key] = const [];
+    }
+  }
+
+  /// Flags a child-graph binding whose key already exists in the parent
+  /// graph (re-bind ban: v1 has no child-overrides-parent semantics), for
+  /// [_flushParentRebindErrors] to report once resolution finishes.
+  ///
+  /// Returns `true` when the binding must be discarded.
+  bool _discardIfParentRebind(BindingKey key, BindingSource newSource) {
+    if (_parentBindings?.lookup(key) == null) {
+      return false;
+    }
+    _parentRebinds.putIfAbsent(key, () => []).add(newSource);
+    return true;
+  }
+
+  /// Reports one aggregated error per parent-rebound key, collected by
+  /// [_discardIfParentRebind] — mirrors `GraphValidator
+  /// ._validateDuplicateInstallations`'s aggregation, so a key rebound from
+  /// two or more child modules (or an injectable and a module provider, etc.)
+  /// is a single diagnostic instead of one per offending declaration.
+  void _flushParentRebindErrors() {
+    for (final MapEntry<BindingKey, List<BindingSource>> entry in _parentRebinds.entries) {
+      final BindingKey key = entry.key;
+      final List<BindingSource> rebinds = entry.value;
+      final BindingSource parentSource = _parentBindings!.lookup(key)!;
+      final String childOrigins = rebinds.map((s) => s.origin).join(', ');
+      _reporter.errorForElement(
+        rebinds.last.element,
+        message:
+            "Binding '${key.debugLabel}' ($childOrigins) is already provided by the parent "
+            'component (${parentSource.origin}).',
+        suggestion:
+            'Remove the subcomponent binding(s) and consume the parent binding, or bind a '
+            'different type or qualifier — subcomponents cannot override parent bindings.',
+      );
+    }
   }
 
   void _registerModuleProviders(List<({ClassElement moduleClass, ModuleData moduleData})> modules) {
@@ -102,6 +239,7 @@ class BindingResolver {
           }
         }
 
+        if (_discardIfParentRebind(key, newSource)) continue;
         if (_discardIfNullabilityDuplicate(key, newSource)) continue;
 
         _bindingMap[key] = newSource;
@@ -143,6 +281,7 @@ class BindingResolver {
         _duplicateBindings.putIfAbsent(key, () => [_bindingMap[key]!]).add(newSource);
       }
 
+      if (_discardIfParentRebind(key, newSource)) continue;
       if (_discardIfNullabilityDuplicate(key, newSource)) continue;
 
       _bindingMap[key] = newSource;
@@ -184,6 +323,7 @@ class BindingResolver {
         _duplicateBindings.putIfAbsent(key, () => [_bindingMap[key]!]).add(newSource);
       }
 
+      if (_discardIfParentRebind(key, newSource)) continue;
       if (_discardIfNullabilityDuplicate(key, newSource)) continue;
 
       _bindingMap[key] = newSource;
@@ -222,6 +362,7 @@ class BindingResolver {
         _duplicateBindings.putIfAbsent(key, () => [_bindingMap[key]!]).add(newSource);
       }
 
+      if (_discardIfParentRebind(key, newSource)) continue;
       if (_discardIfNullabilityDuplicate(key, newSource)) continue;
 
       _bindingMap[key] = newSource;
@@ -392,7 +533,8 @@ class BindingResolver {
             :FormalParameterElement param,
             :String? qualifier,
             passProvider: _,
-          ) in typedefData.injectedParams) {
+          )
+          in typedefData.injectedParams) {
         final BindingKey? depKey = _keyFromType(
           depType,
           qualifier: qualifier,
@@ -429,6 +571,12 @@ class BindingResolver {
         continue;
       }
 
+      // Hierarchical fallback: subcomponent dependencies resolve against the
+      // parent graph (child sees parent, never the other way around).
+      if (_resolveThroughParent(dep.key, eligibleForWidening: eligibleForWidening)) {
+        continue;
+      }
+
       List<BindingSource>? related = _findRelatedBindings(dep.key);
       if (related == null && eligibleForWidening && dep.key.isNullable) {
         // Second pass: a qualified non-nullable binding (`@Q Foo`) is also a
@@ -447,14 +595,22 @@ class BindingResolver {
         final String alsoTried = (dep.key.isNullable && eligibleForWidening)
             ? " (also tried '${dep.key.nonNullable.debugLabel}')"
             : '';
+        final String? subcomponentName = _subcomponentHintFor(dep.key);
+        final String subcomponentNote = subcomponentName != null
+            ? " Note: '${dep.key.debugLabel}' is provided inside subcomponent "
+                  "'$subcomponentName' and is not visible to the parent."
+            : '';
+        final String suggestion = subcomponentName != null
+            ? "Expose the binding as an entry point on '$subcomponentName' and re-export it "
+                  "through a module provider that consumes the subcomponent's factory."
+            : 'Add a @provides method in a module that returns this type, '
+                  'or annotate the class with @inject for constructor injection.';
         _reporter.errorForElement(
           dep.source,
           message:
               'No binding found for type \'${dep.key.debugLabel}\' '
-              'required by ${dep.context}$alsoTried.',
-          suggestion:
-              'Add a @provides method in a module that returns this type, '
-              'or annotate the class with @inject for constructor injection.',
+              'required by ${dep.context}$_inSubcomponentSuffix$alsoTried.$subcomponentNote',
+          suggestion: suggestion,
         );
       }
     }
@@ -468,6 +624,12 @@ class BindingResolver {
 
       // Nullable-widening fallback for entry points.
       if (epKey.isNullable && _bindingMap.containsKey(epKey.nonNullable)) {
+        continue;
+      }
+
+      // Hierarchical fallback: subcomponent entry points may expose parent
+      // bindings, read through the parent reference.
+      if (_resolveThroughParent(epKey, eligibleForWidening: true)) {
         continue;
       }
 
@@ -486,13 +648,12 @@ class BindingResolver {
           diagnosticContext: DiagnosticContext.entryPoint,
         );
       } else {
-        final String alsoTried =
-            epKey.isNullable ? " (also tried '${epKey.nonNullable.debugLabel}')" : '';
+        final String alsoTried = epKey.isNullable ? " (also tried '${epKey.nonNullable.debugLabel}')" : '';
         _reporter.errorForElement(
           element,
           message:
               'No binding found for entry-point type \'${epKey.debugLabel}\' '
-              'exposed by \'${element.name ?? '<unknown>'}\'$alsoTried.',
+              'exposed by \'${element.name ?? '<unknown>'}\'$_inSubcomponentSuffix$alsoTried.',
           suggestion:
               'Add a @provides method in a module that returns this type, '
               'or annotate the class with @inject for constructor injection.',
@@ -500,6 +661,37 @@ class BindingResolver {
       }
     }
   }
+
+  /// Resolves [key] against the parent bindings (subcomponent mode).
+  ///
+  /// Records the effective parent key in `parentBindingsUsed` so the codegen
+  /// knows which parent providers must be promoted to fields. Returns `true`
+  /// when the parent satisfies the key (exact or via nullable widening).
+  bool _resolveThroughParent(BindingKey key, {required bool eligibleForWidening}) {
+    final ParentBindings? parent = _parentBindings;
+    if (parent == null) {
+      return false;
+    }
+    if (parent.lookup(key) != null) {
+      _parentBindingsUsed.add(key);
+      return true;
+    }
+    if (eligibleForWidening && key.isNullable && parent.lookup(key.nonNullable) != null) {
+      _parentBindingsUsed.add(key.nonNullable);
+      return true;
+    }
+    return false;
+  }
+
+  /// Message suffix naming the subcomponent graph being resolved, e.g.
+  /// `" in subcomponent 'HttpSubcomponent'"` — empty for component (parent)
+  /// graphs so their diagnostics stay byte-identical.
+  String get _inSubcomponentSuffix => _subcomponentName != null ? " in subcomponent '$_subcomponentName'" : '';
+
+  /// Returns the name of the subcomponent that privately provides [key],
+  /// or `null` when no installed subcomponent provides it.
+  String? _subcomponentHintFor(BindingKey key) =>
+      _subcomponentProvidedKeyHints[key] ?? (key.isNullable ? _subcomponentProvidedKeyHints[key.nonNullable] : null);
 
   /// Searches the binding map for entries whose [BindingKey.typeIdentity]
   /// matches [missingKey], but whose qualifier differs.

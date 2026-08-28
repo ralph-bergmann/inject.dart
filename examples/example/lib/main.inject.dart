@@ -20,9 +20,15 @@ class MainComponent$Component implements _i1.MainComponent {
       MainComponent$Component._(appModule ?? _i1.AppModule());
 
   MainComponent$Component._(_i1.AppModule appModule) {
-    final database$Provider = _Database$Provider(appModule);
+    final backupSubcomponentFactory$Provider =
+        _BackupSubcomponentFactory$Provider(this);
+    _backupService$Provider = _BackupService$Provider(
+      backupSubcomponentFactory$Provider,
+      appModule,
+    );
+    _database$Provider = _Database$Provider(appModule);
     final counterRepository$Provider = _CounterRepository$Provider(
-      database$Provider,
+      _database$Provider,
     );
     final counterViewModel$Provider = _CounterViewModel$Provider(
       counterRepository$Provider,
@@ -35,10 +41,134 @@ class MainComponent$Component implements _i1.MainComponent {
     _myAppFactory$Provider = _MyAppFactory$Provider(homePageFactory$Provider);
   }
 
+  late final _BackupService$Provider _backupService$Provider;
+
+  late final _Database$Provider _database$Provider;
+
   late final _MyAppFactory$Provider _myAppFactory$Provider;
 
   @override
+  _i1.BackupService get backupService => _backupService$Provider.get();
+
+  @override
   _i1.MyAppFactory get myAppFactory => _myAppFactory$Provider.get();
+}
+
+class BackupSubcomponent$Subcomponent implements _i1.BackupSubcomponent {
+  factory BackupSubcomponent$Subcomponent.create(
+    MainComponent$Component parent, {
+    _i1.BackupModule? backupModule,
+  }) => BackupSubcomponent$Subcomponent._(
+    parent,
+    backupModule ?? _i1.BackupModule(),
+  );
+
+  BackupSubcomponent$Subcomponent._(
+    this._parent,
+    _i1.BackupModule backupModule,
+  ) {
+    final backupSubcomponent$backupClient$Provider =
+        _BackupSubcomponent$BackupClient$Provider(
+          _parent._database$Provider,
+          backupModule,
+        );
+    _backupSubcomponent$backupServiceInternalBackup$Provider =
+        _BackupSubcomponent$BackupServiceInternalBackup$Provider(
+          backupSubcomponent$backupClient$Provider,
+          backupModule,
+        );
+  }
+
+  final MainComponent$Component _parent;
+
+  late final _BackupSubcomponent$BackupServiceInternalBackup$Provider
+  _backupSubcomponent$backupServiceInternalBackup$Provider;
+
+  @override
+  _i1.BackupService get backupService =>
+      _backupSubcomponent$backupServiceInternalBackup$Provider.get();
+}
+
+class _BackupSubcomponentFactory$Factory
+    implements _i1.BackupSubcomponentFactory {
+  const _BackupSubcomponentFactory$Factory(this._parent);
+
+  final MainComponent$Component _parent;
+
+  @override
+  _i1.BackupSubcomponent create({_i1.BackupModule? backupModule}) =>
+      BackupSubcomponent$Subcomponent.create(
+        _parent,
+        backupModule: backupModule,
+      );
+}
+
+class _BackupService$Provider implements _i2.Provider<_i1.BackupService> {
+  _BackupService$Provider(
+    this._backupSubcomponentFactory$Provider,
+    this._module,
+  );
+
+  final _BackupSubcomponentFactory$Provider _backupSubcomponentFactory$Provider;
+
+  final _i1.AppModule _module;
+
+  late final _i1.BackupService _singleton = _create();
+
+  _i1.BackupService _create() =>
+      _module.provideBackupService(_backupSubcomponentFactory$Provider.get());
+
+  @override
+  _i1.BackupService get() => _singleton;
+}
+
+class _BackupSubcomponent$BackupClient$Provider
+    implements _i2.Provider<_i1.BackupClient> {
+  _BackupSubcomponent$BackupClient$Provider(
+    this._database$Provider,
+    this._module,
+  );
+
+  final _Database$Provider _database$Provider;
+
+  final _i1.BackupModule _module;
+
+  late final _i1.BackupClient _singleton = _create();
+
+  _i1.BackupClient _create() => _module.provideClient(_database$Provider.get());
+
+  @override
+  _i1.BackupClient get() => _singleton;
+}
+
+class _BackupSubcomponent$BackupServiceInternalBackup$Provider
+    implements _i2.Provider<_i1.BackupService> {
+  const _BackupSubcomponent$BackupServiceInternalBackup$Provider(
+    this._backupSubcomponent$backupClient$Provider,
+    this._module,
+  );
+
+  final _BackupSubcomponent$BackupClient$Provider
+  _backupSubcomponent$backupClient$Provider;
+
+  final _i1.BackupModule _module;
+
+  @override
+  _i1.BackupService get() =>
+      _module.provideService(_backupSubcomponent$backupClient$Provider.get());
+}
+
+class _BackupSubcomponentFactory$Provider
+    implements _i2.Provider<_i1.BackupSubcomponentFactory> {
+  _BackupSubcomponentFactory$Provider(this._parent);
+
+  final MainComponent$Component _parent;
+
+  late final _i1.BackupSubcomponentFactory _factory =
+      _BackupSubcomponentFactory$Factory(_parent);
+
+  @override
+  _i1.BackupSubcomponentFactory get() => _factory;
 }
 
 class _CounterRepository$Provider
