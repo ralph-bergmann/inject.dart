@@ -1,4 +1,3 @@
-/// Provides instances of [T].
 /// A lazy provider for a dependency of type [T].
 ///
 /// Inject [Provider] instead of `T` to defer construction to call time or to

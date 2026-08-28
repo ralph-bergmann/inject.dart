@@ -1,9 +1,8 @@
 name: inject_annotation
 description: >-
   Constructor-based dependency injection for Dart and Flutter, inspired by
-  Dagger. Declare your object graph with annotations; inject_generator wires it
-  at build time.
-version: 1.2.0
+  Dagger.
+version: 1.2.1
 documentation: https://ralph-bergmann.github.io/inject.dart/
 repository: https://github.com/ralph-bergmann/inject.dart
 issue_tracker: https://github.com/ralph-bergmann/inject.dart/issues

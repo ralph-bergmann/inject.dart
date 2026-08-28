@@ -27,7 +27,9 @@ extension ElementExt on Element {
   /// Resolves the import URI for the library declaring [Element].
   ///
   /// When [sourceUri] is provided and the element is in the same package,
-  /// returns a relative path (Dart convention `prefer_relative_imports`).
+  /// returns a relative path (Dart convention `prefer_relative_imports`) —
+  /// unless the source lives outside lib/ (test/, example/, …) while the
+  /// target lives inside lib/, in which case the package URI is kept.
   /// When [sourceUri] is `null`, returns the absolute package URI.
   /// The original library URI is preserved as-is (including `/src/` paths);
   /// the generated output uses `// ignore_for_file: implementation_imports`.
@@ -45,20 +47,14 @@ extension ElementExt on Element {
     final ({String packageName, String path, String scheme})? sourceLocation = sourceUri.packageLocation();
     final ({String packageName, String path, String scheme})? targetLocation = uri.packageLocation();
     if (sourceLocation != null && targetLocation != null && sourceLocation.packageName == targetLocation.packageName) {
-      if (sourceLocation.scheme == 'asset' &&
-          sourceLocation.path.startsWith('test/') &&
-          targetLocation.scheme == 'package') {
+      if (sourceLocation.scheme == 'asset' && targetLocation.scheme == 'package') {
+        // The output lives outside lib/ (test/, example/, tool/, …) while the
+        // target lives inside lib/. Their paths are rooted differently
+        // (package root vs. lib/), so no correct relative path can be
+        // computed — keep the package URI.
         return uri;
       }
 
-      // final sourcePath = switch (sourceLocation.scheme) {
-      //   'package' => 'lib/${sourceLocation.path}',
-      //   _ => sourceLocation.path,
-      // };
-      // final targetPath = switch (targetLocation.scheme) {
-      //   'package' => 'lib/${targetLocation.path}',
-      //   _ => targetLocation.path,
-      // };
       return p.posix.relative(targetLocation.path, from: p.posix.dirname(sourceLocation.path));
     }
 

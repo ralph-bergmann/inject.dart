@@ -1,3 +1,9 @@
+## 1.2.1
+
+- Fix generated imports for outputs outside `lib/`: when a component lives in `example/`, `tool/`,
+  etc. and references a type from the same package's `lib/`, the generator now emits a `package:`
+  import instead of a broken relative path (`../src/…`). Previously only `test/` was special-cased.
+
 ## 1.2.0
 
 - Add support for `@subcomponent` and `@Module(subcomponents: ...)` — encapsulated dependency

@@ -1,3 +1,7 @@
+## 1.2.1
+
+- add missing documentation
+
 ## 1.2.0
 
 - Add `@subcomponent` and `@Module(subcomponents: ...)` for encapsulated dependency subgraphs.

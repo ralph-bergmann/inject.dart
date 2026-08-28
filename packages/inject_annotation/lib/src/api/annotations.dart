@@ -37,6 +37,7 @@ import 'provision_listener.dart';
 /// `CoffeeShop$Component.create` — not strictly necessary, but useful to
 /// keep generated names out of call sites.
 class Component {
+  /// Creates a component blueprint that installs the given [modules].
   const factory Component([List<Type> modules]) = Component._;
 
   const Component._([this.modules = const <Type>[]]);
@@ -96,6 +97,7 @@ const subcomponent = Subcomponent();
 /// requires the child to bind it under a different key (typically with a
 /// [Qualifier]), with the parent provider binding the plain type.
 class Subcomponent {
+  /// Creates a subcomponent blueprint that installs the given [modules].
   const factory Subcomponent([List<Type> modules]) = Subcomponent._;
 
   const Subcomponent._([this.modules = const <Type>[]]);
@@ -175,6 +177,8 @@ class SubcomponentFactory {
 const module = Module._();
 
 class Module {
+  /// Creates a module annotation that optionally installs [subcomponents]
+  /// and folds in the providers of the modules listed in [includes].
   const factory Module({List<Type> subcomponents, List<Type> includes}) = Module._;
 
   const Module._({this.subcomponents = const <Type>[], this.includes = const <Type>[]});
@@ -233,6 +237,8 @@ class Module {
 /// [Qualifier] annotation.
 const inject = Inject._();
 
+/// The annotation class behind [inject], which marks classes, constructors,
+/// and component members for injection — see [inject] for details.
 class Inject {
   const Inject._();
 }
@@ -241,6 +247,9 @@ class Inject {
 /// assisted injection.
 const assistedInject = AssistedInject._();
 
+/// The annotation class behind [assistedInject], which marks a class or
+/// constructor for assisted injection — see [assistedInject] for usage and
+/// an example.
 class AssistedInject {
   const AssistedInject._();
 }
@@ -252,9 +261,12 @@ class AssistedInject {
 /// while the user must pass others at build time (also known as assisted).
 ///
 /// A factory is usually responsible for combining all the parameters
-/// and creating the object.
+/// and creating the object. See [assistedInject] for a complete example.
 const assisted = Assisted._();
 
+/// The annotation class behind [assisted], which marks the caller-supplied
+/// parameters of an [AssistedInject] constructor — see [assisted] and
+/// [assistedInject] for details.
 class Assisted {
   const Assisted._();
 }
@@ -267,6 +279,9 @@ class Assisted {
 ///   of the [AssistedInject] constructor.
 const assistedFactory = AssistedFactory._();
 
+/// The annotation class behind [assistedFactory], which marks a factory for
+/// [AssistedInject]-annotated types — see [assistedFactory] for usage and an
+/// example.
 class AssistedFactory {
   const AssistedFactory._();
 }
@@ -280,6 +295,8 @@ class AssistedFactory {
 /// [Qualifier] annotation.
 const provides = Provides._();
 
+/// The annotation class behind [provides], which marks a module method as a
+/// provider — see [provides] for details.
 class Provides {
   const Provides._();
 }
@@ -336,6 +353,8 @@ class Qualifier {
 /// ```
 const singleton = Singleton._();
 
+/// The annotation class behind [singleton], which gives a binding singleton
+/// lifetime — see [singleton] for details.
 class Singleton {
   const Singleton._();
 }
@@ -385,6 +404,9 @@ class Singleton {
 /// ```
 const asynchronous = Asynchronous._();
 
+/// The annotation class behind [asynchronous], which marks a
+/// `Future`-returning provider for resolution before injection — see
+/// [asynchronous] for details.
 class Asynchronous {
   const Asynchronous._();
 }
@@ -408,6 +430,8 @@ class Asynchronous {
 /// ```
 const provisionListener = ProvisionListenerAnnotation._();
 
+/// The annotation class behind [provisionListener], which marks a provided
+/// value as a [ProvisionListener] — see [provisionListener] for details.
 class ProvisionListenerAnnotation {
   const ProvisionListenerAnnotation._();
 }

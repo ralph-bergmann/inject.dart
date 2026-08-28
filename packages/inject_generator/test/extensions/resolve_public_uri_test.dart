@@ -147,6 +147,43 @@ void main() {
 
         expect(uri, 'src/api/provider.dart');
       });
+
+      test('keeps package URI when source lives outside lib/ (example)', () async {
+        final library = await _resolve('''
+          import 'package:inject_annotation/inject_annotation.dart';
+          class Foo { late Provider p; }
+        ''');
+        final foo = library.getClass('Foo');
+        final providerType = foo.fields.first.type;
+        final providerElement = (providerType as dynamic).element;
+
+        // The generated output lives in example/ (an asset: URI outside
+        // lib/), the target inside lib/ — a relative path cannot bridge the
+        // two roots, so the package URI is kept.
+        var uri = '';
+        if (providerElement case final Element e) {
+          uri = e.resolvePublicUri(sourceUri: 'asset:inject_annotation/example/main.inject.dart');
+        }
+
+        expect(uri, 'package:inject_annotation/src/api/provider.dart');
+      });
+
+      test('keeps package URI when source lives outside lib/ (test)', () async {
+        final library = await _resolve('''
+          import 'package:inject_annotation/inject_annotation.dart';
+          class Foo { late Provider p; }
+        ''');
+        final foo = library.getClass('Foo');
+        final providerType = foo.fields.first.type;
+        final providerElement = (providerType as dynamic).element;
+
+        var uri = '';
+        if (providerElement case final Element e) {
+          uri = e.resolvePublicUri(sourceUri: 'asset:inject_annotation/test/my_component_test.dart');
+        }
+
+        expect(uri, 'package:inject_annotation/src/api/provider.dart');
+      });
     });
 
     group('edge cases', () {
