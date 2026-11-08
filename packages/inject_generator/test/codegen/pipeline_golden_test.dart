@@ -932,6 +932,61 @@ void main() {
       );
     });
 
+    test('nullable_entry_point_widened golden', () async {
+      await runPipelineGolden(
+        fixtureName: 'nullable_entry_point_widened',
+        goldenDir: _goldenDir,
+        expectFactory: true,
+      );
+    });
+
+    test('nullable_entry_point_sync_over_async error path', () async {
+      final String source = File('$_goldenDir/nullable_entry_point_sync_over_async.dart').readAsStringSync();
+
+      final (:result, :logs) = await _runPipelineWithLogs(source, 'nullable_entry_point_sync_over_async');
+
+      expect(
+        result.outputs.where((id) => id.path.endsWith('.inject.dart')),
+        isEmpty,
+        reason: 'Graph validation error must suppress .inject.dart output',
+      );
+
+      final int line = source.split('\n').indexWhere((l) => l.contains('Db? get db;')) + 1;
+      expect(
+        logs.singleWhere((l) => l.level == Level.SEVERE).message,
+        allOf(
+          contains('nullable_entry_point_sync_over_async.dart:$line:'),
+          contains("Component getter 'db' is declared synchronous"),
+          contains("The provider 'AppModule.provideDb' is asynchronous."),
+          contains("from 'Db?' to 'Future<Db?>'"),
+        ),
+        reason: 'A sync Db? getter over an async Db must report the sync-getter error at the getter',
+      );
+    });
+
+    test('nullable_dep_cycle error path', () async {
+      final String source = File('$_goldenDir/nullable_dep_cycle.dart').readAsStringSync();
+
+      final (:result, :logs) = await _runPipelineWithLogs(source, 'nullable_dep_cycle');
+
+      expect(
+        result.outputs.where((id) => id.path.endsWith('.inject.dart')),
+        isEmpty,
+        reason: 'Graph validation error must suppress .inject.dart output',
+      );
+
+      final int line = source.split('\n').indexWhere((l) => l.contains('Foo provideFoo(')) + 1;
+      expect(
+        logs.singleWhere((l) => l.level == Level.SEVERE).message,
+        allOf(
+          contains('nullable_dep_cycle.dart:$line:'),
+          contains('Circular dependency detected: Foo → Bar → Foo'),
+          isNot(contains('<dependency-graph>')),
+        ),
+        reason: "A cycle through Foo? must be reported once, at the user's Foo binding",
+      );
+    });
+
     test('subcomp_value_param_inject_class golden', () async {
       await runPipelineGolden(
         fixtureName: 'subcomp_value_param_inject_class',

@@ -55,7 +55,10 @@ class CycleValidator {
 
     final List<BindingKey>? deps = dependencyEdges[node];
     if (deps != null) {
-      for (final BindingKey dep in deps) {
+      for (final BindingKey edge in deps) {
+        // A `Foo?` that only `Foo` satisfies has no edges of its own, so a cycle
+        // through it is visible only when the walk continues at `Foo`.
+        final BindingKey dep = edge.isNullable && !bindingMap.containsKey(edge) ? edge.nonNullable : edge;
         if (inStack.contains(dep)) {
           _reportCycle(dep, path, bindingMap);
         } else if (!visited.contains(dep)) {

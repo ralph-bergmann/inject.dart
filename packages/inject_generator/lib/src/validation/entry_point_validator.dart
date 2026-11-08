@@ -3,6 +3,7 @@ import 'package:analyzer/dart/element/element.dart';
 import '../analysis/entry_point_collector.dart';
 import '../logging/diagnostic_reporter.dart';
 import 'async_propagation_result.dart';
+import 'binding_key.dart';
 
 /// Validates that component entry-point getters are declared as `Future<T>`
 /// (or `Provider<T>`) when their binding chain is async.
@@ -21,19 +22,20 @@ class EntryPointValidator {
     // N getters depending on the same async root → one aggregated error.
     final Map<String, _AsyncGroup> byRoot = {};
     for (final EntryPoint ep in entryPoints) {
-      if (asyncResult.asyncBindings[ep.key] != true) continue;
+      final BindingKey key = asyncResult.entryPointKey(ep.key);
+      if (asyncResult.asyncBindings[key] != true) continue;
       if (ep.isFuture || ep.isProvider) continue;
 
-      final String? asyncRoot = asyncResult.findAsyncRoot(ep.key);
+      final String? asyncRoot = asyncResult.findAsyncRoot(key);
       assert(
         asyncRoot != null,
-        'asyncBindings[${ep.key}] is true but findAsyncRoot returned null',
+        'asyncBindings[$key] is true but findAsyncRoot returned null',
       );
       // Namespace the no-root fallback so it cannot collide with a real
       // asyncRoot string that happens to equal another entry's debugLabel.
-      final String groupKey = asyncRoot ?? '__noroot__:${ep.key.debugLabel}';
+      final String groupKey = asyncRoot ?? '__noroot__:${key.debugLabel}';
       final _AsyncGroup group = byRoot.putIfAbsent(groupKey, () => _AsyncGroup(asyncRoot: asyncRoot));
-      group.add(ep, isDirect: asyncResult.isDirectlyAsync(ep.key));
+      group.add(ep, isDirect: asyncResult.isDirectlyAsync(key));
     }
 
     for (final _AsyncGroup group in byRoot.values) {

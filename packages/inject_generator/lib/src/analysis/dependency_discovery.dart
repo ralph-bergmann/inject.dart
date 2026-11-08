@@ -84,7 +84,7 @@ void discoverInjectables({
     final DartType resolvedType = returnType.unwrapProviderAndFuture().resolvedType;
 
     final BindingKey? resolvedKey = BindingKey.fromDartType(resolvedType, qualifier: ep.key.qualifier);
-    if (resolvedKey != null && moduleProvidedKeys.contains(resolvedKey)) {
+    if (resolvedKey != null && _isBound(resolvedKey, moduleProvidedKeys)) {
       continue;
     }
 

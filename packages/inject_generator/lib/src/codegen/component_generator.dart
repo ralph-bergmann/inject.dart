@@ -1120,9 +1120,12 @@ class ComponentGenerator {
   }
 
   void _matchEntryPoints(List<_Binding> bindings, List<EntryPoint> entryPoints) {
+    final Set<BindingKey> bindingKeys = {for (final b in bindings) b.key};
     for (final ep in entryPoints) {
+      // `Foo?` is satisfied by a `Foo` binding, the resolver's nullable widening.
+      final BindingKey key = ep.key.isNullable && !bindingKeys.contains(ep.key) ? ep.key.nonNullable : ep.key;
       for (final binding in bindings) {
-        if (binding.key == ep.key) {
+        if (binding.key == key) {
           binding.entryPoints.add(ep);
           break;
         }

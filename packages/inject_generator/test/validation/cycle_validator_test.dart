@@ -5,6 +5,7 @@ import 'package:inject_generator/src/analysis/annotation_reader.dart';
 import 'package:inject_generator/src/analysis/entry_point_collector.dart';
 import 'package:inject_generator/src/analysis/inject_reader.dart';
 import 'package:inject_generator/src/analysis/module_reader.dart';
+import 'package:inject_generator/src/builder/inject_builder_options.dart';
 import 'package:inject_generator/src/logging/diagnostic_reporter.dart';
 import 'package:inject_generator/src/validation/binding_resolver.dart';
 import 'package:inject_generator/src/validation/cycle_validator.dart';
@@ -454,6 +455,45 @@ void main() {
         );
         // Exactly one cycle, not duplicated
         expect(cycleErrors.length, equals(1));
+      });
+
+      test('does not report a cycle when Foo? has its own binding', () async {
+        final LibraryElement library = await _resolveLibrary('''
+          import 'package:inject_annotation/inject_annotation.dart';
+
+          class Foo {}
+
+          class Bar {}
+
+          @module
+          class AppModule {
+            @provides
+            Foo provideFoo(Bar bar) => Foo();
+
+            @provides
+            Bar provideBar(Foo? foo) => Bar();
+
+            @provides
+            Foo? provideOptionalFoo() => null;
+          }
+        ''');
+
+        final reader = AnnotationReader(reporter: reporter);
+        final ClassElement moduleClass = library.getClass('AppModule')!;
+        final ModuleData moduleData = reader.readModule(moduleClass);
+
+        final result = BindingResolver(reporter: reporter).resolve(
+          modules: [(moduleClass: moduleClass, moduleData: moduleData)],
+          injectables: [],
+          entryPoints: [],
+          nullableDuplicatePolicy: NullableDuplicatePolicy.allow,
+        );
+        CycleValidator(reporter: reporter).validate(
+          bindingMap: result.bindingMap,
+          dependencyEdges: result.dependencyEdges,
+        );
+
+        expect(reporter.hasErrors, isFalse);
       });
     });
   });

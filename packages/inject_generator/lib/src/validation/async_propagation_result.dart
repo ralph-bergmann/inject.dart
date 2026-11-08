@@ -22,6 +22,12 @@ class AsyncPropagationResult {
   final Map<BindingKey, BindingSource> _bindingMap;
   final Map<BindingKey, List<BindingKey>> _dependencyEdges;
 
+  /// The key that holds the async status of an entry point declared as [key].
+  ///
+  /// `Foo?` reads `Foo` when no exact `Foo?` binding exists, the resolver's
+  /// nullable widening.
+  BindingKey entryPointKey(BindingKey key) => key.isNullable && !_bindingMap.containsKey(key) ? key.nonNullable : key;
+
   /// Whether [key] is directly async (i.e. the binding itself is annotated
   /// `@asynchronous` or returns a `Future<T>`), as opposed to being only
   /// transitively async through a dependency.

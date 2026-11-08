@@ -2,6 +2,7 @@ import 'package:analyzer/dart/element/element.dart';
 import 'package:build/build.dart';
 import 'package:build_test/build_test.dart';
 import 'package:inject_generator/src/analysis/annotation_reader.dart';
+import 'package:inject_generator/src/builder/inject_builder_options.dart';
 import 'package:inject_generator/src/logging/diagnostic_reporter.dart';
 import 'package:inject_generator/src/validation/async_propagator.dart';
 import 'package:inject_generator/src/validation/binding_graph_result.dart';
@@ -671,6 +672,62 @@ void main() {
         equals("Change the getter return type from 'Repository' to 'Future<Repository>'."),
         reason: 'Qualifier suffix must not leak into user-facing suggestion',
       );
+    });
+
+    group('a Foo? getter over an exact Foo? binding', () {
+      Future<void> validateProviders(String providers) async {
+        final library = await _resolveLibrary('''
+          import 'package:inject_annotation/inject_annotation.dart';
+
+          class Foo {}
+
+          @module
+          class AppModule {
+            $providers
+          }
+
+          @Component([AppModule])
+          abstract class AppComponent {
+            Foo? get foo;
+          }
+        ''');
+
+        final reader = AnnotationReader(reporter: reporter);
+        final moduleClass = library.getClass('AppModule')!;
+        final moduleData = reader.readModule(moduleClass);
+        final componentData = reader.readComponent(library.getClass('AppComponent')!)!;
+
+        final graphResult = resolver.resolve(
+          modules: [(moduleClass: moduleClass, moduleData: moduleData)],
+          injectables: [],
+          entryPoints: componentData.entryPoints,
+          nullableDuplicatePolicy: NullableDuplicatePolicy.allow,
+        );
+        validator.validate(propagator.propagate(graphResult), componentData.entryPoints);
+      }
+
+      test('reports the sync-getter error when the Foo? binding is async', () async {
+        await validateProviders('''
+          @provides
+          @asynchronous
+          Future<Foo?> provideOptionalFoo() async => null;
+        ''');
+
+        expect(reporter.messages.single.message, contains("Component getter 'foo' is declared synchronous"));
+      });
+
+      test('reports nothing when the Foo? binding is sync, even beside an async Foo', () async {
+        await validateProviders('''
+          @provides
+          Foo? provideOptionalFoo() => null;
+
+          @provides
+          @asynchronous
+          Future<Foo> provideFoo() async => Foo();
+        ''');
+
+        expect(reporter.hasErrors, isFalse);
+      });
     });
 
     // Story 8.1 (subcomponents): the same sync-entry-point-on-async-chain
