@@ -8,6 +8,7 @@
 
 // ignore_for_file: type=lint, type=warning
 // ignore_for_file: no_leading_underscores_for_library_prefixes
+
 import 'package:inject_annotation/inject_annotation.dart' as _i2;
 
 import 'umbrella_module_transitive_include.dart' as _i1;
