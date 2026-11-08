@@ -26,5 +26,5 @@ abstract class RepoPageFactory {
 }
 
 abstract class SessionSubcomponentFactory {
-  SessionSubcomponent create();
+  SessionSubcomponent create({SessionModule? sessionModule});
 }

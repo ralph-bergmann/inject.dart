@@ -1086,7 +1086,7 @@ void main() {
       );
 
       final List<String> severeMessages = logs.where((l) => l.level == Level.SEVERE).map((l) => l.message).toList();
-      expect(severeMessages, hasLength(11), reason: 'Each parameter reports its own error');
+      expect(severeMessages, hasLength(12), reason: 'Each parameter reports its own error');
 
       String direct(String provider) => "The provider '$provider' is asynchronous.";
       String chain(String provider) =>
@@ -1111,6 +1111,14 @@ void main() {
           'L(Provider<M> m);',
           'm',
           "L in subcomponent 'SessionSubcomponent'",
+          direct('AppModule.provideM'),
+          'Provider<M>',
+          'M',
+        ),
+        (
+          'S provideS(Provider<M> m)',
+          'm',
+          "SessionModule.provideS in subcomponent 'SessionSubcomponent'",
           direct('AppModule.provideM'),
           'Provider<M>',
           'M',

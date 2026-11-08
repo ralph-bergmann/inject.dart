@@ -620,6 +620,101 @@ void main() {
         expect(injectables.map((i) => i.classElement.name), ['Dashboard']);
       });
     });
+
+    group('a Provider<Clock> dependency with Clock already bound', () {
+      late List<({ClassElement classElement, InjectableData injectable})> injectables;
+      late LibraryElement library;
+
+      List<({ClassElement moduleClass, ModuleData moduleData})> modulesOf(String name) {
+        final ClassElement moduleClass = library.getClass(name)!;
+        return [(moduleClass: moduleClass, moduleData: reader.readModule(moduleClass))];
+      }
+
+      setUp(() async {
+        injectables = [];
+        library = await _resolveLibrary(r'''
+          import 'package:inject_annotation/inject_annotation.dart';
+
+          class Clock {
+            @inject
+            const Clock();
+          }
+
+          class Page {
+            @assistedInject
+            const Page(this.clock, @assisted this.id);
+            final Provider<Clock> clock;
+            final int id;
+          }
+
+          @assistedFactory
+          abstract class PageFactory {
+            Page create(int id);
+          }
+
+          @module
+          class ClockModule {
+            @provides
+            Clock provideClock() => const Clock();
+          }
+
+          @module
+          class ReaderModule {
+            @provides
+            String provideLabel(Provider<Clock> clock) => '$clock';
+          }
+
+          @Component([ClockModule, ReaderModule])
+          abstract class LabelComponent {
+            String get label;
+          }
+
+          @Component([ClockModule])
+          abstract class PageComponent {
+            PageFactory get pageFactory;
+          }
+        ''');
+      });
+
+      test('a module provider parameter does not discover Clock', () {
+        discoverInjectables(
+          reader: reader,
+          componentData: reader.readComponent(library.getClass('LabelComponent')!)!,
+          modules: [...modulesOf('ClockModule'), ...modulesOf('ReaderModule')],
+          injectables: injectables,
+        );
+
+        expect(injectables, isEmpty);
+      });
+
+      test('an assisted target parameter does not discover Clock', () {
+        final factories =
+            <({ClassElement factoryElement, AssistedInjectData injectData, AssistedFactoryData factoryData})>[];
+
+        discoverAssistedFactories(
+          reader: reader,
+          componentData: reader.readComponent(library.getClass('PageComponent')!)!,
+          modules: modulesOf('ClockModule'),
+          injectables: injectables,
+          factories: factories,
+        );
+
+        expect(factories.single.factoryElement.name, 'PageFactory');
+        expect(injectables, isEmpty);
+      });
+
+      test('a parent key does not discover Clock', () {
+        discoverInjectables(
+          reader: reader,
+          componentData: reader.readComponent(library.getClass('LabelComponent')!)!,
+          modules: modulesOf('ReaderModule'),
+          injectables: injectables,
+          parentProvidedKeys: {BindingKey.fromDartType(library.getClass('Clock')!.thisType)!},
+        );
+
+        expect(injectables, isEmpty);
+      });
+    });
   });
 
   group('discoverTypedefProviders', () {

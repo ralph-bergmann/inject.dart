@@ -109,9 +109,20 @@ class BoxPage {
   BoxPage(BoxFactory f, @assisted String t);
 }
 
-@Subcomponent()
+// A subcomponent's module provider method over the parent's async binding.
+class S {}
+
+@module
+class SessionModule {
+  @provides
+  S provideS(Provider<M> m) => S();
+}
+
+@Subcomponent([SessionModule])
 abstract class SessionSubcomponent {
   Future<L> get l;
+
+  S get s;
 }
 
 @Module(subcomponents: [SessionSubcomponent])
