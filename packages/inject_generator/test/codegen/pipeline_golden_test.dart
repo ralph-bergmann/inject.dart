@@ -1249,6 +1249,39 @@ void main() {
       );
     });
 
+    test('typedef_foreign_provider_bound golden', () async {
+      await runPipelineGolden(
+        fixtureName: 'typedef_foreign_provider_bound',
+        goldenDir: _goldenDir,
+        expectFactory: true,
+      );
+    });
+
+    test('typedef_foreign_provider_unbound error path', () async {
+      final String source = File('$_goldenDir/typedef_foreign_provider_unbound.dart').readAsStringSync();
+
+      final (:result, :logs) = await _runPipelineWithLogs(source, 'typedef_foreign_provider_unbound');
+
+      expect(
+        result.outputs.where((id) => id.path.endsWith('.inject.dart')),
+        isEmpty,
+        reason: 'Graph validation error must suppress .inject.dart output',
+      );
+
+      final List<String> severeMessages = logs.where((l) => l.level == Level.SEVERE).map((l) => l.message).toList();
+      expect(severeMessages, hasLength(1));
+
+      final int line = source.split('\n').indexWhere((l) => l.contains('Item(String name, Provider<I> i);')) + 1;
+      expect(
+        severeMessages.single,
+        allOf(
+          contains('typedef_foreign_provider_unbound.dart:$line:'),
+          contains("No binding found for type 'Provider<I>'"),
+          isNot(contains('dependency chain is asynchronous')),
+        ),
+      );
+    });
+
     test('nullable_child_shadows_parent golden', () async {
       await runPipelineGolden(
         fixtureName: 'nullable_child_shadows_parent',

@@ -673,6 +673,15 @@ abstract class AppComponent {
   over a **raw** `Future<T>` binding does **not** resolve (the generator unwraps
   it and looks for a bare `T`) — for a raw `Future<T>` binding, keep
   `Provider<Future<T>>` to constructor parameters.
+- As a **constructor parameter**, `Provider<T>` needs a synchronous dependency
+  chain. Over an `@asynchronous` chain, direct or transitive, it is a build
+  error at the parameter, because `.get()` must return `T` synchronously.
+  `Provider<Future<T>>` does not help: at a parameter it needs a raw
+  `Future<T>` binding. At an `@inject` constructor, declare the parameter as
+  `T`; the class then becomes async too.
+- An injected parameter of an `@assistedInject` constructor or a `@provides`
+  method cannot use `Provider<T>`: there it is a plain type that needs its own
+  binding, and without one the build fails.
 - Use `Provider<T>` for lazy/optional dependencies and object pools; for a plain
   eager dependency, inject `T` directly.
 

@@ -582,16 +582,8 @@ void discoverTypedefProviders({
         // Resolve type parameters in the constructor param type
         final DartType paramType = _substituteTypeArgs(ctorParam.type, typeParams, typeArgs);
 
-        // Check if param type is Provider<X> — pass provider directly
-        var passProvider = false;
-        var depType = paramType;
-        if (paramType is InterfaceType && paramType.element.name == 'Provider') {
-          final List<DartType> providerTypeArgs = paramType.typeArguments;
-          if (providerTypeArgs.length == 1) {
-            depType = providerTypeArgs.first;
-            passProvider = true;
-          }
-        }
+        // A class that is only named `Provider` is a plain type with its own binding.
+        final (type: DartType depType, isProvider: bool passProvider) = paramType.unwrapProviderParam();
 
         final String? qualifier = ctorParam.readQualifier();
 

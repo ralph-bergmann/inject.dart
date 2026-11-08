@@ -23,7 +23,7 @@
     "A component's create() is synchronous; async resolution surfaces at the entry point — a getter whose chain is @asynchronous must be declared Future<T> (or Provider<Future<T>>) and awaited, through .get() for a provider. Never expect create() to return a Future<Component>",
     "Use @singleton for services that should be shared; async singletons cache at the Future<T> layer",
     "For dependencies mixing injected and runtime parameters, use @assistedInject + @assisted + @assistedFactory",
-    "Inject Provider<T> instead of T to defer construction to call time or to get multiple independent instances of a non-singleton",
+    "Inject Provider<T> instead of T to defer construction to call time or to get multiple independent instances of a non-singleton. A Provider<T> constructor parameter over an @asynchronous chain is a build error; at an @inject constructor, declare it as T. Injected parameters of @assistedInject constructors and @provides methods cannot use Provider<T>",
     "Register cross-cutting observers with a @provisionListener @provides method whose return type implements ProvisionListener<T> (concrete class or interface); @singleton is optional since listeners are treated as singletons automatically",
     "Run 'dart run build_runner build --delete-conflicting-outputs' after every annotation change",
     "ViewModelFactory<T> in inject_flutter is only valid for T extends ChangeNotifier whose construction chain is fully synchronous; inject the factory and call it (factory(builder: (context, vm, child) => ...)), never construct ViewModelBuilder by hand",

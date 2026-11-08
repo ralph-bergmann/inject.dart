@@ -297,6 +297,11 @@ a concrete, in-repo example of the pattern.
 > method return type, and as a constructor parameter on any `@inject` class —
 > injected like any other dependency. There the generator passes the provider
 > itself (not its resolved value), so the consumer controls when `.get()` runs.
+>
+> A `Provider<T>` constructor parameter needs a synchronous dependency chain.
+> Over an `@asynchronous` chain it is a build error, because `.get()` must return
+> `T` synchronously. At an `@inject` constructor, inject `T` directly; the class
+> then becomes async too.
 
 ## Runtime parameters — `@assistedInject`
 
