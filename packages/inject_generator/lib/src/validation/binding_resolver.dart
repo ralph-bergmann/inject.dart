@@ -26,7 +26,9 @@ enum DiagnosticContext {
 /// Phase 1: Registers all bindings (module providers, @inject classes,
 ///   assisted factories, typedef providers) into the binding map.
 /// Phase 2: Verifies that every required dependency and component entry-point
-///   has a matching binding.
+///   has a matching binding. The error for a parameter that keeps its
+///   `Provider` wrapper depends on async status, so `ProviderParameterValidator`
+///   reports it.
 ///
 /// Returns a [BindingGraphResult] consumed by `AsyncPropagator` and the
 /// downstream validators.
@@ -52,6 +54,8 @@ class BindingResolver {
   /// the same key are reported as a single aggregated diagnostic — see
   /// `_flushParentRebindErrors`, called once at the end of [resolve].
   var _parentRebinds = <BindingKey, List<BindingSource>>{};
+
+  var _providerParameters = <ProviderParameter>[];
 
   /// Registers all bindings, verifies dependency resolution, and returns
   /// the resulting [BindingGraphResult].
@@ -99,6 +103,7 @@ class BindingResolver {
     _subcomponentProvidedKeyHints = Map.of(subcomponentProvidedKeyHints);
     _subcomponentName = subcomponentName;
     _parentRebinds = {};
+    _providerParameters = [];
 
     // Phase 1: Build the binding map from all known sources.
     _registerModuleProviders(modules);
@@ -117,6 +122,7 @@ class BindingResolver {
       dependencyEdges: _dependencyEdges,
       duplicateBindings: _duplicateBindings,
       parentBindingsUsed: _parentBindingsUsed,
+      providerParameters: _providerParameters,
     );
   }
 
@@ -466,7 +472,8 @@ class BindingResolver {
     List<EntryPoint> entryPoints,
   ) {
     // Collect all required dependencies
-    final requiredDeps = <({BindingKey key, DartType dartType, Element source, String context})>[];
+    final requiredDeps =
+        <({BindingKey key, DartType dartType, FormalParameterElement source, String context, bool isProvider})>[];
 
     for (final m in modules) {
       for (final ProviderDescriptor provider in m.moduleData.providers) {
@@ -483,6 +490,7 @@ class BindingResolver {
               dartType: dep.type,
               source: dep.parameter,
               context: '${m.moduleClass.name}.${provider.method.name}',
+              isProvider: false,
             ));
           }
         }
@@ -503,6 +511,7 @@ class BindingResolver {
             dartType: dep.type,
             source: dep.parameter,
             context: injectable.classElement.name!,
+            isProvider: dep.isProvider,
           ));
         }
       }
@@ -522,6 +531,7 @@ class BindingResolver {
             dartType: dep.type,
             source: dep.parameter,
             context: '${factory.factoryElement.name!} (assisted factory)',
+            isProvider: false,
           ));
         }
       }
@@ -532,7 +542,7 @@ class BindingResolver {
             :DartType depType,
             :FormalParameterElement param,
             :String? qualifier,
-            passProvider: _,
+            :bool passProvider,
           )
           in typedefData.injectedParams) {
         final BindingKey? depKey = _keyFromType(
@@ -547,6 +557,8 @@ class BindingResolver {
             dartType: depType,
             source: param,
             context: typedefData.typedefType.displayName,
+            // `ViewModelFactoryValidator` owns this typedef, and its `Provider<T>` is not the user's code.
+            isProvider: passProvider && !typedefData.typedefType.isViewModelFactory,
           ));
         }
       }
@@ -554,6 +566,15 @@ class BindingResolver {
 
     // Check each dependency against the binding map
     for (final dep in requiredDeps) {
+      if (dep.isProvider) {
+        _providerParameters.add((
+          parameter: dep.source,
+          requiredBy: '${dep.context}$_inSubcomponentSuffix',
+          valueKey: dep.key,
+          heldBackError: null,
+        ));
+      }
+
       if (_bindingMap.containsKey(dep.key)) {
         continue;
       }
@@ -617,13 +638,27 @@ class BindingResolver {
               'Add a @provides method in a module that returns this type, '
               'or annotate the class with @inject for constructor injection.';
         }
-        _reporter.errorForElement(
-          dep.source,
-          message:
-              'No binding found for type \'${dep.key.debugLabel}\' '
-              'required by ${dep.context}$_inSubcomponentSuffix$alsoTried.$subcomponentNote$sdkNote',
-          suggestion: suggestion,
-        );
+        final message =
+            'No binding found for type \'${dep.key.debugLabel}\' '
+            'required by ${dep.context}$_inSubcomponentSuffix$alsoTried.$subcomponentNote$sdkNote';
+
+        // A reader that kept the `Provider` wrapper leaves a key that never
+        // has a binding. Async status is unknown here, and an async value type
+        // gets a different error, so the validator decides.
+        final value = dep.dartType.unwrapProviderParam();
+        final BindingKey? valueKey = dep.isProvider || !value.isProvider
+            ? null
+            : BindingKey.fromDartType(value.type, qualifier: dep.key.qualifier);
+        if (valueKey == null) {
+          _reporter.errorForElement(dep.source, message: message, suggestion: suggestion);
+        } else {
+          _providerParameters.add((
+            parameter: dep.source,
+            requiredBy: '${dep.context}$_inSubcomponentSuffix',
+            valueKey: valueKey,
+            heldBackError: (message: message, suggestion: suggestion),
+          ));
+        }
       }
     }
 

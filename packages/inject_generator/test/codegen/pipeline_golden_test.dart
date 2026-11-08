@@ -1070,6 +1070,177 @@ void main() {
       );
     });
 
+    test('provider_parameter_over_async error path', () async {
+      final String source = File('$_goldenDir/provider_parameter_over_async.dart').readAsStringSync();
+
+      final (:result, :logs) = await _runPipelineWithLogs(source, 'provider_parameter_over_async');
+
+      expect(
+        result.outputs.where((id) => id.path.endsWith('.inject.dart')),
+        isEmpty,
+        reason: 'Graph validation error must suppress .inject.dart output',
+      );
+      expectMatchesGolden(
+        result.readerWriter.testing.readString(result.outputs.singleWhere((id) => id.path.endsWith('.factory.dart'))),
+        '$_goldenDir/provider_parameter_over_async.factory.dart',
+      );
+
+      final List<String> severeMessages = logs.where((l) => l.level == Level.SEVERE).map((l) => l.message).toList();
+      expect(severeMessages, hasLength(11), reason: 'Each parameter reports its own error');
+
+      String direct(String provider) => "The provider '$provider' is asynchronous.";
+      String chain(String provider) =>
+          "The async provider '$provider' in the dependency chain causes transitive async propagation.";
+
+      final List<String> sourceLines = source.split('\n');
+      for (final (String declaration, String parameter, String requiredBy, String note, String from, String to) in [
+        ('A(Provider<C> c);', 'c', 'A', direct('AppModule.provideC'), 'Provider<C>', 'C'),
+        ('B(Provider<Repo> r);', 'r', 'B', chain('AppModule.provideD'), 'Provider<Repo>', 'Repo'),
+        (
+          'Page(Provider<E> e, @assisted String t);',
+          'e',
+          'PageFactory (assisted factory)',
+          direct('AppModule.provideE'),
+          'Provider<E>',
+          'E',
+        ),
+        ('G provideG(Provider<H> h)', 'h', 'AppModule.provideG', direct('AppModule.provideH'), 'Provider<H>', 'H'),
+        ('Item(String name, Provider<I> i);', 'i', 'ListFactory', direct('AppModule.provideI'), 'Provider<I>', 'I'),
+        ('J(Provider<K?> k);', 'k', 'J', direct('AppModule.provideK'), 'Provider<K?>', 'K?'),
+        (
+          'L(Provider<M> m);',
+          'm',
+          "L in subcomponent 'SessionSubcomponent'",
+          direct('AppModule.provideM'),
+          'Provider<M>',
+          'M',
+        ),
+        (
+          'N provideN(@prod Provider<O> o)',
+          'o',
+          'AppModule.provideN',
+          direct('AppModule.provideO'),
+          'Provider<O>',
+          'O',
+        ),
+        (
+          'RepoPage(Provider<RepoForPage> r, @assisted String t);',
+          'r',
+          'RepoPageFactory (assisted factory)',
+          chain('AppModule.provideD'),
+          'Provider<RepoForPage>',
+          'RepoForPage',
+        ),
+        (
+          'P provideP(Provider<RepoForModule> r)',
+          'r',
+          'AppModule.provideP',
+          chain('AppModule.provideD'),
+          'Provider<RepoForModule>',
+          'RepoForModule',
+        ),
+        (
+          'Box(String name, Provider<T> value);',
+          'value',
+          'BoxFactory',
+          direct('AppModule.provideQ'),
+          'Provider<T>',
+          'T',
+        ),
+      ]) {
+        final int line = sourceLines.indexWhere((l) => l.contains(declaration)) + 1;
+        expect(
+          severeMessages,
+          anyElement(
+            allOf(
+              contains('provider_parameter_over_async.dart:$line:'),
+              contains(
+                "Parameter '$parameter' required by $requiredBy is declared '$from' "
+                'but its dependency chain is asynchronous.',
+              ),
+              contains(note),
+              contains("Change the parameter type from '$from' to '$to'."),
+            ),
+          ),
+          reason: "Expected the provider-parameter error at '$declaration'",
+        );
+      }
+      expect(
+        severeMessages,
+        everyElement(isNot(contains('No binding found'))),
+        reason: 'The async error must replace the missing-binding error, not add to it',
+      );
+    });
+
+    test('provider_parameter_no_async error path', () async {
+      final String source = File('$_goldenDir/provider_parameter_no_async.dart').readAsStringSync();
+
+      final (:result, :logs) = await _runPipelineWithLogs(source, 'provider_parameter_no_async');
+
+      expect(
+        result.outputs.where((id) => id.path.endsWith('.inject.dart')),
+        isEmpty,
+        reason: 'Graph validation error must suppress .inject.dart output',
+      );
+      expectMatchesGolden(
+        result.readerWriter.testing.readString(result.outputs.singleWhere((id) => id.path.endsWith('.factory.dart'))),
+        '$_goldenDir/provider_parameter_no_async.factory.dart',
+      );
+
+      final List<String> severeMessages = logs.where((l) => l.level == Level.SEVERE).map((l) => l.message).toList();
+      expect(severeMessages, hasLength(5));
+
+      final List<String> sourceLines = source.split('\n');
+      for (final (String declaration, String expected) in [
+        (
+          'Page(Provider<Clock> clock, @assisted String title);',
+          "No binding found for type 'Provider<Clock>' required by PageFactory (assisted factory).",
+        ),
+        (
+          'Report provideReport(Provider<Logger> logger)',
+          "No binding found for type 'Provider<Logger>' required by AppModule.provideReport.",
+        ),
+        (
+          'Service(Provider<MissingForInject> missing);',
+          "No binding found for type 'MissingForInject' required by Service.",
+        ),
+        (
+          'Dialog(Provider<MissingForAssisted> missing, @assisted String title);',
+          "No binding found for type 'Provider<MissingForAssisted>' required by DialogFactory (assisted factory).",
+        ),
+        (
+          'Audit provideAudit(Provider<MissingForModule> missing)',
+          "No binding found for type 'Provider<MissingForModule>' required by AppModule.provideAudit.",
+        ),
+      ]) {
+        final int line = sourceLines.indexWhere((l) => l.contains(declaration)) + 1;
+        expect(
+          severeMessages,
+          anyElement(
+            allOf(
+              contains('provider_parameter_no_async.dart:$line:'),
+              contains(expected),
+              contains('Add a @provides method in a module that returns this type'),
+            ),
+          ),
+          reason: "Expected the missing-binding error and its suggestion at '$declaration'",
+        );
+      }
+      expect(
+        severeMessages,
+        everyElement(isNot(contains('dependency chain is asynchronous'))),
+        reason: 'A sync or missing value type must not report the async error',
+      );
+    });
+
+    test('provider_parameter_typedef_sync golden', () async {
+      await runPipelineGolden(
+        fixtureName: 'provider_parameter_typedef_sync',
+        goldenDir: _goldenDir,
+        expectFactory: true,
+      );
+    });
+
     test('nullable_child_shadows_parent golden', () async {
       await runPipelineGolden(
         fixtureName: 'nullable_child_shadows_parent',

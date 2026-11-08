@@ -128,7 +128,7 @@ void main() {
 `create()` stays synchronous **even when the graph contains `@asynchronous`
 providers**. Async resolution surfaces at the **entry point**: a getter whose
 dependency chain is async must be declared `Future<T>` (or `Provider<Future<T>>`), and
-you `await` that getter — not `create()`:
+you `await` that getter (or its `.get()` result) — not `create()`:
 
 ```dart
 @component

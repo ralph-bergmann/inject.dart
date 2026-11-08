@@ -30,8 +30,8 @@ class EntryPointValidator {
       if (isAsync == null || isAsync == ep.isFuture) continue;
 
       if (!isAsync) {
-        // The resolver has reported the missing binding, and it may be the
-        // async one the `Future` was declared for.
+        // The missing binding has its own error, and it may be the async one
+        // the `Future` was declared for.
         if (asyncResult.hasUnboundDependency(key)) continue;
 
         // A sync chain has no async root to group by.

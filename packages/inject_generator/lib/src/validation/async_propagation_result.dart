@@ -3,8 +3,8 @@ import 'binding_key.dart';
 
 /// The immutable result of async propagation (Phase 3 of graph validation).
 ///
-/// Produced by `AsyncPropagator` and consumed by `ViewModelFactoryValidator`
-/// and `EntryPointValidator`.
+/// Produced by `AsyncPropagator` and consumed by `ViewModelFactoryValidator`,
+/// `EntryPointValidator`, and `ProviderParameterValidator`.
 class AsyncPropagationResult {
   /// Creates an immutable result, defensively copying the given maps.
   AsyncPropagationResult({

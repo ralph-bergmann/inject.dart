@@ -18,6 +18,7 @@ import 'async_propagation_result.dart';
 import 'async_propagator.dart';
 import 'binding_resolver.dart';
 import 'entry_point_validator.dart';
+import 'provider_parameter_validator.dart';
 import 'view_model_factory_validator.dart';
 import 'cycle_validator.dart';
 import 'qualifier_validator.dart';
@@ -61,6 +62,7 @@ class GraphValidator {
   final _asyncPropagator = AsyncPropagator();
   late final _viewModelFactoryValidator = ViewModelFactoryValidator(reporter: _reporter);
   late final _entryPointValidator = EntryPointValidator(reporter: _reporter);
+  late final _providerParameterValidator = ProviderParameterValidator(reporter: _reporter);
   late final _cycleValidator = CycleValidator(reporter: _reporter);
   late final _qualifierValidator = QualifierValidator(reporter: _reporter);
   late final _reachabilityValidator = ReachabilityValidator(reporter: _reporter);
@@ -217,6 +219,9 @@ class GraphValidator {
 
     // Sub-validator 5: Entry-point async signatures — Phase 5
     _entryPointValidator.validate(asyncResult, validEntryPoints);
+
+    // Sub-validator 5a: `Provider<T>` parameters over an async chain
+    _providerParameterValidator.validate(asyncResult, graphResult.providerParameters);
 
     // Sub-validator 5b: Validate every installed subcomponent graph against
     // this (parent) graph. Runs before cycle detection so the factory→child
@@ -428,6 +433,10 @@ class GraphValidator {
     // entry point on an async chain (including chains that cross into the
     // parent) is an error; `create(...)` itself always stays synchronous.
     _entryPointValidator.validate(mergedAsyncResult, validEntryPoints);
+
+    // A child's `Provider<T>` parameter can sit over an async parent binding,
+    // so it needs the merged async result.
+    _providerParameterValidator.validate(mergedAsyncResult, childGraphResult.providerParameters);
 
     // Cycle detection over the CHILD's own graph only (not the merged one):
     // parent keys the child depends on act as leaf nodes here, which is

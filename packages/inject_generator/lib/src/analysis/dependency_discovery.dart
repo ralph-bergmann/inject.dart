@@ -123,13 +123,12 @@ void discoverInjectables({
   for (final module in modules) {
     for (final ProviderDescriptor provider in module.moduleData.providers) {
       for (final ParameterDependency dependency in provider.dependencies) {
-        final BindingKey? depKey = BindingKey.fromDartType(dependency.type, qualifier: dependency.qualifier);
-        if (depKey != null && _isBound(depKey, moduleProvidedKeys)) {
+        if (_isDependencyBound(dependency, moduleProvidedKeys)) {
           continue;
         }
 
         _findAndAddInjectable(
-          dartType: dependency.type,
+          dartType: dependency.type.unwrapProviderParam().type,
           reader: reader,
           injectables: injectables,
           moduleProvidedKeys: moduleProvidedKeys,
@@ -417,8 +416,7 @@ void _discoverFactoryDependencies({
   required Set<BindingKey> moduleProvidedKeys,
 }) {
   for (final ParameterDependency dep in injectData.injectedDependencies) {
-    final BindingKey? depKey = BindingKey.fromDartType(dep.type, qualifier: dep.qualifier);
-    if (depKey != null && _isBound(depKey, moduleProvidedKeys)) {
+    if (_isDependencyBound(dep, moduleProvidedKeys)) {
       continue;
     }
 
@@ -462,7 +460,7 @@ void _discoverFactoryDependencies({
 
     if (!discoveredAsFactory) {
       _findAndAddInjectable(
-        dartType: dep.type,
+        dartType: dep.type.unwrapProviderParam().type,
         reader: reader,
         injectables: injectables,
         moduleProvidedKeys: moduleProvidedKeys,
@@ -660,6 +658,14 @@ DartType _substituteTypeArgs(DartType type, List<TypeParameterElement> params, L
 
   return type;
 }
+
+/// Whether [dep] already has a binding, or, for a reader that kept a
+/// `Provider<T>` wrapper, its `T` has one.
+bool _isDependencyBound(ParameterDependency dep, Set<BindingKey> moduleProvidedKeys) =>
+    [dep.type, dep.type.unwrapProviderParam().type].any((type) {
+      final BindingKey? key = BindingKey.fromDartType(type, qualifier: dep.qualifier);
+      return key != null && _isBound(key, moduleProvidedKeys);
+    });
 
 void _findAndAddInjectable({
   required DartType dartType,
