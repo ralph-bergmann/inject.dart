@@ -59,8 +59,10 @@ class AsyncPropagator {
       changed = false;
       for (final MapEntry<BindingKey, List<BindingKey>> entry in dependencyEdges.entries) {
         final BindingKey bindingKey = entry.key;
-        if (asyncBindings[bindingKey] == true) {
-          continue; // Already async, no change possible
+        // A factory stays synchronous: `ProviderParameterValidator` reports its
+        // async dependency at the parameter, so readers get no follow-up error.
+        if (asyncBindings[bindingKey] == true || graphResult.factoryKeys.contains(bindingKey)) {
+          continue;
         }
 
         for (final BindingKey depKey in entry.value) {

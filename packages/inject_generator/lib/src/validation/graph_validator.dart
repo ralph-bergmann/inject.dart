@@ -413,6 +413,7 @@ class GraphValidator {
       dependencyEdges: {...parentGraphResult.dependencyEdges, ...childGraphResult.dependencyEdges},
       duplicateBindings: childGraphResult.duplicateBindings,
       parentBindingsUsed: childGraphResult.parentBindingsUsed,
+      factoryKeys: {...parentGraphResult.factoryKeys, ...childGraphResult.factoryKeys},
     );
     final AsyncPropagationResult mergedAsyncResult = _asyncPropagator.propagate(
       mergedGraphResult,

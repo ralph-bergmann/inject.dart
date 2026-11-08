@@ -668,7 +668,8 @@ void _findAndAddInjectable({
       const [],
   String? qualifier,
 }) {
-  if (dartType case final InterfaceType interfaceType) {
+  // An unbound `Future<T>` reader still needs `T` discovered, so the async check can see its chain.
+  if (dartType.unwrapFuture case final InterfaceType interfaceType) {
     final InterfaceElement element = interfaceType.element;
     if (element case final ClassElement classElement) {
       // Skip types already discovered as assisted factories

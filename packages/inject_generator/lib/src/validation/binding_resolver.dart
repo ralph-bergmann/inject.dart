@@ -56,6 +56,7 @@ class BindingResolver {
   var _parentRebinds = <BindingKey, List<BindingSource>>{};
 
   var _providerParameters = <ProviderParameter>[];
+  var _factoryKeys = <BindingKey>{};
 
   /// Registers all bindings, verifies dependency resolution, and returns
   /// the resulting [BindingGraphResult].
@@ -104,6 +105,7 @@ class BindingResolver {
     _subcomponentName = subcomponentName;
     _parentRebinds = {};
     _providerParameters = [];
+    _factoryKeys = {};
 
     // Phase 1: Build the binding map from all known sources.
     _registerModuleProviders(modules);
@@ -123,6 +125,7 @@ class BindingResolver {
       duplicateBindings: _duplicateBindings,
       parentBindingsUsed: _parentBindingsUsed,
       providerParameters: _providerParameters,
+      factoryKeys: _factoryKeys,
     );
   }
 
@@ -333,6 +336,7 @@ class BindingResolver {
       if (_discardIfNullabilityDuplicate(key, newSource)) continue;
 
       _bindingMap[key] = newSource;
+      _factoryKeys.add(key);
 
       final deps = <BindingKey>{};
       for (final ParameterDependency dep in factory.injectData.injectedDependencies) {
@@ -372,6 +376,7 @@ class BindingResolver {
       if (_discardIfNullabilityDuplicate(key, newSource)) continue;
 
       _bindingMap[key] = newSource;
+      _factoryKeys.add(key);
 
       final deps = <BindingKey>{};
       for (final ({DartType depType, FormalParameterElement param, String? qualifier, bool passProvider}) injected
@@ -473,7 +478,16 @@ class BindingResolver {
   ) {
     // Collect all required dependencies
     final requiredDeps =
-        <({BindingKey key, DartType dartType, FormalParameterElement source, String context, bool isProvider})>[];
+        <
+          ({
+            BindingKey key,
+            DartType dartType,
+            FormalParameterElement source,
+            String context,
+            bool isProvider,
+            bool inFactory,
+          })
+        >[];
 
     for (final m in modules) {
       for (final ProviderDescriptor provider in m.moduleData.providers) {
@@ -491,6 +505,7 @@ class BindingResolver {
               source: dep.parameter,
               context: '${m.moduleClass.name}.${provider.method.name}',
               isProvider: false,
+              inFactory: false,
             ));
           }
         }
@@ -512,6 +527,7 @@ class BindingResolver {
             source: dep.parameter,
             context: injectable.classElement.name!,
             isProvider: dep.isProvider,
+            inFactory: false,
           ));
         }
       }
@@ -532,6 +548,7 @@ class BindingResolver {
             source: dep.parameter,
             context: '${factory.factoryElement.name!} (assisted factory)',
             isProvider: false,
+            inFactory: true,
           ));
         }
       }
@@ -559,6 +576,7 @@ class BindingResolver {
             context: typedefData.typedefType.displayName,
             // `ViewModelFactoryValidator` owns this typedef, and its `Provider<T>` is not the user's code.
             isProvider: passProvider && !typedefData.typedefType.isViewModelFactory,
+            inFactory: !typedefData.typedefType.isViewModelFactory,
           ));
         }
       }
@@ -566,11 +584,12 @@ class BindingResolver {
 
     // Check each dependency against the binding map
     for (final dep in requiredDeps) {
-      if (dep.isProvider) {
+      if (dep.isProvider || dep.inFactory) {
         _providerParameters.add((
           parameter: dep.source,
           requiredBy: '${dep.context}$_inSubcomponentSuffix',
           valueKey: dep.key,
+          inFactory: dep.inFactory,
           heldBackError: null,
         ));
       }
@@ -642,13 +661,14 @@ class BindingResolver {
             'No binding found for type \'${dep.key.debugLabel}\' '
             'required by ${dep.context}$_inSubcomponentSuffix$alsoTried.$subcomponentNote$sdkNote';
 
-        // A reader that kept the `Provider` wrapper leaves a key that never
-        // has a binding. Async status is unknown here, and an async value type
-        // gets a different error, so the validator decides.
+        // A reader that kept the `Provider` wrapper, or a `Provider<Future<T>>`
+        // reader, leaves a key without a binding even when `T` has one. Async
+        // status is unknown here, and an async value type gets a different
+        // error, so the validator decides.
         final value = dep.dartType.unwrapProviderParam();
-        final BindingKey? valueKey = dep.isProvider || !value.isProvider
-            ? null
-            : BindingKey.fromDartType(value.type, qualifier: dep.key.qualifier);
+        final DartType valueType = value.type.unwrapFuture;
+        final bool holdBack = dep.isProvider ? !identical(valueType, value.type) : value.isProvider;
+        final BindingKey? valueKey = holdBack ? BindingKey.fromDartType(valueType, qualifier: dep.key.qualifier) : null;
         if (valueKey == null) {
           _reporter.errorForElement(dep.source, message: message, suggestion: suggestion);
         } else {
@@ -656,6 +676,7 @@ class BindingResolver {
             parameter: dep.source,
             requiredBy: '${dep.context}$_inSubcomponentSuffix',
             valueKey: valueKey,
+            inFactory: dep.inFactory,
             heldBackError: (message: message, suggestion: suggestion),
           ));
         }

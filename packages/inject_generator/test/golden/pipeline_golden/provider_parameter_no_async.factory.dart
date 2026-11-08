@@ -13,6 +13,10 @@ abstract class DialogFactory {
   Dialog create(String title);
 }
 
+abstract class FuturePageOverSyncFactory {
+  FuturePageOverSync create(String title);
+}
+
 abstract class PageFactory {
   Page create(String title);
 }

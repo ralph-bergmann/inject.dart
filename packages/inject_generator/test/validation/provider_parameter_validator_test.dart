@@ -92,7 +92,11 @@ void main() {
     final typedefProvider = typedefProviders.single;
     expect(typedefProvider.typedefType.isViewModelFactory, isTrue);
     expect(typedefProvider.injectedParams.single.passProvider, isTrue);
-    expect(graphResult.providerParameters, isEmpty, reason: 'ViewModelFactoryValidator owns this typedef');
+    expect(
+      graphResult.providerParameters.map((p) => p.parameter.name),
+      isNot(contains('vmProvider')),
+      reason: 'ViewModelFactoryValidator owns this typedef',
+    );
     expect(reporter.messages.single.message, contains('cannot use an asynchronous ViewModel'));
   });
 }

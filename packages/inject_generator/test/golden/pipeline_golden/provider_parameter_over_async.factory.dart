@@ -13,6 +13,18 @@ abstract class BoxPageFactory {
   BoxPage create(String t);
 }
 
+abstract class ChainPageFactory {
+  ChainPage create(String t);
+}
+
+abstract class FutureItemPageFactory {
+  FutureItemPage create(String t);
+}
+
+abstract class FuturePageFactory {
+  FuturePage create(String t);
+}
+
 abstract class ListPageFactory {
   ListPage create(String t);
 }
@@ -21,8 +33,20 @@ abstract class PageFactory {
   Page create(String t);
 }
 
+abstract class PlainItemPageFactory {
+  PlainItemPage create(String t);
+}
+
+abstract class PlainPageFactory {
+  PlainPage create(String t);
+}
+
 abstract class RepoPageFactory {
   RepoPage create(String t);
+}
+
+abstract class SessionPageFactory {
+  SessionPage create(String t);
 }
 
 abstract class SessionSubcomponentFactory {

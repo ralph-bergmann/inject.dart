@@ -37,6 +37,22 @@ class Dialog {
   Dialog(Provider<MissingForAssisted> missing, @assisted String title);
 }
 
+// `Provider<Future<T>>` needs a raw `Future<T>` binding: a sync or missing `T` keeps the missing-binding error.
+class FutureOverSync {
+  @inject
+  FutureOverSync(Provider<Future<Clock>> clock);
+}
+
+class FutureOverMissing {
+  @inject
+  FutureOverMissing(Provider<Future<MissingForInject>> missing);
+}
+
+class FuturePageOverSync {
+  @assistedInject
+  FuturePageOverSync(Provider<Future<Clock>> clock, @assisted String title);
+}
+
 @module
 class AppModule {
   @provides
@@ -63,4 +79,10 @@ abstract class AppComponent {
   DialogFactory get dialogFactory;
 
   Audit get audit;
+
+  FutureOverSync get futureOverSync;
+
+  FutureOverMissing get futureOverMissing;
+
+  FuturePageOverSyncFactory get futurePageOverSync;
 }

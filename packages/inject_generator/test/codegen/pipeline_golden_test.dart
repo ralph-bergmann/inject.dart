@@ -1086,7 +1086,7 @@ void main() {
       );
 
       final List<String> severeMessages = logs.where((l) => l.level == Level.SEVERE).map((l) => l.message).toList();
-      expect(severeMessages, hasLength(12), reason: 'Each parameter reports its own error');
+      expect(severeMessages, hasLength(21), reason: 'Each parameter reports its own error, with no follow-up errors');
 
       String direct(String provider) => "The provider '$provider' is asynchronous.";
       String chain(String provider) =>
@@ -1096,17 +1096,25 @@ void main() {
       for (final (String declaration, String parameter, String requiredBy, String note, String from, String to) in [
         ('A(Provider<C> c);', 'c', 'A', direct('AppModule.provideC'), 'Provider<C>', 'C'),
         ('B(Provider<Repo> r);', 'r', 'B', chain('AppModule.provideD'), 'Provider<Repo>', 'Repo'),
-        (
-          'Page(Provider<E> e, @assisted String t);',
-          'e',
-          'PageFactory (assisted factory)',
-          direct('AppModule.provideE'),
-          'Provider<E>',
-          'E',
-        ),
         ('G provideG(Provider<H> h)', 'h', 'AppModule.provideG', direct('AppModule.provideH'), 'Provider<H>', 'H'),
-        ('Item(String name, Provider<I> i);', 'i', 'ListFactory', direct('AppModule.provideI'), 'Provider<I>', 'I'),
         ('J(Provider<K?> k);', 'k', 'J', direct('AppModule.provideK'), 'Provider<K?>', 'K?'),
+        ('FutureA(Provider<Future<C>> c);', 'c', 'FutureA', direct('AppModule.provideC'), 'Provider<Future<C>>', 'C'),
+        (
+          'FutureB(Provider<Future<RepoForFuture>> r);',
+          'r',
+          'FutureB',
+          chain('AppModule.provideD'),
+          'Provider<Future<RepoForFuture>>',
+          'RepoForFuture',
+        ),
+        (
+          'provideFutureModuleValue(Provider<Future<C>> c)',
+          'c',
+          'AppModule.provideFutureModuleValue',
+          direct('AppModule.provideC'),
+          'Provider<Future<C>>',
+          'C',
+        ),
         (
           'L(Provider<M> m);',
           'm',
@@ -1132,28 +1140,12 @@ void main() {
           'O',
         ),
         (
-          'RepoPage(Provider<RepoForPage> r, @assisted String t);',
-          'r',
-          'RepoPageFactory (assisted factory)',
-          chain('AppModule.provideD'),
-          'Provider<RepoForPage>',
-          'RepoForPage',
-        ),
-        (
           'P provideP(Provider<RepoForModule> r)',
           'r',
           'AppModule.provideP',
           chain('AppModule.provideD'),
           'Provider<RepoForModule>',
           'RepoForModule',
-        ),
-        (
-          'Box(String name, Provider<T> value);',
-          'value',
-          'BoxFactory',
-          direct('AppModule.provideQ'),
-          'Provider<T>',
-          'T',
         ),
       ]) {
         final int line = sourceLines.indexWhere((l) => l.contains(declaration)) + 1;
@@ -1173,11 +1165,120 @@ void main() {
           reason: "Expected the provider-parameter error at '$declaration'",
         );
       }
+
+      for (final (String declaration, String parameter, String requiredBy, String note, String declared) in [
+        (
+          'Page(Provider<E> e, @assisted String t);',
+          'e',
+          'PageFactory (assisted factory)',
+          direct('AppModule.provideE'),
+          'Provider<E>',
+        ),
+        (
+          'RepoPage(Provider<RepoForPage> r, @assisted String t);',
+          'r',
+          'RepoPageFactory (assisted factory)',
+          chain('AppModule.provideD'),
+          'Provider<RepoForPage>',
+        ),
+        ('Item(String name, Provider<I> i);', 'i', 'ListFactory', direct('AppModule.provideI'), 'Provider<I>'),
+        ('Box(String name, Provider<T> value);', 'value', 'BoxFactory', direct('AppModule.provideQ'), 'Provider<T>'),
+        (
+          'PlainPage(C c, @assisted String t);',
+          'c',
+          'PlainPageFactory (assisted factory)',
+          direct('AppModule.provideC'),
+          'C',
+        ),
+        (
+          'ChainPage(Repo r, @assisted String t);',
+          'r',
+          'ChainPageFactory (assisted factory)',
+          chain('AppModule.provideD'),
+          'Repo',
+        ),
+        ('PlainItem(String name, C c);', 'c', 'PlainItemFactory', direct('AppModule.provideC'), 'C'),
+        (
+          'FuturePage(Provider<Future<C>> c, @assisted String t);',
+          'c',
+          'FuturePageFactory (assisted factory)',
+          direct('AppModule.provideC'),
+          'Provider<Future<C>>',
+        ),
+        (
+          'FutureItem(String name, Provider<Future<C>> c);',
+          'c',
+          'FutureItemFactory',
+          direct('AppModule.provideC'),
+          'Provider<Future<C>>',
+        ),
+        (
+          'SessionPage(M m, @assisted String t);',
+          'm',
+          "SessionPageFactory (assisted factory) in subcomponent 'SessionSubcomponent'",
+          direct('AppModule.provideM'),
+          'M',
+        ),
+      ]) {
+        final int line = sourceLines.indexWhere((l) => l.contains(declaration)) + 1;
+        expect(
+          severeMessages,
+          anyElement(
+            allOf(
+              contains('provider_parameter_over_async.dart:$line:'),
+              contains(
+                "Parameter '$parameter' required by $requiredBy is declared '$declared' "
+                'but its dependency chain is asynchronous.',
+              ),
+              contains(note),
+              contains('creates its object synchronously'),
+              contains('pass the awaited value in as a factory parameter'),
+              isNot(contains('Change the parameter type')),
+            ),
+          ),
+          reason: "Expected the factory-parameter error at '$declaration'",
+        );
+      }
       expect(
         severeMessages,
         everyElement(isNot(contains('No binding found'))),
         reason: 'The async error must replace the missing-binding error, not add to it',
       );
+    });
+
+    test('a Future getter of an assisted factory over an async chain gets the sync-getter advice', () async {
+      const source = r'''
+import 'package:inject_annotation/inject_annotation.dart';
+
+part 'factory_getter_over_async.factory.dart';
+
+class C {}
+
+class View {
+  @assistedInject
+  View(C c, @assisted String x);
+}
+
+@module
+class AppModule {
+  @asynchronous
+  @provides
+  Future<C> provideC() async => C();
+}
+
+@Component([AppModule])
+abstract class AppComponent {
+  Future<ViewFactory> get view;
+}
+''';
+
+      final (:result, :logs) = await _runPipelineWithLogs(source, 'factory_getter_over_async');
+
+      expect(result.outputs.where((id) => id.path.endsWith('.inject.dart')), isEmpty);
+      final List<String> severeMessages = logs.where((l) => l.level == Level.SEVERE).map((l) => l.message).toList();
+      expect(severeMessages, hasLength(2));
+      expect(severeMessages, anyElement(contains("Parameter 'c' required by ViewFactory (assisted factory)")));
+      expect(severeMessages, anyElement(_asyncGetter('view', from: 'Future<ViewFactory>', to: 'ViewFactory')));
     });
 
     test('provider_parameter_no_async error path', () async {
@@ -1196,10 +1297,22 @@ void main() {
       );
 
       final List<String> severeMessages = logs.where((l) => l.level == Level.SEVERE).map((l) => l.message).toList();
-      expect(severeMessages, hasLength(5));
+      expect(severeMessages, hasLength(8));
 
       final List<String> sourceLines = source.split('\n');
       for (final (String declaration, String expected) in [
+        (
+          'FutureOverSync(Provider<Future<Clock>> clock);',
+          "No binding found for type 'Future<Clock>' required by FutureOverSync.",
+        ),
+        (
+          'FutureOverMissing(Provider<Future<MissingForInject>> missing);',
+          "No binding found for type 'Future<MissingForInject>' required by FutureOverMissing.",
+        ),
+        (
+          'FuturePageOverSync(Provider<Future<Clock>> clock, @assisted String title);',
+          "No binding found for type 'Provider<Future<Clock>>' required by FuturePageOverSyncFactory (assisted factory).",
+        ),
         (
           'Page(Provider<Clock> clock, @assisted String title);',
           "No binding found for type 'Provider<Clock>' required by PageFactory (assisted factory).",

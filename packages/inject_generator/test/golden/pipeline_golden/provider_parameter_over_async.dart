@@ -109,8 +109,71 @@ class BoxPage {
   BoxPage(BoxFactory f, @assisted String t);
 }
 
+// Plain parameters of an assisted factory: `create` cannot wait for them.
+class PlainPage {
+  @assistedInject
+  PlainPage(C c, @assisted String t);
+}
+
+class ChainPage {
+  @assistedInject
+  ChainPage(Repo r, @assisted String t);
+}
+
+// A typedef provider's plain extra parameter: the closure cannot wait for it.
+class PlainItem {
+  PlainItem(String name, C c);
+}
+
+typedef PlainItemFactory = PlainItem Function(String name);
+
+class PlainItemPage {
+  @assistedInject
+  PlainItemPage(PlainItemFactory f, @assisted String t);
+}
+
+// `Provider<Future<T>>` over an `@asynchronous T`: it only fits a raw `Future<T>` binding.
+class FutureA {
+  @inject
+  FutureA(Provider<Future<C>> c);
+}
+
+class RepoForFuture {
+  @inject
+  RepoForFuture(D d);
+}
+
+class FutureB {
+  @inject
+  FutureB(Provider<Future<RepoForFuture>> r);
+}
+
+class FuturePage {
+  @assistedInject
+  FuturePage(Provider<Future<C>> c, @assisted String t);
+}
+
+class FutureItem {
+  FutureItem(String name, Provider<Future<C>> c);
+}
+
+typedef FutureItemFactory = FutureItem Function(String name);
+
+class FutureItemPage {
+  @assistedInject
+  FutureItemPage(FutureItemFactory f, @assisted String t);
+}
+
+class FutureModuleValue {}
+
 // A subcomponent's module provider method over the parent's async binding.
 class S {}
+
+// A subcomponent's assisted factory over the parent's async binding.
+class SessionPage {
+  @assistedInject
+  SessionPage(M m, @assisted String t);
+}
 
 @module
 class SessionModule {
@@ -123,6 +186,8 @@ abstract class SessionSubcomponent {
   Future<L> get l;
 
   S get s;
+
+  SessionPageFactory get sessionPage;
 }
 
 @Module(subcomponents: [SessionSubcomponent])
@@ -172,6 +237,9 @@ class AppModule {
   @asynchronous
   @provides
   Future<Q> provideQ() async => Q();
+
+  @provides
+  FutureModuleValue provideFutureModuleValue(Provider<Future<C>> c) => FutureModuleValue();
 }
 
 @Component([AppModule])
@@ -184,9 +252,9 @@ abstract class AppComponent {
 
   G get g;
 
-  Future<ListFactory> get l;
+  ListFactory get l;
 
-  Future<ListPageFactory> get listPage;
+  ListPageFactory get listPage;
 
   Future<J> get j;
 
@@ -196,7 +264,23 @@ abstract class AppComponent {
 
   P get p;
 
-  Future<BoxPageFactory> get boxPage;
+  BoxPageFactory get boxPage;
+
+  PlainPageFactory get plainPage;
+
+  ChainPageFactory get chainPage;
+
+  PlainItemPageFactory get plainItemPage;
+
+  FutureA get futureA;
+
+  FutureB get futureB;
+
+  FuturePageFactory get futurePage;
+
+  FutureItemPageFactory get futureItemPage;
+
+  FutureModuleValue get futureModuleValue;
 
   SessionSubcomponentFactory get sessionFactory;
 }

@@ -245,6 +245,10 @@ class Inject {
 
 /// Annotates a class or the constructor of a class that will be created via
 /// assisted injection.
+///
+/// The factory creates the object synchronously, so an injected parameter over
+/// an [asynchronous] chain is a build error. Pass the awaited value in as an
+/// [assisted] parameter instead.
 const assistedInject = AssistedInject._();
 
 /// The annotation class behind [assistedInject], which marks a class or

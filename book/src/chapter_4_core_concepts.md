@@ -361,6 +361,11 @@ abstract class CustomHomePageFactory {
 The synthesised variant is the default for the common case. An explicit
 `@assistedFactory` takes precedence over synthesis.
 
+> **Note:** A factory creates its object synchronously, so it cannot wait for a
+> dependency. An injected parameter over an `@asynchronous` chain is a build
+> error. Make the dependency synchronous, or pass the awaited value in as an
+> `@assisted` parameter.
+
 ### File setup for `@assistedInject`
 
 Files containing `@assistedInject` constructors need a `part` directive so the

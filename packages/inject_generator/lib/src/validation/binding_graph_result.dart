@@ -5,16 +5,19 @@ import 'binding_key.dart';
 /// Describes the origin of a binding in the dependency graph.
 typedef BindingSource = ({BindingKey key, String origin, bool isAsync, bool isSingleton, Element element});
 
-/// A parameter declared `Provider<T>`, recorded for the check that runs after
-/// async propagation.
+/// A parameter that needs its value synchronously, recorded for the check that
+/// runs after async propagation: one declared `Provider<T>`, or any injected
+/// parameter of an assisted factory or typedef provider ([inFactory]).
 ///
-/// [heldBackError] is the missing-binding error of a parameter whose reader
-/// kept the `Provider` wrapper in the binding key. The resolver cannot report
-/// it yet: when `T` is async, the async error replaces it.
+/// [heldBackError] is the missing-binding error of a `Provider<T>` parameter
+/// whose binding key cannot match: the reader kept the `Provider` wrapper, or
+/// `T` is a `Future`. The resolver cannot report it yet: when the value type
+/// is async, the async error replaces it.
 typedef ProviderParameter = ({
   FormalParameterElement parameter,
   String requiredBy,
   BindingKey valueKey,
+  bool inFactory,
   ({String message, String suggestion})? heldBackError,
 });
 
@@ -32,6 +35,7 @@ class BindingGraphResult {
     required Map<BindingKey, List<BindingSource>> duplicateBindings,
     Set<BindingKey> parentBindingsUsed = const {},
     List<ProviderParameter> providerParameters = const [],
+    Set<BindingKey> factoryKeys = const {},
   }) : bindingMap = Map.unmodifiable(bindingMap),
        dependencyEdges = Map.unmodifiable(
          dependencyEdges.map((k, v) => MapEntry(k, List<BindingKey>.unmodifiable(v))),
@@ -40,7 +44,8 @@ class BindingGraphResult {
          duplicateBindings.map((k, v) => MapEntry(k, List<BindingSource>.unmodifiable(v))),
        ),
        parentBindingsUsed = Set.unmodifiable(parentBindingsUsed),
-       providerParameters = List.unmodifiable(providerParameters);
+       providerParameters = List.unmodifiable(providerParameters),
+       factoryKeys = Set.unmodifiable(factoryKeys);
 
   /// Maps each [BindingKey] to its [BindingSource] origin information.
   final Map<BindingKey, BindingSource> bindingMap;
@@ -62,9 +67,13 @@ class BindingGraphResult {
   /// address them as `_parent._<provider>`.
   final Set<BindingKey> parentBindingsUsed;
 
-  /// The parameters declared `Provider<T>` in this graph, checked once async
-  /// status is known.
+  /// The parameters of this graph that need their value synchronously, checked
+  /// once async status is known.
   final List<ProviderParameter> providerParameters;
+
+  /// The assisted factories and typedef providers of this graph. Both create
+  /// their object synchronously, so async status never passes through them.
+  final Set<BindingKey> factoryKeys;
 }
 
 /// A read-only view of a parent component's resolved bindings, used to

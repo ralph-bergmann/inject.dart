@@ -734,6 +734,11 @@ final card = component.productCardFactory.create(product);
 - The `@assisted` parameter types in the factory method must exactly match
   those in the `@assistedInject` constructor.
 - The source file must declare `part '<file>.factory.dart';`.
+- Injected parameters must have a synchronous dependency chain, because the
+  factory cannot wait for them. Over an `@asynchronous` chain each one is a
+  build error at the parameter. The same applies to the extra constructor
+  parameters behind a typedef provider. Make the dependency synchronous, or
+  pass the awaited value in as a factory parameter.
 
 ## Application Architecture
 

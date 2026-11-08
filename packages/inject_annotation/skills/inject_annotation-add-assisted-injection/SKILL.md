@@ -141,3 +141,6 @@ class HomePage extends StatelessWidget {
   plain injectable; runtime parameters can't be passed.
 - **Injecting the class instead of its factory** → inject the factory and call
   it with the runtime arguments.
+- **An injected parameter over an `@asynchronous` chain** → build error at the
+  parameter, because the factory cannot wait for it. Make the dependency
+  synchronous, or pass the awaited value in as an `@assisted` parameter.

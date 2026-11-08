@@ -4,9 +4,9 @@ import 'async_propagation_result.dart';
 import 'binding_graph_result.dart';
 import 'binding_key.dart';
 
-/// Reports each parameter declared `Provider<T>` whose value type has an async
-/// dependency chain: `Provider<T>.get()` returns `T` synchronously, so no
-/// provider exists to pass there.
+/// Reports each parameter that needs its value synchronously but has an async
+/// dependency chain: `Provider<T>.get()` returns `T` synchronously, and an
+/// assisted factory or typedef provider cannot wait for a dependency.
 ///
 /// Must be called after `AsyncPropagator`, because async status does not exist
 /// during binding resolution.
@@ -34,14 +34,20 @@ class ProviderParameterValidator {
           ? " The provider '$asyncRoot' is asynchronous."
           : " The async provider '$asyncRoot' in the dependency chain causes transitive async propagation.";
       final String declared = p.parameter.type.getDisplayString();
-      final String value = p.parameter.type.unwrapProviderParam().type.getDisplayString();
+      final String value = p.parameter.type.unwrapProviderParam().type.unwrapFuture.getDisplayString();
+      final factoryInfo = p.inFactory
+          ? ' An assisted factory or typedef provider creates its object synchronously.'
+          : '';
 
       _reporter.errorForElement(
         p.parameter,
         message:
             "Parameter '${p.parameter.name}' required by ${p.requiredBy} is declared '$declared' "
-            'but its dependency chain is asynchronous.$rootInfo',
-        suggestion: "Change the parameter type from '$declared' to '$value'.",
+            'but its dependency chain is asynchronous.$rootInfo$factoryInfo',
+        // A factory has no async form, so `T` would not compile there.
+        suggestion: p.inFactory
+            ? 'Make the dependency synchronous, or pass the awaited value in as a factory parameter.'
+            : "Change the parameter type from '$declared' to '$value'.",
       );
     }
   }
