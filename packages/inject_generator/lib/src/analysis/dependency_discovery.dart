@@ -501,6 +501,14 @@ typedef TypedefProviderData = ({
 /// For each typedef dep, analyzes the function's return type constructor
 /// to find parameters not in the function signature — these are injectable.
 /// Also discovers transitive injectables from those parameters.
+///
+/// No provider is synthesized for a dep whose key is already provided by a
+/// module or the parent graph (`F?` counts as bound by `F`, the resolver's
+/// nullable widening), nor when an extra parameter can never be a binding
+/// because [BindingKey.fromDartType] returns `null` for it (a raw function or
+/// record). A typedef rejected that way leaves no discovery side effects: the
+/// regular resolution reports the usual `No binding found` at the injecting
+/// parameter.
 void discoverTypedefProviders({
   required AnnotationReader reader,
   required List<({ClassElement factoryElement, AssistedInjectData injectData, AssistedFactoryData factoryData})>
@@ -525,6 +533,13 @@ void discoverTypedefProviders({
       if (dep.type is! FunctionType) continue;
       final funcType = dep.type as FunctionType;
       if (funcType.alias == null) continue;
+
+      // A module or parent binding wins, whatever the typedef's shape.
+      final BindingKey? key = BindingKey.fromDartType(dep.type, qualifier: dep.qualifier);
+      if (key != null &&
+          (moduleProvidedKeys.contains(key) || (key.isNullable && moduleProvidedKeys.contains(key.nonNullable)))) {
+        continue;
+      }
 
       // Dedup by typedef type identity
       if (typedefProviders.any((t) => t.typedefType == dep.type)) continue;
@@ -571,12 +586,20 @@ void discoverTypedefProviders({
         final String? qualifier = ctorParam.readQualifier();
 
         injectedParams.add((param: ctorParam, depType: depType, qualifier: qualifier, passProvider: passProvider));
+      }
 
-        // Discover the dep type as injectable
-        final BindingKey? depKey = BindingKey.fromDartType(depType, qualifier: qualifier);
-        if (depKey == null || !moduleProvidedKeys.contains(depKey)) {
+      if (injectedParams.isEmpty) continue;
+
+      // A parameter without a key can never be a binding; reject before discovery so no side effects remain.
+      if (injectedParams.any((p) => BindingKey.fromDartType(p.depType, qualifier: p.qualifier) == null)) {
+        continue;
+      }
+
+      // Discover the dep types as injectables
+      for (final injected in injectedParams) {
+        if (!moduleProvidedKeys.contains(BindingKey.fromDartType(injected.depType, qualifier: injected.qualifier))) {
           _findAndAddInjectable(
-            dartType: depType,
+            dartType: injected.depType,
             reader: reader,
             injectables: injectables,
             moduleProvidedKeys: moduleProvidedKeys,
@@ -584,8 +607,6 @@ void discoverTypedefProviders({
           );
         }
       }
-
-      if (injectedParams.isEmpty) continue;
 
       typedefProviders.add((
         typedefType: dep.type,

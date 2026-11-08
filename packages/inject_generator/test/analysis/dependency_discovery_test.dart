@@ -2,6 +2,7 @@ import 'package:analyzer/dart/element/element.dart';
 import 'package:build/build.dart';
 import 'package:build_test/build_test.dart';
 import 'package:inject_generator/src/analysis/annotation_reader.dart';
+import 'package:inject_generator/src/analysis/assisted_reader.dart';
 import 'package:inject_generator/src/analysis/component_reader.dart';
 import 'package:inject_generator/src/analysis/dependency_discovery.dart';
 import 'package:inject_generator/src/analysis/inject_reader.dart';
@@ -444,6 +445,147 @@ void main() {
       expect(injectables[0].classElement.name, 'ProfileWidget');
       expect(injectables[1].classElement.name, 'ProfileWidget');
       expect(injectables[0].injectable.key.qualifier, isNot(injectables[1].injectable.key.qualifier));
+    });
+  });
+
+  group('discoverTypedefProviders', () {
+    late List<TypedefProviderData> providers;
+    late List<({ClassElement classElement, InjectableData injectable})> injectables;
+
+    // Runs discovery for the `Target`/`TargetFactory` pair in [declarations],
+    // with `AppModule` installed when the source declares it.
+    Future<void> discover(String declarations) async {
+      final LibraryElement library = await _resolveLibrary('''
+        import 'package:inject_annotation/inject_annotation.dart';
+
+        class Clock {
+          @inject
+          const Clock();
+        }
+
+        @assistedFactory
+        abstract class TargetFactory {
+          Target create(int id);
+        }
+
+        $declarations
+      ''');
+
+      final ClassElement factoryClass = library.getClass('TargetFactory')!;
+      final AssistedFactoryData factoryData = reader.readAssistedFactory(factoryClass)!;
+      final AssistedInjectData injectData = reader.readAssistedInject(library.getClass('Target')!)!;
+      final ClassElement? moduleClass = library.getClass('AppModule');
+      providers = [];
+      injectables = [];
+
+      discoverTypedefProviders(
+        reader: reader,
+        factories: [(factoryElement: factoryClass, injectData: injectData, factoryData: factoryData)],
+        injectables: injectables,
+        modules: [if (moduleClass != null) (moduleClass: moduleClass, moduleData: reader.readModule(moduleClass))],
+        typedefProviders: providers,
+      );
+    }
+
+    test('a raw function extra parameter yields no provider and no injectables after an @inject parameter', () async {
+      await discover('''
+        class Built {
+          Built(Clock clock, void Function() onDone);
+        }
+        typedef BuiltFactory = Built Function();
+
+        class Target {
+          @assistedInject
+          Target(BuiltFactory builder, @assisted int id);
+        }
+      ''');
+
+      expect(providers, isEmpty);
+      expect(injectables, isEmpty);
+    });
+
+    test('a raw record extra parameter yields no provider and no injectables after an @inject parameter', () async {
+      await discover('''
+        class Built {
+          Built(Clock clock, (int, int) range);
+        }
+        typedef BuiltFactory = Built Function();
+
+        class Target {
+          @assistedInject
+          Target(BuiltFactory builder, @assisted int id);
+        }
+      ''');
+
+      expect(providers, isEmpty);
+      expect(injectables, isEmpty);
+    });
+
+    test('a raw function parameter the typedef forwards does not block synthesis', () async {
+      await discover('''
+        class Built {
+          Built(void Function() onDone, Clock clock);
+        }
+        typedef BuiltFactory = Built Function(void Function() onDone);
+
+        class Target {
+          @assistedInject
+          Target(BuiltFactory builder, @assisted int id);
+        }
+      ''');
+
+      expect(providers, hasLength(1));
+      expect(providers.single.injectedParams.single.param.name, 'clock');
+      expect(injectables.map((i) => i.classElement.name), ['Clock']);
+    });
+
+    test('a module-provided extra parameter gets a provider but is not discovered as an injectable', () async {
+      await discover('''
+        class Built {
+          Built(Clock clock);
+        }
+        typedef BuiltFactory = Built Function();
+
+        @module
+        class AppModule {
+          @provides
+          Clock provideClock() => const Clock();
+        }
+
+        class Target {
+          @assistedInject
+          Target(BuiltFactory builder, @assisted int id);
+        }
+      ''');
+
+      expect(providers, hasLength(1));
+      expect(injectables, isEmpty);
+    });
+
+    test('a dependency qualified like a module binding yields no provider', () async {
+      await discover('''
+        const primary = Qualifier(#primary);
+
+        class Built {
+          Built(Clock clock);
+        }
+        typedef BuiltFactory = Built Function();
+
+        @module
+        class AppModule {
+          @provides
+          @primary
+          BuiltFactory provideBuiltFactory() => throw UnimplementedError();
+        }
+
+        class Target {
+          @assistedInject
+          Target(@primary BuiltFactory builder, @assisted int id);
+        }
+      ''');
+
+      expect(providers, isEmpty);
+      expect(injectables, isEmpty);
     });
   });
 

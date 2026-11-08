@@ -849,6 +849,101 @@ void main() {
         reason: "Expected 'also tried' diagnostic for nullable dep with no binding",
       );
     });
+
+    // A module or parent binding of a function typedef wins over the
+    // synthesized typedef provider.
+    test('typedef_module_binding_assisted_dep golden', () async {
+      await runPipelineGolden(
+        fixtureName: 'typedef_module_binding_assisted_dep',
+        goldenDir: _goldenDir,
+        expectFactory: true,
+      );
+    });
+
+    test('typedef_qualified_binding_assisted_dep golden', () async {
+      await runPipelineGolden(
+        fixtureName: 'typedef_qualified_binding_assisted_dep',
+        goldenDir: _goldenDir,
+        expectFactory: true,
+      );
+    });
+
+    test('typedef_parent_binding_assisted_dep_in_subcomp golden', () async {
+      await runPipelineGolden(
+        fixtureName: 'typedef_parent_binding_assisted_dep_in_subcomp',
+        goldenDir: _goldenDir,
+        expectFactory: true,
+      );
+    });
+
+    test('typedef_provider_synthesized_assisted_dep golden', () async {
+      await runPipelineGolden(
+        fixtureName: 'typedef_provider_synthesized_assisted_dep',
+        goldenDir: _goldenDir,
+        expectFactory: true,
+      );
+    });
+
+    test('typedef_unbound_unbindable_ctor_param error path', () async {
+      final String source = File('$_goldenDir/typedef_unbound_unbindable_ctor_param.dart').readAsStringSync();
+
+      final Builder factory = factoryBuilder(BuilderOptions.empty);
+      final Builder inject = injectBuilder(BuilderOptions.empty);
+
+      final logs = <LogRecord>[];
+
+      final TestBuilderResult result = await testBuilders(
+        [factory, inject],
+        {
+          ...injectAnnotationAssets,
+          'pkg|lib/typedef_unbound_unbindable_ctor_param.dart': source,
+        },
+        rootPackage: 'pkg',
+        visibleOutputBuilders: {factory},
+        appliesBuilders: {
+          factory: ['inject_generator|inject_builder'],
+        },
+        flattenOutput: true,
+        onLog: logs.add,
+      );
+
+      expect(
+        result.outputs.where((id) => id.path.endsWith('.inject.dart')),
+        isEmpty,
+        reason: 'Graph validation error must suppress .inject.dart output',
+      );
+
+      final List<String> severeMessages = logs.where((l) => l.level == Level.SEVERE).map((l) => l.message).toList();
+      final List<String> sourceLines = source.split('\n');
+      for (final (String typedefName, String parameter) in [
+        ('LoadCount', 'this.loadCount,'),
+        ('TickerBuilder', 'this.tickerBuilder,'),
+      ]) {
+        final int line = sourceLines.indexWhere((l) => l.contains(parameter)) + 1;
+        expect(
+          severeMessages,
+          anyElement(
+            allOf(
+              contains('typedef_unbound_unbindable_ctor_param.dart:$line:'),
+              contains("No binding found for type '$typedefName'"),
+            ),
+          ),
+          reason: "Expected a missing-binding error for '$typedefName' at its injecting parameter",
+        );
+      }
+      expect(
+        severeMessages,
+        everyElement(allOf(isNot(contains('dart:async')), isNot(contains('is not supported as a dependency')))),
+        reason: 'A rejected typedef must not surface a diagnostic inside the SDK',
+      );
+
+      final Iterable<String> warnMessages = logs.where((l) => l.level == Level.WARNING).map((l) => l.message);
+      expect(
+        warnMessages,
+        everyElement(isNot(contains('never used'))),
+        reason: 'A rejected typedef must not leave its @inject parameter class behind as a discovered binding',
+      );
+    });
   });
 }
 
