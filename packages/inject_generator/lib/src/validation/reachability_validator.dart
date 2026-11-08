@@ -13,33 +13,35 @@ class ReachabilityValidator {
   ReachabilityValidator({required DiagnosticReporter reporter}) : _reporter = reporter;
   final DiagnosticReporter _reporter;
 
-  /// Computes the set of [BindingKey]s reachable from [entryPoints] via BFS
-  /// through [dependencyEdges].
+  /// Computes the set of [BindingKey]s reachable from [entryPoints] and
+  /// [extraRoots] by walking [dependencyEdges].
+  ///
+  /// [extraRoots] holds keys consumed from outside this graph, such as parent
+  /// bindings a subcomponent reads. Their own dependencies count as reachable.
   static Set<BindingKey> computeReachableKeys({
     required Map<BindingKey, BindingSource> bindingMap,
     required Map<BindingKey, List<BindingKey>> dependencyEdges,
     required List<EntryPoint> entryPoints,
+    Set<BindingKey> extraRoots = const {},
   }) {
     final reachable = <BindingKey>{};
     final queue = <BindingKey>[];
 
-    for (final ep in entryPoints) {
-      if (bindingMap.containsKey(ep.key) && reachable.add(ep.key)) {
-        queue.add(ep.key);
+    void visit(BindingKey key) {
+      // `Foo?` is satisfied by a `Foo` binding, the resolver's nullable widening.
+      final BindingKey bound = key.isNullable && !bindingMap.containsKey(key) ? key.nonNullable : key;
+      if (bindingMap.containsKey(bound) && reachable.add(bound)) {
+        queue.add(bound);
       }
     }
 
+    for (final ep in entryPoints) {
+      visit(ep.key);
+    }
+    extraRoots.forEach(visit);
+
     while (queue.isNotEmpty) {
-      final BindingKey current = queue.removeLast();
-      final List<BindingKey>? deps = dependencyEdges[current];
-      if (deps == null) {
-        continue;
-      }
-      for (final BindingKey dep in deps) {
-        if (bindingMap.containsKey(dep) && reachable.add(dep)) {
-          queue.add(dep);
-        }
-      }
+      dependencyEdges[queue.removeLast()]?.forEach(visit);
     }
 
     return reachable;
@@ -55,11 +57,14 @@ class ReachabilityValidator {
   /// unreachable check. This is used for infrastructure bindings such as
   /// `@provisionListener` providers that are wired implicitly and do not
   /// need a component entry point to be considered "used".
+  ///
+  /// [extraRoots] is forwarded to [computeReachableKeys].
   void validate({
     required Map<BindingKey, BindingSource> bindingMap,
     required Map<BindingKey, List<BindingKey>> dependencyEdges,
     required List<EntryPoint> entryPoints,
     Set<BindingKey> exemptKeys = const {},
+    Set<BindingKey> extraRoots = const {},
   }) {
     if (bindingMap.isEmpty) {
       return;
@@ -69,6 +74,7 @@ class ReachabilityValidator {
       bindingMap: bindingMap,
       dependencyEdges: dependencyEdges,
       entryPoints: entryPoints,
+      extraRoots: extraRoots,
     );
 
     // Report unreachable bindings as warnings (sorted for deterministic output).

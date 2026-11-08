@@ -587,6 +587,133 @@ void main() {
       expect(providers, isEmpty);
       expect(injectables, isEmpty);
     });
+
+    test('a nullable extra parameter bound by a module is not discovered as an injectable', () async {
+      await discover('''
+        class Built {
+          Built(Clock? clock);
+        }
+        typedef BuiltFactory = Built Function();
+
+        @module
+        class AppModule {
+          @provides
+          Clock provideClock() => const Clock();
+        }
+
+        class Target {
+          @assistedInject
+          Target(BuiltFactory builder, @assisted int id);
+        }
+      ''');
+
+      expect(providers, hasLength(1));
+      expect(injectables, isEmpty);
+    });
+
+    test('an abstract return type with a factory constructor gets a provider', () async {
+      await discover('''
+        abstract class Built {
+          factory Built(Clock clock) = _Built;
+        }
+        class _Built implements Built {
+          _Built(Clock clock);
+        }
+        typedef BuiltFactory = Built Function();
+
+        class Target {
+          @assistedInject
+          Target(BuiltFactory builder, @assisted int id);
+        }
+      ''');
+
+      expect(providers, hasLength(1));
+      expect(injectables.map((i) => i.classElement.name), ['Clock']);
+    });
+
+    test('an abstract return type with a generative constructor yields no provider and no injectables', () async {
+      await discover('''
+        abstract class Built {
+          Built(Clock clock);
+        }
+        typedef BuiltFactory = Built Function();
+
+        class Target {
+          @assistedInject
+          Target(BuiltFactory builder, @assisted int id);
+        }
+      ''');
+
+      expect(providers, isEmpty);
+      expect(injectables, isEmpty);
+    });
+
+    test('a sealed return type with a generative constructor yields no provider and no injectables', () async {
+      await discover('''
+        sealed class Built {
+          Built(Clock clock);
+        }
+        typedef BuiltFactory = Built Function();
+
+        class Target {
+          @assistedInject
+          Target(BuiltFactory builder, @assisted int id);
+        }
+      ''');
+
+      expect(providers, isEmpty);
+      expect(injectables, isEmpty);
+    });
+
+    test('a qualified extra parameter discovers only the matching constructor', () async {
+      await discover('''
+        const primary = Qualifier(#primary);
+        const secondary = Qualifier(#secondary);
+
+        class Missing {}
+
+        class QClock {
+          @inject
+          @primary
+          QClock.first();
+
+          @inject
+          @secondary
+          QClock.second(Missing missing);
+        }
+
+        class Built {
+          Built(@primary QClock clock);
+        }
+        typedef BuiltFactory = Built Function();
+
+        class Target {
+          @assistedInject
+          Target(BuiltFactory builder, @assisted int id);
+        }
+      ''');
+
+      expect(providers, hasLength(1));
+      expect(injectables.map((i) => i.injectable.key.qualifier), ['primary']);
+    });
+
+    test('two typedefs with one signature get one provider each', () async {
+      await discover('''
+        class Built {
+          Built(Clock clock);
+        }
+        typedef FirstFactory = Built Function();
+        typedef SecondFactory = Built Function();
+
+        class Target {
+          @assistedInject
+          Target(FirstFactory first, SecondFactory second, @assisted int id);
+        }
+      ''');
+
+      expect(providers.map((p) => p.typedefType.alias!.element.name), ['FirstFactory', 'SecondFactory']);
+      expect(injectables.map((i) => i.classElement.name), ['Clock']);
+    });
   });
 
   group('collectModuleProvidedKeys', () {

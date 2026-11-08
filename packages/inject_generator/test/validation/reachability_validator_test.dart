@@ -24,6 +24,7 @@ void _validateReachability({
   required List<({ClassElement classElement, InjectableData injectable})> injectables,
   required List<EntryPoint> entryPoints,
   Set<BindingKey> exemptKeys = const {},
+  Set<BindingKey> extraRoots = const {},
 }) {
   final result = BindingResolver(
     reporter: reporter,
@@ -34,6 +35,7 @@ void _validateReachability({
     dependencyEdges: result.dependencyEdges,
     entryPoints: entryPoints,
     exemptKeys: exemptKeys,
+    extraRoots: extraRoots,
   );
 }
 
@@ -406,6 +408,123 @@ void main() {
 
         expect(reporter.hasErrors, isFalse);
         expect(reporter.messages, isEmpty);
+      });
+
+      test('binding consumed only as a nullable dependency is not reported', () async {
+        final LibraryElement library = await _resolveLibrary('''
+          import 'package:inject_annotation/inject_annotation.dart';
+
+          class Foo {}
+
+          @module
+          class AppModule {
+            @provides
+            Foo provideFoo() => Foo();
+
+            @provides
+            String provideName(Foo? foo) => 'name';
+          }
+
+          @Component([AppModule])
+          abstract class AppComponent {
+            @inject
+            String get name;
+          }
+        ''');
+
+        final ClassElement moduleClass = library.getClass('AppModule')!;
+        final reader = AnnotationReader(reporter: reporter);
+
+        _validateReachability(
+          reporter: reporter,
+          modules: [(moduleClass: moduleClass, moduleData: reader.readModule(moduleClass))],
+          injectables: [],
+          entryPoints: reader.readComponent(library.getClass('AppComponent')!)!.entryPoints,
+        );
+
+        expect(reporter.hasErrors, isFalse);
+        expect(reporter.messages, isEmpty);
+      });
+
+      test('binding consumed only as a nullable entry point is not reported', () async {
+        final LibraryElement library = await _resolveLibrary('''
+          import 'package:inject_annotation/inject_annotation.dart';
+
+          class Foo {}
+
+          @module
+          class AppModule {
+            @provides
+            Foo provideFoo() => Foo();
+          }
+
+          @Component([AppModule])
+          abstract class AppComponent {
+            @inject
+            Foo? get foo;
+          }
+        ''');
+
+        final ClassElement moduleClass = library.getClass('AppModule')!;
+        final reader = AnnotationReader(reporter: reporter);
+
+        _validateReachability(
+          reporter: reporter,
+          modules: [(moduleClass: moduleClass, moduleData: reader.readModule(moduleClass))],
+          injectables: [],
+          entryPoints: reader.readComponent(library.getClass('AppComponent')!)!.entryPoints,
+        );
+
+        expect(reporter.hasErrors, isFalse);
+        expect(reporter.messages, isEmpty);
+      });
+
+      test('an extra root keeps its own dependencies reachable and leaves other bindings reported', () async {
+        final LibraryElement library = await _resolveLibrary('''
+          import 'package:inject_annotation/inject_annotation.dart';
+
+          class Database {}
+
+          class Repository {
+            Repository(this.database);
+
+            final Database database;
+          }
+
+          @module
+          class AppModule {
+            @provides
+            Database provideDatabase() => Database();
+
+            @provides
+            Repository provideRepository(Database database) => Repository(database);
+
+            @provides
+            int provideUnused() => 42;
+          }
+
+          @Component([AppModule])
+          abstract class AppComponent {}
+        ''');
+
+        final ClassElement moduleClass = library.getClass('AppModule')!;
+        final reader = AnnotationReader(reporter: reporter);
+        final ModuleData moduleData = reader.readModule(moduleClass);
+
+        _validateReachability(
+          reporter: reporter,
+          modules: [(moduleClass: moduleClass, moduleData: moduleData)],
+          injectables: [],
+          entryPoints: reader.readComponent(library.getClass('AppComponent')!)!.entryPoints,
+          extraRoots: {BindingKey.fromDartType(library.getClass('Repository')!.thisType)!},
+        );
+
+        expect(reporter.hasErrors, isFalse);
+        final Iterable<DiagnosticMessage> warnings = reporter.messages.where(
+          (m) => m.severity == DiagnosticSeverity.warning && m.message.contains('never used'),
+        );
+        expect(warnings, hasLength(1));
+        expect(warnings.first.message, contains("Binding 'int'"));
       });
 
       test('provisionListener binding is exempt from reachability warning', () async {

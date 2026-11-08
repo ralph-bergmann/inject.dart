@@ -481,6 +481,7 @@ class ProviderGenerator {
   }) {
     final fields = <Field>[];
     final params = <Parameter>[];
+    final seenFieldNames = <String>{};
     for (final dep in dependencies) {
       // Use non-nullable display name: the provider for `Foo?` is the same as
       // for `Foo` (nullable-widening), so both map to `_Foo$Provider`.
@@ -493,6 +494,8 @@ class ProviderGenerator {
         parentPrefix: parentPrefix,
       );
       final String depFieldName = _providerFieldName(depTypeName, dep.qualifier, componentPrefix: depPrefix);
+      // Several parameters can read one provider; it still needs only one field.
+      if (!seenFieldNames.add(depFieldName)) continue;
       final Reference depFieldType = partFileContext
           ? dep.type.providerTypeRef(partFileContext: true)
           : refer(providerClassName(depTypeName, dep.qualifier, componentPrefix: depPrefix));
@@ -1018,7 +1021,7 @@ class ProviderGenerator {
         final ({DartType depType, FormalParameterElement param, String? qualifier, bool passProvider}) injected =
             typedefData.injectedParams.firstWhere((ip) => ip.param == ctorParam);
         final String depFieldName = _providerFieldName(
-          injected.depType.displayName,
+          injected.depType.nonNullableDisplayName,
           injected.qualifier,
           componentPrefix: _depPrefix(
             injected.depType,

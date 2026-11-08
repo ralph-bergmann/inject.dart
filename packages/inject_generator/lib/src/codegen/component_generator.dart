@@ -295,11 +295,13 @@ class ComponentGenerator {
         ctorArgs.add('this');
       }
 
-      // Dependency providers first (excluding listener deps added for topo sort)
+      // Dependency providers first (excluding listener deps added for topo sort).
+      // Parameters that read one provider share one field, so it is passed once.
       for (final BindingKey depKey in binding.dependencyKeys) {
         if (listenerBindingKeys.contains(depKey)) continue;
         final _Binding depBinding = sortedBindings.firstWhere((b) => b.key == depKey);
-        ctorArgs.add(depBinding.isField ? '_${depBinding.baseName}' : depBinding.variableName);
+        final String arg = depBinding.isField ? '_${depBinding.baseName}' : depBinding.variableName;
+        if (!ctorArgs.contains(arg)) ctorArgs.add(arg);
       }
 
       // Listener provider refs between deps and module
@@ -908,11 +910,13 @@ class ComponentGenerator {
 
       // Dependency providers first: child bindings by local reference,
       // parent bindings through the parent component's promoted fields.
+      // Parameters that read one provider share one field, so it is passed once.
       for (final BindingKey depKey in binding.dependencyKeys) {
         if (listenerBindingKeys.contains(depKey)) continue;
         final _Binding? depBinding = sortedBindings.where((b) => b.key == depKey).firstOrNull;
         if (depBinding != null) {
-          ctorArgs.add(depBinding.isField ? '_${depBinding.baseName}' : depBinding.variableName);
+          final String arg = depBinding.isField ? '_${depBinding.baseName}' : depBinding.variableName;
+          if (!ctorArgs.contains(arg)) ctorArgs.add(arg);
           continue;
         }
         final String? parentField = _parentFieldFor(depKey, parentProviderFieldNames);
@@ -928,7 +932,7 @@ class ComponentGenerator {
             'https://github.com/ralph-bergmann/inject.dart/issues with a reproduction.',
           );
         }
-        ctorArgs.add('_parent.$parentField');
+        if (!ctorArgs.contains('_parent.$parentField')) ctorArgs.add('_parent.$parentField');
       }
 
       if (listenerCalls != null) {

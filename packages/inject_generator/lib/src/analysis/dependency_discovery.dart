@@ -504,11 +504,12 @@ typedef TypedefProviderData = ({
 ///
 /// No provider is synthesized for a dep whose key is already provided by a
 /// module or the parent graph (`F?` counts as bound by `F`, the resolver's
-/// nullable widening), nor when an extra parameter can never be a binding
-/// because [BindingKey.fromDartType] returns `null` for it (a raw function or
-/// record). A typedef rejected that way leaves no discovery side effects: the
-/// regular resolution reports the usual `No binding found` at the injecting
-/// parameter.
+/// nullable widening), when the return type is abstract or sealed and its
+/// unnamed constructor is generative, nor when an extra parameter can never be
+/// a binding because [BindingKey.fromDartType] returns `null` for it (a raw
+/// function or record). A typedef rejected that way leaves no discovery side
+/// effects: the regular resolution reports the usual `No binding found` at the
+/// injecting parameter.
 void discoverTypedefProviders({
   required AnnotationReader reader,
   required List<({ClassElement factoryElement, AssistedInjectData injectData, AssistedFactoryData factoryData})>
@@ -528,6 +529,10 @@ void discoverTypedefProviders({
     }
   }
 
+  // `Foo?` counts as bound by `Foo`, the resolver's nullable widening.
+  bool isBound(BindingKey key) =>
+      moduleProvidedKeys.contains(key) || (key.isNullable && moduleProvidedKeys.contains(key.nonNullable));
+
   for (final factory in factories) {
     for (final ParameterDependency dep in factory.injectData.injectedDependencies) {
       if (dep.type is! FunctionType) continue;
@@ -536,13 +541,12 @@ void discoverTypedefProviders({
 
       // A module or parent binding wins, whatever the typedef's shape.
       final BindingKey? key = BindingKey.fromDartType(dep.type, qualifier: dep.qualifier);
-      if (key != null &&
-          (moduleProvidedKeys.contains(key) || (key.isNullable && moduleProvidedKeys.contains(key.nonNullable)))) {
-        continue;
-      }
+      if (key != null && isBound(key)) continue;
 
-      // Dedup by typedef type identity
-      if (typedefProviders.any((t) => t.typedefType == dep.type)) continue;
+      // DartType equality ignores the alias, so two typedefs with one signature
+      // would collapse. Typedef providers register without a qualifier.
+      final BindingKey? typedefKey = BindingKey.fromDartType(dep.type);
+      if (typedefProviders.any((t) => BindingKey.fromDartType(t.typedefType) == typedefKey)) continue;
 
       // The function's return type must be an InterfaceType with a constructor
       final DartType returnType = funcType.returnType;
@@ -553,6 +557,9 @@ void discoverTypedefProviders({
 
       final ConstructorElement? constructor = classElement.unnamedConstructor;
       if (constructor == null) continue;
+
+      // An abstract or sealed class can only be built through a factory constructor.
+      if (!classElement.isConstructable && !constructor.isFactory) continue;
 
       // Type parameter substitution map (e.g., T → HomePageViewModel)
       final List<TypeParameterElement> typeParams = classElement.typeParameters;
@@ -597,13 +604,14 @@ void discoverTypedefProviders({
 
       // Discover the dep types as injectables
       for (final injected in injectedParams) {
-        if (!moduleProvidedKeys.contains(BindingKey.fromDartType(injected.depType, qualifier: injected.qualifier))) {
+        if (!isBound(BindingKey.fromDartType(injected.depType, qualifier: injected.qualifier)!)) {
           _findAndAddInjectable(
             dartType: injected.depType,
             reader: reader,
             injectables: injectables,
             moduleProvidedKeys: moduleProvidedKeys,
             factories: factories,
+            qualifier: injected.qualifier,
           );
         }
       }
@@ -864,15 +872,6 @@ List<SubcomponentFactoryDescriptor> discoverSubcomponentFactories({
         factories: subcomponentFactories,
         parentProvidedKeys: parentProvidedKeys,
       );
-      final subcomponentTypedefProviders = <TypedefProviderData>[];
-      discoverTypedefProviders(
-        reader: reader,
-        factories: subcomponentFactories,
-        injectables: subcomponentInjectables,
-        modules: subcomponentModules,
-        typedefProviders: subcomponentTypedefProviders,
-        parentProvidedKeys: parentProvidedKeys,
-      );
 
       // An explicit `@subcomponentFactory` targeting this subcomponent, if
       // any, replaces the synthesized `<Name>Factory` (mirrors the
@@ -940,6 +939,18 @@ List<SubcomponentFactoryDescriptor> discoverSubcomponentFactories({
           valueParameters.add((key: key, parameter: parameter));
         }
       }
+
+      // Runs after the value parameters are known: a typedef passed as one is
+      // already bound, so it must not get a synthesized provider.
+      final subcomponentTypedefProviders = <TypedefProviderData>[];
+      discoverTypedefProviders(
+        reader: reader,
+        factories: subcomponentFactories,
+        injectables: subcomponentInjectables,
+        modules: subcomponentModules,
+        typedefProviders: subcomponentTypedefProviders,
+        parentProvidedKeys: {...parentProvidedKeys, for (final valueParameter in valueParameters) valueParameter.key},
+      );
 
       descriptors.add((
         subcomponentClass: element,

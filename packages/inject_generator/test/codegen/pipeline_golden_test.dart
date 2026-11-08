@@ -884,6 +884,187 @@ void main() {
       );
     });
 
+    test('typedef_subcomp_factory_value_param golden', () async {
+      await runPipelineGolden(
+        fixtureName: 'typedef_subcomp_factory_value_param',
+        goldenDir: _goldenDir,
+        expectFactory: true,
+      );
+    });
+
+    test('typedef_provider_extra_param_shapes golden', () async {
+      await runPipelineGolden(
+        fixtureName: 'typedef_provider_extra_param_shapes',
+        goldenDir: _goldenDir,
+        expectFactory: true,
+      );
+    });
+
+    test('typedef_abstract_return_type error path', () async {
+      final String source = File('$_goldenDir/typedef_abstract_return_type.dart').readAsStringSync();
+
+      final (:result, :logs) = await _runPipelineWithLogs(source, 'typedef_abstract_return_type');
+
+      expect(
+        result.outputs.where((id) => id.path.endsWith('.inject.dart')),
+        isEmpty,
+        reason: 'Graph validation error must suppress .inject.dart output',
+      );
+
+      final List<String> severeMessages = logs.where((l) => l.level == Level.SEVERE).map((l) => l.message).toList();
+      final List<String> sourceLines = source.split('\n');
+      for (final (String typedefName, String parameter) in [
+        ('AbstractBuilder', 'this.abstractBuilder,'),
+        ('SealedBuilder', 'this.sealedBuilder,'),
+      ]) {
+        final int line = sourceLines.indexWhere((l) => l.contains(parameter)) + 1;
+        expect(
+          severeMessages,
+          anyElement(
+            allOf(
+              contains('typedef_abstract_return_type.dart:$line:'),
+              contains("No binding found for type '$typedefName'"),
+            ),
+          ),
+          reason: "Expected a missing-binding error for '$typedefName' at its injecting parameter",
+        );
+      }
+
+      expect(
+        logs.where((l) => l.level == Level.WARNING).map((l) => l.message),
+        everyElement(isNot(contains('never used'))),
+        reason: 'A rejected typedef must not leave its @inject parameter class behind as a discovered binding',
+      );
+    });
+
+    test('a binding consumed only by a subcomponent is not reported as never used', () async {
+      final String source = File('$_goldenDir/typedef_parent_binding_assisted_dep_in_subcomp.dart').readAsStringSync();
+
+      final (:result, :logs) = await _runPipelineWithLogs(source, 'typedef_parent_binding_assisted_dep_in_subcomp');
+
+      expect(result.succeeded, isTrue);
+      expect(
+        logs.where((l) => l.level == Level.WARNING).map((l) => l.message),
+        everyElement(isNot(contains('never used'))),
+      );
+    });
+
+    test('a dependency of a binding consumed only by a subcomponent is not reported, an unused binding is', () async {
+      const fixtureName = 'transitive_child_consumption';
+      const source =
+          '''
+        import 'package:inject_annotation/inject_annotation.dart';
+
+        part '$fixtureName.factory.dart';
+
+        class Database {
+          const Database();
+        }
+
+        class Repository {
+          const Repository(this.database);
+
+          final Database database;
+        }
+
+        class Unused {
+          const Unused();
+        }
+
+        class SessionView {
+          @inject
+          const SessionView(this.repository);
+
+          final Repository repository;
+        }
+
+        @Module(subcomponents: [SessionSubcomponent])
+        class AppModule {
+          @provides
+          Database provideDatabase() => const Database();
+
+          @provides
+          Repository provideRepository(Database database) => Repository(database);
+
+          @provides
+          Unused provideUnused() => const Unused();
+        }
+
+        @subcomponent
+        abstract class SessionSubcomponent {
+          SessionView get sessionView;
+        }
+
+        @Component([AppModule])
+        abstract class AppComponent {
+          SessionSubcomponentFactory get sessionFactory;
+        }
+      ''';
+
+      final (result: _, :logs) = await _runPipelineWithLogs(source, fixtureName);
+
+      final List<String> neverUsed = logs
+          .where((l) => l.level == Level.WARNING && l.message.contains('never used'))
+          .map((l) => l.message)
+          .toList();
+      expect(neverUsed, hasLength(1), reason: 'Only the binding nobody consumes may be reported: $neverUsed');
+      expect(neverUsed.single, contains('Unused'));
+    });
+
+    test('a typed listener for a binding consumed only by a subcomponent is not reported as never used', () async {
+      const fixtureName = 'listener_child_consumption';
+      const source =
+          '''
+        import 'package:inject_annotation/inject_annotation.dart';
+
+        part '$fixtureName.factory.dart';
+
+        class Database {
+          const Database();
+        }
+
+        class DatabaseListener implements ProvisionListener<Database> {
+          @override
+          void onProvision(Database instance) {}
+        }
+
+        class SessionView {
+          @inject
+          const SessionView(this.database);
+
+          final Database database;
+        }
+
+        @Module(subcomponents: [SessionSubcomponent])
+        class AppModule {
+          @provides
+          Database provideDatabase() => const Database();
+
+          @provides
+          @provisionListener
+          DatabaseListener provideListener() => DatabaseListener();
+        }
+
+        @subcomponent
+        abstract class SessionSubcomponent {
+          SessionView get sessionView;
+        }
+
+        @Component([AppModule])
+        abstract class AppComponent {
+          SessionSubcomponentFactory get sessionFactory;
+        }
+      ''';
+
+      final (:result, :logs) = await _runPipelineWithLogs(source, fixtureName);
+
+      expect(result.succeeded, isTrue);
+      expect(
+        logs.where((l) => l.level == Level.WARNING).map((l) => l.message),
+        everyElement(isNot(contains('never used'))),
+      );
+    });
+
     test('typedef_unbound_unbindable_ctor_param error path', () async {
       final String source = File('$_goldenDir/typedef_unbound_unbindable_ctor_param.dart').readAsStringSync();
 
@@ -947,11 +1128,16 @@ void main() {
   });
 }
 
-/// Runs the factory → inject pipeline on [source] and returns the generated
-/// `.inject.dart` content, or `null` when the build produced no output.
-Future<String?> _runPipelineGetInjectOutput(String source, String fixtureName) async {
+/// Runs the factory → inject pipeline on [source] and returns the result with
+/// every log record of the build.
+Future<({TestBuilderResult result, List<LogRecord> logs})> _runPipelineWithLogs(
+  String source,
+  String fixtureName,
+) async {
   final Builder factory = factoryBuilder(BuilderOptions.empty);
   final Builder inject = injectBuilder(BuilderOptions.empty);
+
+  final logs = <LogRecord>[];
 
   final TestBuilderResult result = await testBuilders(
     [factory, inject],
@@ -965,7 +1151,16 @@ Future<String?> _runPipelineGetInjectOutput(String source, String fixtureName) a
       factory: ['inject_generator|inject_builder'],
     },
     flattenOutput: true,
+    onLog: logs.add,
   );
+
+  return (result: result, logs: logs);
+}
+
+/// Runs the factory → inject pipeline on [source] and returns the generated
+/// `.inject.dart` content, or `null` when the build produced no output.
+Future<String?> _runPipelineGetInjectOutput(String source, String fixtureName) async {
+  final (:result, logs: _) = await _runPipelineWithLogs(source, fixtureName);
 
   final AssetId? injectOutputId = result.readerWriter.testing.assets
       .where((id) => id.path.endsWith('.inject.dart'))

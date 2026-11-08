@@ -268,11 +268,19 @@ class GraphValidator {
     // least one *reachable* provisioned binding; otherwise they are dead code
     // and the reachability warning should fire.
 
+    // Parent bindings an installed subcomponent reads are in use, along with
+    // their own dependencies.
+    final consumedByChildren = <BindingKey>{
+      for (final descriptor in subcomponentDescriptors)
+        ...?_lastSubcomponentResults[descriptor.subcomponentClass]?.graphResult.parentBindingsUsed,
+    };
+
     // First compute which keys are reachable WITHOUT listener exemptions.
     final Set<BindingKey> reachableKeys = ReachabilityValidator.computeReachableKeys(
       bindingMap: graphResult.bindingMap,
       dependencyEdges: graphResult.dependencyEdges,
       entryPoints: validEntryPoints,
+      extraRoots: consumedByChildren,
     );
 
     final reachableProvisionedTypes = <DartType>[
@@ -300,6 +308,7 @@ class GraphValidator {
       dependencyEdges: graphResult.dependencyEdges,
       entryPoints: validEntryPoints,
       exemptKeys: listenerExemptKeys,
+      extraRoots: consumedByChildren,
     );
   }
 
