@@ -892,6 +892,98 @@ void main() {
       );
     });
 
+    test('nullable_module_provider_param golden', () async {
+      await runPipelineGolden(
+        fixtureName: 'nullable_module_provider_param',
+        goldenDir: _goldenDir,
+      );
+    });
+
+    test('nullable_exact_binding golden', () async {
+      await runPipelineGolden(
+        fixtureName: 'nullable_exact_binding',
+        goldenDir: _goldenDir,
+        expectFactory: true,
+      );
+    });
+
+    test('nullable_exact_binding_in_subcomp golden', () async {
+      await runPipelineGolden(
+        fixtureName: 'nullable_exact_binding_in_subcomp',
+        goldenDir: _goldenDir,
+        expectFactory: true,
+      );
+    });
+
+    test('nullable_duplicate_binding_allow_consumed golden', () async {
+      await runPipelineGolden(
+        fixtureName: 'nullable_duplicate_binding_allow_consumed',
+        goldenDir: _goldenDir,
+        expectFactory: true,
+        injectBuilderOptions: BuilderOptions({'nullable_duplicate_binding_policy': 'allow'}),
+      );
+    });
+
+    test('nullable_dep_bound_inject_class golden', () async {
+      await runPipelineGolden(
+        fixtureName: 'nullable_dep_bound_inject_class',
+        goldenDir: _goldenDir,
+        expectFactory: true,
+      );
+    });
+
+    test('subcomp_value_param_inject_class golden', () async {
+      await runPipelineGolden(
+        fixtureName: 'subcomp_value_param_inject_class',
+        goldenDir: _goldenDir,
+      );
+    });
+
+    test('typedef_sdk_return_type error path', () async {
+      final String source = File('$_goldenDir/typedef_sdk_return_type.dart').readAsStringSync();
+
+      final (:result, :logs) = await _runPipelineWithLogs(source, 'typedef_sdk_return_type');
+
+      expect(
+        result.outputs.where((id) => id.path.endsWith('.inject.dart')),
+        isEmpty,
+        reason: 'Graph validation error must suppress .inject.dart output',
+      );
+
+      final List<String> severeMessages = logs.where((l) => l.level == Level.SEVERE).map((l) => l.message).toList();
+      final List<String> sourceLines = source.split('\n');
+      for (final (String typedefName, String parameter) in [
+        ('DateBuilder', 'this.dateBuilder,'),
+        ('DelayBuilder', 'this.delayBuilder,'),
+      ]) {
+        final int line = sourceLines.indexWhere((l) => l.contains(parameter)) + 1;
+        expect(
+          severeMessages,
+          anyElement(
+            allOf(
+              contains('typedef_sdk_return_type.dart:$line:'),
+              contains("No binding found for type '$typedefName'"),
+              contains("cannot synthesize a provider for '$typedefName' because it returns a type from the Dart SDK"),
+              contains("Add a @provides method in a module that returns '$typedefName'"),
+            ),
+          ),
+          reason: "Expected the SDK-typedef error for '$typedefName' at its injecting parameter",
+        );
+      }
+      expect(
+        severeMessages,
+        everyElement(
+          allOf(
+            isNot(matches(RegExp(r'\bdart:[a-z]'))),
+            isNot(contains('required by DateBuilder')),
+            isNot(contains('required by DelayBuilder')),
+            isNot(contains('is not supported as a dependency')),
+          ),
+        ),
+        reason: 'A typedef returning an SDK type must not surface a diagnostic inside the SDK',
+      );
+    });
+
     test('typedef_provider_extra_param_shapes golden', () async {
       await runPipelineGolden(
         fixtureName: 'typedef_provider_extra_param_shapes',

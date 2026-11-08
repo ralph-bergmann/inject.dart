@@ -33,6 +33,7 @@ class ProviderGenerator {
     String? componentPrefix,
     Set<BindingKey> parentKeys = const {},
     String? parentPrefix,
+    required Set<BindingKey> exactNullableKeys,
     String? sourceUri,
   }) {
     final DartType returnType = descriptor.returnType;
@@ -63,6 +64,7 @@ class ProviderGenerator {
       componentPrefix: componentPrefix,
       parentKeys: parentKeys,
       parentPrefix: parentPrefix,
+      exactNullableKeys: exactNullableKeys,
     );
 
     // Listener provider fields (between deps and module)
@@ -104,8 +106,8 @@ class ProviderGenerator {
     // Build get() body: _module.methodName(dep1.get(), dep2.get(), ...)
     final String args = descriptor.dependencies
         .map((dep) {
-          final String depTypeName = dep.type.displayName;
           final String? depQualifier = dep.qualifier;
+          final String depTypeName = _depTypeName(dep.type, depQualifier, exactNullableKeys);
           final String depFieldName = _providerFieldName(
             depTypeName,
             depQualifier,
@@ -115,6 +117,7 @@ class ProviderGenerator {
               componentPrefix: componentPrefix,
               parentKeys: parentKeys,
               parentPrefix: parentPrefix,
+              exactNullableKeys: exactNullableKeys,
             ),
           );
           final BindingKey? depKey = BindingKey.fromDartType(dep.type, qualifier: dep.qualifier);
@@ -246,6 +249,7 @@ class ProviderGenerator {
     String? componentPrefix,
     Set<BindingKey> parentKeys = const {},
     String? parentPrefix,
+    required Set<BindingKey> exactNullableKeys,
     String? sourceUri,
   }) {
     final String typeName = classElement.name!;
@@ -270,6 +274,7 @@ class ProviderGenerator {
       componentPrefix: componentPrefix,
       parentKeys: parentKeys,
       parentPrefix: parentPrefix,
+      exactNullableKeys: exactNullableKeys,
     );
 
     // Listener provider fields
@@ -298,9 +303,8 @@ class ProviderGenerator {
     final namedArgs = <String, Expression>{};
     for (final FormalParameterElement param in injectable.constructor.formalParameters) {
       final ParameterDependency dep = injectable.dependencies.firstWhere((candidate) => candidate.parameter == param);
-      // Use nonNullableDisplayName: Foo? widens to the Foo provider (_Foo$Provider)
-      final String depTypeName = dep.type.nonNullableDisplayName;
       final String? depQualifier = dep.qualifier;
+      final String depTypeName = _depTypeName(dep.type, depQualifier, exactNullableKeys);
       final String depFieldName = _providerFieldName(
         depTypeName,
         depQualifier,
@@ -310,6 +314,7 @@ class ProviderGenerator {
           componentPrefix: componentPrefix,
           parentKeys: parentKeys,
           parentPrefix: parentPrefix,
+          exactNullableKeys: exactNullableKeys,
         ),
       );
       final BindingKey? depKey = BindingKey.fromDartType(dep.type, qualifier: dep.qualifier);
@@ -472,26 +477,29 @@ class ProviderGenerator {
   ///
   /// [componentPrefix] is forwarded to the field-name/field-type naming
   /// helpers — see [providerClassName].
+  ///
+  /// [exactNullableKeys] holds the graph's own `Foo?` bindings — see
+  /// [_depTypeName].
   static ({List<Field> fields, List<Parameter> params}) buildDependencyProviderFields(
     List<({DartType type, String? qualifier})> dependencies, {
     bool partFileContext = false,
     String? componentPrefix,
     Set<BindingKey> parentKeys = const {},
     String? parentPrefix,
+    required Set<BindingKey> exactNullableKeys,
   }) {
     final fields = <Field>[];
     final params = <Parameter>[];
     final seenFieldNames = <String>{};
     for (final dep in dependencies) {
-      // Use non-nullable display name: the provider for `Foo?` is the same as
-      // for `Foo` (nullable-widening), so both map to `_Foo$Provider`.
-      final String depTypeName = dep.type.nonNullableDisplayName;
+      final String depTypeName = _depTypeName(dep.type, dep.qualifier, exactNullableKeys);
       final String? depPrefix = _depPrefix(
         dep.type,
         dep.qualifier,
         componentPrefix: componentPrefix,
         parentKeys: parentKeys,
         parentPrefix: parentPrefix,
+        exactNullableKeys: exactNullableKeys,
       );
       final String depFieldName = _providerFieldName(depTypeName, dep.qualifier, componentPrefix: depPrefix);
       // Several parameters can read one provider; it still needs only one field.
@@ -532,6 +540,7 @@ class ProviderGenerator {
     String? componentPrefix,
     Set<BindingKey> parentKeys = const {},
     String? parentPrefix,
+    required Set<BindingKey> exactNullableKeys,
     String? sourceUri,
   }) {
     final String factoryName = factoryElement.name!;
@@ -554,14 +563,17 @@ class ProviderGenerator {
     // TODO(inject.dart): propagate BindingKey→fieldName mapping if needed.
     //
     // Nullable deps (Foo?) are normalized to their non-nullable key for
-    // deduplication: the provider for Foo? is the same as for Foo (widening).
+    // deduplication: the provider for Foo? is the same as for Foo (widening),
+    // unless the graph binds Foo? itself.
     final seen = <BindingKey>{};
     final allDeps = <({DartType type, String? qualifier})>[];
     for (final injectData in injectDataList) {
       for (final ParameterDependency dep in injectData.injectedDependencies) {
         final BindingKey? rawKey = BindingKey.fromDartType(dep.type, qualifier: dep.qualifier);
         if (rawKey == null) continue;
-        final BindingKey dedupKey = rawKey.isNullable ? rawKey.nonNullable : rawKey;
+        final BindingKey dedupKey = rawKey.isNullable && !exactNullableKeys.contains(rawKey)
+            ? rawKey.nonNullable
+            : rawKey;
         if (seen.add(dedupKey)) {
           allDeps.add((type: dep.type, qualifier: dep.qualifier));
         }
@@ -573,6 +585,7 @@ class ProviderGenerator {
       componentPrefix: componentPrefix,
       parentKeys: parentKeys,
       parentPrefix: parentPrefix,
+      exactNullableKeys: exactNullableKeys,
     );
 
     // Inline factory class name (lives in .inject.dart)
@@ -700,7 +713,7 @@ class ProviderGenerator {
     String? componentPrefix,
     String? sourceUri,
   }) {
-    final String typeName = type.nonNullableDisplayName;
+    final String typeName = type.displayName;
     final String className = providerClassName(typeName, qualifier, componentPrefix: componentPrefix);
     final Reference typeRef = type.typeRef(sourceUri: sourceUri);
     final providerTypeRef = TypeReference(
@@ -763,6 +776,7 @@ class ProviderGenerator {
     String? componentPrefix,
     Set<BindingKey> parentKeys = const {},
     String? parentPrefix,
+    required Set<BindingKey> exactNullableKeys,
     String? sourceUri,
   }) {
     final String factoryName = factoryElement.name!;
@@ -772,14 +786,17 @@ class ProviderGenerator {
 
     // Unify deps from all constructors (dedup by BindingKey).
     // NOTE: same displayName-based field name caveat as generateFactoryProvider.
-    // Nullable deps are normalized to non-nullable for deduplication (widening).
+    // Nullable deps are normalized to non-nullable for deduplication (widening),
+    // unless the graph binds Foo? itself.
     final seen = <BindingKey>{};
     final allDeps = <({DartType type, String? qualifier})>[];
     for (final (:injectData, factoryData: _) in entries) {
       for (final ParameterDependency dep in injectData.injectedDependencies) {
         final BindingKey? rawKey = BindingKey.fromDartType(dep.type, qualifier: dep.qualifier);
         if (rawKey == null) continue;
-        final BindingKey dedupKey = rawKey.isNullable ? rawKey.nonNullable : rawKey;
+        final BindingKey dedupKey = rawKey.isNullable && !exactNullableKeys.contains(rawKey)
+            ? rawKey.nonNullable
+            : rawKey;
         if (seen.add(dedupKey)) {
           allDeps.add((type: dep.type, qualifier: dep.qualifier));
         }
@@ -791,6 +808,7 @@ class ProviderGenerator {
       componentPrefix: componentPrefix,
       parentKeys: parentKeys,
       parentPrefix: parentPrefix,
+      exactNullableKeys: exactNullableKeys,
     );
 
     // Generate one method per entry.
@@ -803,6 +821,7 @@ class ProviderGenerator {
           componentPrefix: componentPrefix,
           parentKeys: parentKeys,
           parentPrefix: parentPrefix,
+          exactNullableKeys: exactNullableKeys,
           sourceUri: sourceUri,
         ),
       );
@@ -831,6 +850,7 @@ class ProviderGenerator {
     String? componentPrefix,
     Set<BindingKey> parentKeys = const {},
     String? parentPrefix,
+    required Set<BindingKey> exactNullableKeys,
     String? sourceUri,
   }) {
     // Partition create() params by Dart parameter kind so optional-positional
@@ -893,7 +913,7 @@ class ProviderGenerator {
           (ip) => ip.parameter == param,
         );
         final String depFieldName = _providerFieldName(
-          injectedDep.type.nonNullableDisplayName,
+          _depTypeName(injectedDep.type, injectedDep.qualifier, exactNullableKeys),
           injectedDep.qualifier,
           componentPrefix: _depPrefix(
             injectedDep.type,
@@ -901,6 +921,7 @@ class ProviderGenerator {
             componentPrefix: componentPrefix,
             parentKeys: parentKeys,
             parentPrefix: parentPrefix,
+            exactNullableKeys: exactNullableKeys,
           ),
         );
         final Expression expr = refer(depFieldName).property('get').call([]);
@@ -959,6 +980,7 @@ class ProviderGenerator {
     String? componentPrefix,
     Set<BindingKey> parentKeys = const {},
     String? parentPrefix,
+    required Set<BindingKey> exactNullableKeys,
     String? sourceUri,
   }) {
     final DartType typedefType = typedefData.typedefType;
@@ -978,6 +1000,7 @@ class ProviderGenerator {
       componentPrefix: componentPrefix,
       parentKeys: parentKeys,
       parentPrefix: parentPrefix,
+      exactNullableKeys: exactNullableKeys,
     );
 
     // Build the closure as a code_builder Method so the scoped emitter
@@ -1021,7 +1044,7 @@ class ProviderGenerator {
         final ({DartType depType, FormalParameterElement param, String? qualifier, bool passProvider}) injected =
             typedefData.injectedParams.firstWhere((ip) => ip.param == ctorParam);
         final String depFieldName = _providerFieldName(
-          injected.depType.nonNullableDisplayName,
+          _depTypeName(injected.depType, injected.qualifier, exactNullableKeys),
           injected.qualifier,
           componentPrefix: _depPrefix(
             injected.depType,
@@ -1029,6 +1052,7 @@ class ProviderGenerator {
             componentPrefix: componentPrefix,
             parentKeys: parentKeys,
             parentPrefix: parentPrefix,
+            exactNullableKeys: exactNullableKeys,
           ),
         );
         final Expression expr = injected.passProvider
@@ -1089,6 +1113,14 @@ class ProviderGenerator {
   static String _providerFieldName(String typeName, String? qualifier, {String? componentPrefix}) =>
       '_${providerBaseName(typeName, qualifier, componentPrefix: componentPrefix)}';
 
+  /// Type name a dependency's provider is generated under: `Foo?` reads the
+  /// `Foo` provider (nullable widening) unless [exactNullableKeys], the graph's
+  /// own `Foo?` bindings, contains it.
+  static String _depTypeName(DartType type, String? qualifier, Set<BindingKey> exactNullableKeys) =>
+      exactNullableKeys.contains(BindingKey.fromDartType(type, qualifier: qualifier))
+      ? type.displayName
+      : type.nonNullableDisplayName;
+
   /// Selects the naming prefix for one dependency: dependencies satisfied by
   /// the parent graph (subcomponent codegen) are named with the parent's
   /// prefix so that the generated field type matches the parent's provider
@@ -1099,12 +1131,15 @@ class ProviderGenerator {
     required String? componentPrefix,
     required Set<BindingKey> parentKeys,
     required String? parentPrefix,
+    required Set<BindingKey> exactNullableKeys,
   }) {
     if (parentKeys.isEmpty) {
       return componentPrefix;
     }
     final BindingKey? key = BindingKey.fromDartType(type, qualifier: qualifier);
-    if (key != null && (parentKeys.contains(key) || (key.isNullable && parentKeys.contains(key.nonNullable)))) {
+    if (key != null &&
+        (parentKeys.contains(key) ||
+            (key.isNullable && !exactNullableKeys.contains(key) && parentKeys.contains(key.nonNullable)))) {
       return parentPrefix;
     }
     return componentPrefix;

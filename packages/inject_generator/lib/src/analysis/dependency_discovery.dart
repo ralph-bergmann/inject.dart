@@ -47,6 +47,12 @@ Set<BindingKey> collectModuleProvidedKeys(
   return result;
 }
 
+/// Whether a dependency on [key] is satisfied by a binding in [boundKeys].
+///
+/// `Foo?` counts as bound by `Foo`, the resolver's nullable widening.
+bool _isBound(BindingKey key, Set<BindingKey> boundKeys) =>
+    boundKeys.contains(key) || (key.isNullable && boundKeys.contains(key.nonNullable));
+
 /// Discovers `@inject`-annotated classes referenced by entry points
 /// or as dependencies of module providers.
 ///
@@ -118,7 +124,7 @@ void discoverInjectables({
     for (final ProviderDescriptor provider in module.moduleData.providers) {
       for (final ParameterDependency dependency in provider.dependencies) {
         final BindingKey? depKey = BindingKey.fromDartType(dependency.type, qualifier: dependency.qualifier);
-        if (depKey != null && moduleProvidedKeys.contains(depKey)) {
+        if (depKey != null && _isBound(depKey, moduleProvidedKeys)) {
           continue;
         }
 
@@ -412,7 +418,7 @@ void _discoverFactoryDependencies({
 }) {
   for (final ParameterDependency dep in injectData.injectedDependencies) {
     final BindingKey? depKey = BindingKey.fromDartType(dep.type, qualifier: dep.qualifier);
-    if (depKey != null && moduleProvidedKeys.contains(depKey)) {
+    if (depKey != null && _isBound(depKey, moduleProvidedKeys)) {
       continue;
     }
 
@@ -504,12 +510,12 @@ typedef TypedefProviderData = ({
 ///
 /// No provider is synthesized for a dep whose key is already provided by a
 /// module or the parent graph (`F?` counts as bound by `F`, the resolver's
-/// nullable widening), when the return type is abstract or sealed and its
-/// unnamed constructor is generative, nor when an extra parameter can never be
-/// a binding because [BindingKey.fromDartType] returns `null` for it (a raw
-/// function or record). A typedef rejected that way leaves no discovery side
-/// effects: the regular resolution reports the usual `No binding found` at the
-/// injecting parameter.
+/// nullable widening), when the return type comes from the Dart SDK, when the
+/// return type is abstract or sealed and its unnamed constructor is generative,
+/// nor when an extra parameter can never be a binding because
+/// [BindingKey.fromDartType] returns `null` for it (a raw function or record).
+/// A typedef rejected that way leaves no discovery side effects: the regular
+/// resolution reports the usual `No binding found` at the injecting parameter.
 void discoverTypedefProviders({
   required AnnotationReader reader,
   required List<({ClassElement factoryElement, AssistedInjectData injectData, AssistedFactoryData factoryData})>
@@ -529,10 +535,6 @@ void discoverTypedefProviders({
     }
   }
 
-  // `Foo?` counts as bound by `Foo`, the resolver's nullable widening.
-  bool isBound(BindingKey key) =>
-      moduleProvidedKeys.contains(key) || (key.isNullable && moduleProvidedKeys.contains(key.nonNullable));
-
   for (final factory in factories) {
     for (final ParameterDependency dep in factory.injectData.injectedDependencies) {
       if (dep.type is! FunctionType) continue;
@@ -541,7 +543,10 @@ void discoverTypedefProviders({
 
       // A module or parent binding wins, whatever the typedef's shape.
       final BindingKey? key = BindingKey.fromDartType(dep.type, qualifier: dep.qualifier);
-      if (key != null && isBound(key)) continue;
+      if (key != null && _isBound(key, moduleProvidedKeys)) continue;
+
+      // An SDK constructor is not written for injection: its parameters are not dependencies.
+      if (dep.type.isTypedefReturningSdkType) continue;
 
       // DartType equality ignores the alias, so two typedefs with one signature
       // would collapse. Typedef providers register without a qualifier.
@@ -604,7 +609,7 @@ void discoverTypedefProviders({
 
       // Discover the dep types as injectables
       for (final injected in injectedParams) {
-        if (!isBound(BindingKey.fromDartType(injected.depType, qualifier: injected.qualifier)!)) {
+        if (!_isBound(BindingKey.fromDartType(injected.depType, qualifier: injected.qualifier)!, moduleProvidedKeys)) {
           _findAndAddInjectable(
             dartType: injected.depType,
             reader: reader,
@@ -694,7 +699,7 @@ void _findAndAddInjectable({
         // Recursively discover dependencies
         for (final ParameterDependency dep in injectable.dependencies) {
           final BindingKey? depKey = BindingKey.fromDartType(dep.type, qualifier: dep.qualifier);
-          if (depKey != null && moduleProvidedKeys.contains(depKey)) {
+          if (depKey != null && _isBound(depKey, moduleProvidedKeys)) {
             continue;
           }
           _findAndAddInjectable(
@@ -850,29 +855,6 @@ List<SubcomponentFactoryDescriptor> discoverSubcomponentFactories({
       }
       final subcomponentModules = reader.expandModules(directSubcomponentModuleClasses);
 
-      // Analyse the child graph. Order mirrors the component pipeline:
-      // assisted factories first so synthesized factory types are not added
-      // as injectables.
-      final subcomponentInjectables = <({ClassElement classElement, InjectableData injectable})>[];
-      final subcomponentFactories =
-          <({ClassElement factoryElement, AssistedInjectData injectData, AssistedFactoryData factoryData})>[];
-      discoverAssistedFactories(
-        reader: reader,
-        componentData: subcomponentData,
-        modules: subcomponentModules,
-        injectables: subcomponentInjectables,
-        factories: subcomponentFactories,
-        parentProvidedKeys: parentProvidedKeys,
-      );
-      discoverInjectables(
-        reader: reader,
-        componentData: subcomponentData,
-        modules: subcomponentModules,
-        injectables: subcomponentInjectables,
-        factories: subcomponentFactories,
-        parentProvidedKeys: parentProvidedKeys,
-      );
-
       // An explicit `@subcomponentFactory` targeting this subcomponent, if
       // any, replaces the synthesized `<Name>Factory` (mirrors the
       // `@assistedFactory` precedence over a synthesized factory). It is
@@ -891,6 +873,55 @@ List<SubcomponentFactoryDescriptor> discoverSubcomponentFactories({
           break;
         }
       }
+
+      final valueParameters = <({BindingKey key, FormalParameterElement parameter})>[];
+      if (explicitFactoryData != null) {
+        for (final (:parameter, :type, :qualifier) in explicitFactoryData.valueParameters) {
+          final BindingKey? key = BindingKey.fromDartType(type, qualifier: qualifier);
+          if (key == null) {
+            reporter.errorForElement(
+              parameter,
+              message:
+                  "Value parameter '${parameter.name}' of '${explicitFactoryData.factoryElement.name}."
+                  "${explicitFactoryData.createMethod.name}' has an unsupported binding type "
+                  "'${type.getDisplayString()}'.",
+              suggestion: 'Use an interface type or wrap the dependency in a typedef or class.',
+            );
+            continue;
+          }
+          valueParameters.add((key: key, parameter: parameter));
+        }
+      }
+
+      // A value parameter is already a binding of the child graph, so discovery
+      // must not add another one for its type.
+      final boundKeys = <BindingKey>{
+        ...parentProvidedKeys,
+        for (final valueParameter in valueParameters) valueParameter.key,
+      };
+
+      // Analyse the child graph. Order mirrors the component pipeline:
+      // assisted factories first so synthesized factory types are not added
+      // as injectables.
+      final subcomponentInjectables = <({ClassElement classElement, InjectableData injectable})>[];
+      final subcomponentFactories =
+          <({ClassElement factoryElement, AssistedInjectData injectData, AssistedFactoryData factoryData})>[];
+      discoverAssistedFactories(
+        reader: reader,
+        componentData: subcomponentData,
+        modules: subcomponentModules,
+        injectables: subcomponentInjectables,
+        factories: subcomponentFactories,
+        parentProvidedKeys: boundKeys,
+      );
+      discoverInjectables(
+        reader: reader,
+        componentData: subcomponentData,
+        modules: subcomponentModules,
+        injectables: subcomponentInjectables,
+        factories: subcomponentFactories,
+        parentProvidedKeys: boundKeys,
+      );
 
       final ClassElement factoryClass;
       if (explicitFactoryData != null) {
@@ -921,27 +952,6 @@ List<SubcomponentFactoryDescriptor> discoverSubcomponentFactories({
         continue;
       }
 
-      final valueParameters = <({BindingKey key, FormalParameterElement parameter})>[];
-      if (explicitFactoryData != null) {
-        for (final (:parameter, :type, :qualifier) in explicitFactoryData.valueParameters) {
-          final BindingKey? key = BindingKey.fromDartType(type, qualifier: qualifier);
-          if (key == null) {
-            reporter.errorForElement(
-              parameter,
-              message:
-                  "Value parameter '${parameter.name}' of '${explicitFactoryData.factoryElement.name}."
-                  "${explicitFactoryData.createMethod.name}' has an unsupported binding type "
-                  "'${type.getDisplayString()}'.",
-              suggestion: 'Use an interface type or wrap the dependency in a typedef or class.',
-            );
-            continue;
-          }
-          valueParameters.add((key: key, parameter: parameter));
-        }
-      }
-
-      // Runs after the value parameters are known: a typedef passed as one is
-      // already bound, so it must not get a synthesized provider.
       final subcomponentTypedefProviders = <TypedefProviderData>[];
       discoverTypedefProviders(
         reader: reader,
@@ -949,7 +959,7 @@ List<SubcomponentFactoryDescriptor> discoverSubcomponentFactories({
         injectables: subcomponentInjectables,
         modules: subcomponentModules,
         typedefProviders: subcomponentTypedefProviders,
-        parentProvidedKeys: {...parentProvidedKeys, for (final valueParameter in valueParameters) valueParameter.key},
+        parentProvidedKeys: boundKeys,
       );
 
       descriptors.add((

@@ -20,12 +20,21 @@ class AsyncPropagator {
       asyncBindings[entry.key] = entry.value.isAsync;
     }
 
+    // A `Foo?` dependency that only `Foo` satisfies has no binding of its own,
+    // so async status and the async root must reach `Foo` through an extra edge.
+    final Map<BindingKey, List<BindingKey>> dependencyEdges = {
+      ...graphResult.dependencyEdges,
+      for (final List<BindingKey> deps in graphResult.dependencyEdges.values)
+        for (final BindingKey dep in deps)
+          if (dep.isNullable && !graphResult.bindingMap.containsKey(dep)) dep: [dep.nonNullable],
+    };
+
     // Propagate until stable: if any dependency is async, the dependent
     // binding becomes async too.
     var changed = true;
     while (changed) {
       changed = false;
-      for (final MapEntry<BindingKey, List<BindingKey>> entry in graphResult.dependencyEdges.entries) {
+      for (final MapEntry<BindingKey, List<BindingKey>> entry in dependencyEdges.entries) {
         final BindingKey bindingKey = entry.key;
         if (asyncBindings[bindingKey] == true) {
           continue; // Already async, no change possible
@@ -44,7 +53,7 @@ class AsyncPropagator {
     return AsyncPropagationResult(
       asyncBindings: asyncBindings,
       bindingMap: graphResult.bindingMap,
-      dependencyEdges: graphResult.dependencyEdges,
+      dependencyEdges: dependencyEdges,
     );
   }
 }

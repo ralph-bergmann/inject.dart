@@ -1104,7 +1104,7 @@ class ComponentGenerator {
       bindings.add(
         _Binding(
           key: vp.key,
-          typeName: vp.parameter.type.nonNullableDisplayName,
+          typeName: vp.parameter.type.displayName,
           qualifier: vp.key.qualifier,
           moduleParamName: null,
           dependencyKeys: [],

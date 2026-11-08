@@ -151,6 +151,7 @@ class CodeGenerator {
           effectiveModuleProviders[provider.key] = (moduleClass: m.moduleClass, descriptor: provider);
         }
       }
+      final Set<BindingKey> exactNullableKeys = effectiveModuleProviders.keys.where((key) => key.isNullable).toSet();
 
       // Partition listener providers: collect from sorted modules in
       // deterministic order. All registered listeners participate in chaining.
@@ -193,6 +194,7 @@ class CodeGenerator {
           asyncBindings: asyncBindings,
           listenerCalls: listenerCalls,
           componentPrefix: componentPrefix,
+          exactNullableKeys: exactNullableKeys,
           sourceUri: sourceUri,
         );
         if (seenProviders.add(spec.name)) {
@@ -217,6 +219,7 @@ class CodeGenerator {
           asyncBindings: asyncBindings,
           listenerCalls: listenerCalls,
           componentPrefix: componentPrefix,
+          exactNullableKeys: exactNullableKeys,
           sourceUri: sourceUri,
         );
         if (seenProviders.add(spec.name)) {
@@ -241,6 +244,7 @@ class CodeGenerator {
           factoryElement: group.first.factoryElement,
           injectDataList: [for (final f in group) f.injectData],
           componentPrefix: componentPrefix,
+          exactNullableKeys: exactNullableKeys,
           sourceUri: sourceUri,
         );
         if (seenProviders.add(providerSpec.name)) {
@@ -251,6 +255,7 @@ class CodeGenerator {
           factoryElement: group.first.factoryElement,
           entries: [for (final f in group) (injectData: f.injectData, factoryData: f.factoryData)],
           componentPrefix: componentPrefix,
+          exactNullableKeys: exactNullableKeys,
           sourceUri: sourceUri,
         );
         if (seenProviders.add(inlineFactorySpec.name)) {
@@ -262,6 +267,7 @@ class CodeGenerator {
         final Class spec = _providerGen.generateTypedefProvider(
           typedefData: typedefData,
           componentPrefix: componentPrefix,
+          exactNullableKeys: exactNullableKeys,
           sourceUri: sourceUri,
         );
         if (seenProviders.add(spec.name)) {
@@ -387,6 +393,13 @@ class CodeGenerator {
         effectiveModuleProviders[provider.key] = (moduleClass: m.moduleClass, descriptor: provider);
       }
     }
+    // A widened read is recorded in parentKeys as `Foo`, so a `Foo?` entry means
+    // an exact parent binding.
+    final Set<BindingKey> exactNullableKeys = {
+      ...effectiveModuleProviders.keys,
+      for (final valueParameter in descriptor.valueParameters) valueParameter.key,
+      ...parentKeys,
+    }.where((key) => key.isNullable).toSet();
 
     final sortedModules = [...modules]..sort((a, b) => a.moduleClass.name!.compareTo(b.moduleClass.name!));
     final listenerProviders = <({ClassElement moduleClass, ProviderDescriptor descriptor})>[];
@@ -423,6 +436,7 @@ class CodeGenerator {
         componentPrefix: childPrefix,
         parentKeys: parentKeys,
         parentPrefix: parentPrefix,
+        exactNullableKeys: exactNullableKeys,
         sourceUri: sourceUri,
       );
       if (seenProviders.add(spec.name)) {
@@ -449,6 +463,7 @@ class CodeGenerator {
         componentPrefix: childPrefix,
         parentKeys: parentKeys,
         parentPrefix: parentPrefix,
+        exactNullableKeys: exactNullableKeys,
         sourceUri: sourceUri,
       );
       if (seenProviders.add(spec.name)) {
@@ -474,6 +489,7 @@ class CodeGenerator {
         componentPrefix: childPrefix,
         parentKeys: parentKeys,
         parentPrefix: parentPrefix,
+        exactNullableKeys: exactNullableKeys,
         sourceUri: sourceUri,
       );
       if (seenProviders.add(providerSpec.name)) {
@@ -486,6 +502,7 @@ class CodeGenerator {
         componentPrefix: childPrefix,
         parentKeys: parentKeys,
         parentPrefix: parentPrefix,
+        exactNullableKeys: exactNullableKeys,
         sourceUri: sourceUri,
       );
       if (seenProviders.add(inlineFactorySpec.name)) {
@@ -499,6 +516,7 @@ class CodeGenerator {
         componentPrefix: childPrefix,
         parentKeys: parentKeys,
         parentPrefix: parentPrefix,
+        exactNullableKeys: exactNullableKeys,
         sourceUri: sourceUri,
       );
       if (seenProviders.add(spec.name)) {

@@ -600,16 +600,28 @@ class BindingResolver {
             ? " Note: '${dep.key.debugLabel}' is provided inside subcomponent "
                   "'$subcomponentName' and is not visible to the parent."
             : '';
-        final String suggestion = subcomponentName != null
-            ? "Expose the binding as an entry point on '$subcomponentName' and re-export it "
-                  "through a module provider that consumes the subcomponent's factory."
-            : 'Add a @provides method in a module that returns this type, '
-                  'or annotate the class with @inject for constructor injection.';
+        final bool isSdkTypedef = subcomponentName == null && dep.dartType.isTypedefReturningSdkType;
+        final String sdkNote = isSdkTypedef
+            ? " inject.dart cannot synthesize a provider for '${dep.key.typeNameOnly}' because it returns a type "
+                  'from the Dart SDK.'
+            : '';
+        final String suggestion;
+        if (subcomponentName != null) {
+          suggestion =
+              "Expose the binding as an entry point on '$subcomponentName' and re-export it "
+              "through a module provider that consumes the subcomponent's factory.";
+        } else if (isSdkTypedef) {
+          suggestion = "Add a @provides method in a module that returns '${dep.key.typeNameOnly}'.";
+        } else {
+          suggestion =
+              'Add a @provides method in a module that returns this type, '
+              'or annotate the class with @inject for constructor injection.';
+        }
         _reporter.errorForElement(
           dep.source,
           message:
               'No binding found for type \'${dep.key.debugLabel}\' '
-              'required by ${dep.context}$_inSubcomponentSuffix$alsoTried.$subcomponentNote',
+              'required by ${dep.context}$_inSubcomponentSuffix$alsoTried.$subcomponentNote$sdkNote',
           suggestion: suggestion,
         );
       }

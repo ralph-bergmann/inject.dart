@@ -287,6 +287,60 @@ void main() {
       expect(descriptor.valueParameters.single.parameter.name, 'userId');
     });
 
+    test('a value parameter binds its type, so the @inject class of that type is not discovered', () async {
+      final LibraryElement library = await _resolveLibrary('''
+        import 'package:inject_annotation/inject_annotation.dart';
+
+        class Clock {
+          @inject
+          const Clock();
+        }
+
+        class SessionView {
+          @inject
+          const SessionView(this.clock);
+          final Clock clock;
+        }
+
+        class SessionPage {
+          @assistedInject
+          const SessionPage(this.clock, @assisted this.id);
+          final Clock clock;
+          final int id;
+        }
+
+        @assistedFactory
+        abstract class SessionPageFactory {
+          SessionPage create(int id);
+        }
+
+        @subcomponent
+        abstract class SessionSubcomponent {
+          SessionView get sessionView;
+          SessionPageFactory get sessionPageFactory;
+        }
+
+        @subcomponentFactory
+        abstract class SessionSubcomponentFactory {
+          SessionSubcomponent create(Clock clock);
+        }
+
+        @Module(subcomponents: [SessionSubcomponent])
+        class AppModule {}
+      ''');
+
+      final ClassElement appModule = library.getClass('AppModule')!;
+      final List<SubcomponentFactoryDescriptor> descriptors = discoverSubcomponentFactories(
+        reader: reader,
+        reporter: reporter,
+        modules: [(moduleClass: appModule, moduleData: reader.readModule(appModule))],
+        parentProvidedKeys: const {},
+      );
+
+      expect(descriptors.single.subcomponentFactories.single.factoryElement.name, 'SessionPageFactory');
+      expect(descriptors.single.subcomponentInjectables.map((i) => i.classElement.name), ['SessionView']);
+    });
+
     test(
       'a value parameter of an unsupported binding type is reported and dropped from valueParameters',
       () async {
@@ -445,6 +499,126 @@ void main() {
       expect(injectables[0].classElement.name, 'ProfileWidget');
       expect(injectables[1].classElement.name, 'ProfileWidget');
       expect(injectables[0].injectable.key.qualifier, isNot(injectables[1].injectable.key.qualifier));
+    });
+
+    group('a Clock? dependency with Clock already bound', () {
+      late List<({ClassElement classElement, InjectableData injectable})> injectables;
+      late LibraryElement library;
+
+      List<({ClassElement moduleClass, ModuleData moduleData})> modulesOf(String name) {
+        final ClassElement moduleClass = library.getClass(name)!;
+        return [(moduleClass: moduleClass, moduleData: reader.readModule(moduleClass))];
+      }
+
+      setUp(() async {
+        injectables = [];
+        library = await _resolveLibrary(r'''
+          import 'package:inject_annotation/inject_annotation.dart';
+
+          class Clock {
+            @inject
+            const Clock();
+          }
+
+          class Dashboard {
+            @inject
+            const Dashboard(this.clock);
+            final Clock? clock;
+          }
+
+          class Page {
+            @assistedInject
+            const Page(this.clock, @assisted this.id);
+            final Clock? clock;
+            final int id;
+          }
+
+          @assistedFactory
+          abstract class PageFactory {
+            Page create(int id);
+          }
+
+          @module
+          class ClockModule {
+            @provides
+            Clock provideClock() => const Clock();
+          }
+
+          @module
+          class LabelModule {
+            @provides
+            Clock provideClock() => const Clock();
+
+            @provides
+            String provideLabel(Clock? clock) => '$clock';
+          }
+
+          @Component([LabelModule])
+          abstract class LabelComponent {
+            String get label;
+          }
+
+          @Component([ClockModule])
+          abstract class DashboardComponent {
+            Dashboard get dashboard;
+          }
+
+          @Component([ClockModule])
+          abstract class PageComponent {
+            PageFactory get pageFactory;
+          }
+        ''');
+      });
+
+      test('a module provider parameter does not discover Clock', () {
+        discoverInjectables(
+          reader: reader,
+          componentData: reader.readComponent(library.getClass('LabelComponent')!)!,
+          modules: modulesOf('LabelModule'),
+          injectables: injectables,
+        );
+
+        expect(injectables, isEmpty);
+      });
+
+      test('an assisted target parameter does not discover Clock', () {
+        final factories =
+            <({ClassElement factoryElement, AssistedInjectData injectData, AssistedFactoryData factoryData})>[];
+
+        discoverAssistedFactories(
+          reader: reader,
+          componentData: reader.readComponent(library.getClass('PageComponent')!)!,
+          modules: modulesOf('ClockModule'),
+          injectables: injectables,
+          factories: factories,
+        );
+
+        expect(factories.single.factoryElement.name, 'PageFactory');
+        expect(injectables, isEmpty);
+      });
+
+      test('a discovered @inject class parameter does not discover Clock', () {
+        discoverInjectables(
+          reader: reader,
+          componentData: reader.readComponent(library.getClass('DashboardComponent')!)!,
+          modules: modulesOf('ClockModule'),
+          injectables: injectables,
+        );
+
+        expect(injectables.map((i) => i.classElement.name), ['Dashboard']);
+      });
+
+      test('a parent key does not discover Clock', () {
+        discoverInjectables(
+          reader: reader,
+          componentData: reader.readComponent(library.getClass('DashboardComponent')!)!,
+          modules: [],
+          injectables: injectables,
+          parentProvidedKeys: {BindingKey.fromDartType(library.getClass('Clock')!.thisType)!},
+        );
+
+        expect(injectables.map((i) => i.classElement.name), ['Dashboard']);
+      });
     });
   });
 
@@ -608,6 +782,40 @@ void main() {
       ''');
 
       expect(providers, hasLength(1));
+      expect(injectables, isEmpty);
+    });
+
+    test('a typedef returning an SDK type yields no provider and no injectables', () async {
+      await discover('''
+        typedef BuiltFactory = DateTime Function();
+
+        class Target {
+          @assistedInject
+          Target(BuiltFactory builder, @assisted int id);
+        }
+      ''');
+
+      expect(providers, isEmpty);
+      expect(injectables, isEmpty);
+    });
+
+    test('a typedef returning an SDK type stays without a provider when its parameter type is bound', () async {
+      await discover('''
+        typedef BuiltFactory = DateTime Function();
+
+        @module
+        class AppModule {
+          @provides
+          int provideYear() => 2026;
+        }
+
+        class Target {
+          @assistedInject
+          Target(BuiltFactory builder, @assisted int id);
+        }
+      ''');
+
+      expect(providers, isEmpty);
       expect(injectables, isEmpty);
     });
 

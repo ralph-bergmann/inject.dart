@@ -119,6 +119,43 @@ void main() {
       expect(asyncByLabel['String'], isFalse);
     });
 
+    test('propagates async through a Foo? dependency that only an async Foo satisfies', () async {
+      final library = await _resolveLibrary('''
+        import 'package:inject_annotation/inject_annotation.dart';
+
+        class Foo {}
+
+        @module
+        class AppModule {
+          @provides
+          @asynchronous
+          Future<Foo> provideFoo() async => Foo();
+
+          @provides
+          String provideString(Foo? foo) => foo.toString();
+        }
+      ''');
+
+      final reader = AnnotationReader(reporter: reporter);
+      final moduleClass = library.getClass('AppModule')!;
+      final moduleData = reader.readModule(moduleClass);
+
+      final graphResult = resolver.resolve(
+        modules: [(moduleClass: moduleClass, moduleData: moduleData)],
+        injectables: [],
+      );
+      final asyncResult = propagator.propagate(graphResult);
+
+      expect(reporter.hasErrors, isFalse);
+      final asyncByLabel = {
+        for (final entry in asyncResult.asyncBindings.entries) entry.key.debugLabel: entry.value,
+      };
+      expect(asyncByLabel['String'], isTrue, reason: 'String depends on Foo? and only async Foo binds it');
+      expect(asyncByLabel['Foo?'], isTrue, reason: 'codegen reads the dependency by its own key');
+      final stringKey = graphResult.bindingMap.keys.singleWhere((key) => key.debugLabel == 'String');
+      expect(asyncResult.findAsyncRoot(stringKey), 'AppModule.provideFoo');
+    });
+
     // Story 8.1 (subcomponents): async propagation must also work across a
     // component/subcomponent boundary, mirroring how `GraphValidator
     // .validateSubcomponent` merges the parent and child graphs before

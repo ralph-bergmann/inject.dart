@@ -51,9 +51,8 @@ extension DartTypeExt on DartType {
 
   /// Like [displayName] but always omits the nullability suffix.
   ///
-  /// Use this for provider field names and provider class names: the provider
-  /// for `Foo?` is the same object as for `Foo` (nullable-widening), so both
-  /// must resolve to the same identifier (`_Foo$Provider`).
+  /// Use this for a `Foo?` dependency that reads the `Foo` provider through
+  /// nullable widening: both resolve to the same identifier (`_Foo$Provider`).
   String get nonNullableDisplayName {
     final type = this;
     if (type case InterfaceType()) {
@@ -130,6 +129,12 @@ extension DartTypeExt on DartType {
     final bool isNullable = forceNullable || type.nullabilitySuffix == NullabilitySuffix.question;
     return refer(isNullable ? '$display?' : display);
   }
+
+  /// Whether this is a function typedef that returns a type from the Dart SDK.
+  bool get isTypedefReturningSdkType => switch (this) {
+    FunctionType(alias: _?, returnType: InterfaceType(:final element)) => element.library.isInSdk,
+    _ => false,
+  };
 
   /// Whether this type is `ViewModelFactory<T>` from `inject_flutter`.
   bool get isViewModelFactory {
