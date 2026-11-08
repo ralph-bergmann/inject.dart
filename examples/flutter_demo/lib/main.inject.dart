@@ -8,6 +8,7 @@
 
 // ignore_for_file: type=lint, type=warning
 // ignore_for_file: no_leading_underscores_for_library_prefixes
+
 import 'dart:async' as _i8;
 
 import 'package:counter_analytics/src/analytics_module.dart' as _i4;

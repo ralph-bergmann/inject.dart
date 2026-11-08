@@ -8,6 +8,7 @@
 
 // ignore_for_file: type=lint, type=warning
 // ignore_for_file: no_leading_underscores_for_library_prefixes
+
 import 'package:flutter_demo/src/data/repositories/counter_repository.dart'
     as _i3;
 import 'package:flutter_demo/src/data/services/database.dart' as _i2;

@@ -8,6 +8,7 @@
 
 // ignore_for_file: type=lint, type=warning
 // ignore_for_file: no_leading_underscores_for_library_prefixes
+
 import 'package:flutter/src/foundation/key.dart' as _i3;
 import 'package:flutter/src/widgets/framework.dart' as _i5;
 import 'package:inject_annotation/inject_annotation.dart' as _i2;
