@@ -1087,6 +1087,38 @@ void main() {
       );
     });
 
+    test('nullable_parent_reader_beside_child_exact golden', () async {
+      await runPipelineGolden(
+        fixtureName: 'nullable_parent_reader_beside_child_exact',
+        goldenDir: _goldenDir,
+        expectFactory: true,
+      );
+    });
+
+    test('nullable_parent_reader_sync_getter error path', () async {
+      final String source = File('$_goldenDir/nullable_parent_reader_sync_getter.dart').readAsStringSync();
+
+      final (:result, :logs) = await _runPipelineWithLogs(source, 'nullable_parent_reader_sync_getter');
+
+      expect(
+        result.outputs.where((id) => id.path.endsWith('.inject.dart')),
+        isEmpty,
+        reason: 'Graph validation error must suppress .inject.dart output',
+      );
+
+      final int line = source.split('\n').indexWhere((l) => l.contains('  Reader get reader;')) + 1;
+      expect(
+        logs.singleWhere((l) => l.level == Level.SEVERE).message,
+        allOf(
+          contains('nullable_parent_reader_sync_getter.dart:$line:'),
+          contains("Component getter 'reader' is declared synchronous"),
+          contains("The async provider 'AppModule.provideFoo' in the dependency chain"),
+          contains("from 'Reader' to 'Future<Reader>'"),
+        ),
+        reason: "A parent class reading Foo? must follow the parent's async Foo, not the child's sync Foo?",
+      );
+    });
+
     test('nullable_dep_cycle error path', () async {
       final String source = File('$_goldenDir/nullable_dep_cycle.dart').readAsStringSync();
 

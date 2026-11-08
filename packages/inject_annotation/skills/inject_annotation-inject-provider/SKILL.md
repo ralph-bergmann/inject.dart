@@ -74,10 +74,12 @@ missing `T` is a build error, just as for a direct `T` injection.
 As a **constructor parameter**, `Provider<Future<T>>` injects a provider over a
 raw `Future<T>` binding (a `@provides` returning `Future<T>` with **no**
 `@asynchronous`). The inner `Future<T>` is **preserved** (not unwrapped to `T`):
-`.get()` returns the `Future<T>`, which you `await`. Keep `Provider<Future<T>>`
-to constructor parameters — as a component entry-point getter over a raw
-`Future<T>` binding it does **not** resolve (the generator unwraps it and looks
-for a bare `T`).
+`.get()` returns the `Future<T>`, which you `await`. For a raw `Future<T>`
+binding, keep `Provider<Future<T>>` to constructor parameters — as a component
+entry-point getter it does **not** resolve (the generator unwraps it and looks
+for a bare `T`). A component getter whose dependency chain is `@asynchronous`
+is the opposite case: it must be `Future<T>` or `Provider<Future<T>>`, and
+`Provider<T>` there is a build error.
 
 ### 4. Regenerate and verify
 

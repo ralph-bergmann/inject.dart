@@ -527,9 +527,10 @@ class SettingsService {
 - `create()` is **always synchronous** — it constructs the component. Async
   resolution surfaces at the **entry point**: a component getter whose
   dependency chain is `@asynchronous` must be declared `Future<T>` (or
-  `Provider<T>`), and you `await` that getter. Declaring such a getter as a
-  plain `T` is a build error ("declared synchronous but its dependency chain is
-  asynchronous — change the return type to `Future<T>`").
+  `Provider<Future<T>>`), and you `await` that getter (or its `.get()` result).
+  Declaring such a getter as a plain `T` is a build error ("declared synchronous
+  but its dependency chain is asynchronous — change the return type to
+  `Future<T>`").
 - Do not annotate a provider with `@asynchronous` if you want to inject the
   `Future` itself — omit the annotation, and the binding type stays `Future<T>`
   (the consumer awaits it explicitly).
@@ -666,11 +667,12 @@ abstract class AppComponent {
   a raw `Future<T>` binding (a `@provides` returning `Future<T>` with no
   `@asynchronous`). The inner `Future<T>` is **preserved** (not unwrapped to
   `T`): `.get()` returns the `Future<T>`, which you `await`.
-- As a **component entry point**, expose an async-resolved binding with
-  `Provider<T>` (or `Future<T>`). Note the asymmetry: a `Provider<Future<T>>`
-  *entry-point getter* over a **raw** `Future<T>` binding does **not** resolve
-  (the generator unwraps it and looks for a bare `T`) — keep `Provider<Future<T>>`
-  to constructor parameters.
+- As a **component entry point**, expose a binding whose chain is `@asynchronous`
+  with `Future<T>` or `Provider<Future<T>>`; `Provider<T>` over such a chain is a
+  build error. Note the asymmetry: a `Provider<Future<T>>` *entry-point getter*
+  over a **raw** `Future<T>` binding does **not** resolve (the generator unwraps
+  it and looks for a bare `T`) — for a raw `Future<T>` binding, keep
+  `Provider<Future<T>>` to constructor parameters.
 - Use `Provider<T>` for lazy/optional dependencies and object pools; for a plain
   eager dependency, inject `T` directly.
 
@@ -1038,7 +1040,7 @@ abstract class AppComponent {
   Config get config; // build error: declared synchronous but chain is async
 }
 
-// ✅ CORRECT — declare the entry point as Future<T> (or Provider<T>) and await it
+// ✅ CORRECT — declare the entry point as Future<T> (or Provider<Future<T>>) and await it (or its .get() result)
 @component
 abstract class AppComponent {
   @inject

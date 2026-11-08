@@ -37,11 +37,16 @@ class AsyncPropagator {
 
     // A `Foo?` dependency that only `Foo` satisfies has no binding of its own,
     // so async status and the async root must reach `Foo` through an extra edge.
+    // A child's exact `Foo?` means the parent has none, so a parent's reader of
+    // `Foo?` resolved to the parent's `Foo` and must not see the child's status.
     final Map<BindingKey, List<BindingKey>> dependencyEdges = {
-      ...graphResult.dependencyEdges,
-      for (final BindingKey key in ownKeys)
-        if (graphResult.dependencyEdges[key] case final List<BindingKey> deps)
-          key: [for (final BindingKey dep in deps) shadowedKeys.contains(dep) ? dep.nonNullable : dep],
+      for (final MapEntry(:key, value: deps) in graphResult.dependencyEdges.entries)
+        key: [
+          for (final BindingKey dep in deps)
+            (ownKeys.contains(key) ? shadowedKeys.contains(dep) : dep.isNullable && ownKeys.contains(dep))
+                ? dep.nonNullable
+                : dep,
+        ],
       for (final List<BindingKey> deps in graphResult.dependencyEdges.values)
         for (final BindingKey dep in deps)
           if (dep.isNullable && !graphResult.bindingMap.containsKey(dep)) dep: [dep.nonNullable],
