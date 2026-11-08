@@ -409,7 +409,10 @@ class GraphValidator {
       duplicateBindings: childGraphResult.duplicateBindings,
       parentBindingsUsed: childGraphResult.parentBindingsUsed,
     );
-    final AsyncPropagationResult mergedAsyncResult = _asyncPropagator.propagate(mergedGraphResult);
+    final AsyncPropagationResult mergedAsyncResult = _asyncPropagator.propagate(
+      mergedGraphResult,
+      ownKeys: childGraphResult.bindingMap.keys.toSet(),
+    );
 
     // ViewModel constraints for the child scope.
     _viewModelFactoryValidator.validate(

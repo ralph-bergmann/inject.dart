@@ -12,7 +12,10 @@ import 'binding_key.dart';
 class AsyncPropagator {
   /// Returns an [AsyncPropagationResult] marking every binding that is async
   /// directly or transitively.
-  AsyncPropagationResult propagate(BindingGraphResult graphResult) {
+  ///
+  /// When [graphResult] merges a subcomponent with its parent, [ownKeys] holds
+  /// the subcomponent's own bindings.
+  AsyncPropagationResult propagate(BindingGraphResult graphResult, {Set<BindingKey> ownKeys = const {}}) {
     final Map<BindingKey, bool> asyncBindings = {};
 
     // Initialize async status from direct annotations
@@ -20,10 +23,25 @@ class AsyncPropagator {
       asyncBindings[entry.key] = entry.value.isAsync;
     }
 
+    // The resolver satisfies a child's `Foo?` with the child's own `Foo` before
+    // the parent's exact `Foo?`. Only the child's reads move to `Foo`, so the
+    // parent's readers keep the status of the parent's exact binding.
+    // shortcut: a raw `Future<Foo>?` dependency also counts as shadowed although
+    // the resolver does not widen it; add per-edge eligibility if a child ever
+    // binds `Future<Foo>` beside a parent's exact `Future<Foo>?`.
+    final Set<BindingKey> shadowedKeys = {
+      for (final BindingKey key in ownKeys)
+        if (!key.isNullable && !ownKeys.contains(key.toNullable) && graphResult.bindingMap.containsKey(key.toNullable))
+          key.toNullable,
+    };
+
     // A `Foo?` dependency that only `Foo` satisfies has no binding of its own,
     // so async status and the async root must reach `Foo` through an extra edge.
     final Map<BindingKey, List<BindingKey>> dependencyEdges = {
       ...graphResult.dependencyEdges,
+      for (final BindingKey key in ownKeys)
+        if (graphResult.dependencyEdges[key] case final List<BindingKey> deps)
+          key: [for (final BindingKey dep in deps) shadowedKeys.contains(dep) ? dep.nonNullable : dep],
       for (final List<BindingKey> deps in graphResult.dependencyEdges.values)
         for (final BindingKey dep in deps)
           if (dep.isNullable && !graphResult.bindingMap.containsKey(dep)) dep: [dep.nonNullable],
@@ -50,10 +68,16 @@ class AsyncPropagator {
       }
     }
 
+    // Generated child code looks the status up under its declared `Foo?` key.
+    for (final BindingKey shadowed in shadowedKeys) {
+      asyncBindings[shadowed] = asyncBindings[shadowed.nonNullable]!;
+    }
+
     return AsyncPropagationResult(
       asyncBindings: asyncBindings,
       bindingMap: graphResult.bindingMap,
       dependencyEdges: dependencyEdges,
+      shadowedKeys: shadowedKeys,
     );
   }
 }

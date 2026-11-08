@@ -242,8 +242,8 @@ void main() {
       expect(reporter.hasErrors, isFalse);
     });
 
-    // Provider<T> getter on async chain → no error
-    test('allows Provider<T> entry-point getter with async chain', () async {
+    // Provider<T> getter on async chain → error
+    test('reports error for Provider<T> entry-point getter with async chain', () async {
       final library = await _resolveLibrary('''
         import 'package:inject_annotation/inject_annotation.dart';
 
@@ -285,7 +285,183 @@ void main() {
       final asyncResult = propagator.propagate(graphResult);
       validator.validate(asyncResult, componentData.entryPoints);
 
-      expect(reporter.hasErrors, isFalse);
+      final msg = reporter.messages.single;
+      expect(
+        msg.message,
+        equals(
+          "Component getter 'repository' is declared synchronous but its dependency chain is asynchronous."
+          " The async provider 'DbModule.provideDatabase' in the dependency chain"
+          ' causes transitive async propagation.',
+        ),
+      );
+      expect(
+        msg.suggestion,
+        equals("Change the getter return type from 'Provider<Repository>' to 'Provider<Future<Repository>>'."),
+      );
+    });
+
+    test('an unbound Future<T> getter reports only the resolver error', () async {
+      final library = await _resolveLibrary('''
+        import 'package:inject_annotation/inject_annotation.dart';
+
+        class Unbound {}
+
+        @Component([])
+        abstract class AppComponent {
+          Future<Unbound> get x;
+        }
+      ''');
+
+      final reader = AnnotationReader(reporter: reporter);
+      final componentClass = library.getClass('AppComponent')!;
+      final componentData = reader.readComponent(componentClass)!;
+
+      final graphResult = resolver.resolve(modules: [], injectables: [], entryPoints: componentData.entryPoints);
+      final asyncResult = propagator.propagate(graphResult);
+      validator.validate(asyncResult, componentData.entryPoints);
+
+      expect(reporter.messages.single.message, contains("No binding found for entry-point type 'Unbound'"));
+    });
+
+    test('a Future<T> getter over a chain with a missing binding reports only the resolver error', () async {
+      final library = await _resolveLibrary('''
+        import 'package:inject_annotation/inject_annotation.dart';
+
+        class Db {}
+
+        @inject
+        class Repository {
+          Repository(this.db);
+          final Db db;
+        }
+
+        @Component([])
+        abstract class AppComponent {
+          Future<Repository> get repository;
+        }
+      ''');
+
+      final reader = AnnotationReader(reporter: reporter);
+      final repoClass = library.getClass('Repository')!;
+      final repoData = reader.readInjectable(repoClass)!;
+      final componentData = reader.readComponent(library.getClass('AppComponent')!)!;
+
+      final graphResult = resolver.resolve(
+        modules: [],
+        injectables: [(classElement: repoClass, injectable: repoData)],
+        entryPoints: componentData.entryPoints,
+      );
+      validator.validate(propagator.propagate(graphResult), componentData.entryPoints);
+
+      expect(reporter.messages.single.message, contains("No binding found for type 'Db'"));
+    });
+
+    group('a Provider getter whose wrapper matches its binding', () {
+      const asyncFoo = '''
+        @provides
+        @asynchronous
+        Future<Foo> provideFoo() async => Foo();
+      ''';
+      const syncFoo = '''
+        @provides
+        Foo provideFoo() => Foo();
+      ''';
+
+      Future<void> validateGetter(String provider, String getter) async {
+        final library = await _resolveLibrary('''
+          import 'package:inject_annotation/inject_annotation.dart';
+
+          class Foo {}
+
+          @module
+          class AppModule {
+            $provider
+          }
+
+          @Component([AppModule])
+          abstract class AppComponent {
+            $getter
+          }
+        ''');
+
+        final reader = AnnotationReader(reporter: reporter);
+        final moduleClass = library.getClass('AppModule')!;
+        final moduleData = reader.readModule(moduleClass);
+        final componentData = reader.readComponent(library.getClass('AppComponent')!)!;
+
+        final graphResult = resolver.resolve(
+          modules: [(moduleClass: moduleClass, moduleData: moduleData)],
+          injectables: [],
+          entryPoints: componentData.entryPoints,
+        );
+        validator.validate(propagator.propagate(graphResult), componentData.entryPoints);
+      }
+
+      test('allows Provider<Future<T>> over an async chain', () async {
+        await validateGetter(asyncFoo, 'Provider<Future<Foo>> get foo;');
+
+        expect(reporter.hasErrors, isFalse);
+      });
+
+      test('allows Provider<Future<T?>> over an async T', () async {
+        await validateGetter(asyncFoo, 'Provider<Future<Foo?>> get foo;');
+
+        expect(reporter.hasErrors, isFalse);
+      });
+
+      test('allows Provider<T> over a sync chain', () async {
+        await validateGetter(syncFoo, 'Provider<Foo> get foo;');
+
+        expect(reporter.hasErrors, isFalse);
+      });
+    });
+
+    test('sync and Provider<T> getters over one async root report one aggregated error', () async {
+      final library = await _resolveLibrary('''
+        import 'package:inject_annotation/inject_annotation.dart';
+
+        @module
+        class DbModule {
+          @provides
+          @asynchronous
+          Future<Db> provideDb() => Future.value(Db());
+        }
+
+        class Db {}
+
+        @Component([DbModule])
+        abstract class AppComponent {
+          Db get a;
+          Provider<Db> get b;
+        }
+      ''');
+
+      final reader = AnnotationReader(reporter: reporter);
+      final moduleClass = library.getClass('DbModule')!;
+      final moduleData = reader.readModule(moduleClass);
+      final componentClass = library.getClass('AppComponent')!;
+      final componentData = reader.readComponent(componentClass)!;
+
+      final graphResult = resolver.resolve(
+        modules: [(moduleClass: moduleClass, moduleData: moduleData)],
+        injectables: [],
+        entryPoints: componentData.entryPoints,
+      );
+      final asyncResult = propagator.propagate(graphResult);
+      validator.validate(asyncResult, componentData.entryPoints);
+
+      final msg = reporter.messages.single;
+      expect(
+        msg.message,
+        equals(
+          'Component entry points [a, b] are declared synchronous but their dependency chain is asynchronous.'
+          " The provider 'DbModule.provideDb' is asynchronous.",
+        ),
+      );
+      expect(
+        msg.suggestion,
+        equals("Change return types: 'Db' → 'Future<Db>'; 'Provider<Db>' → 'Provider<Future<Db>>'."),
+      );
     });
 
     // sync getter on sync chain → no error

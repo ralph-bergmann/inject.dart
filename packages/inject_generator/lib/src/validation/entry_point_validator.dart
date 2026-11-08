@@ -1,12 +1,14 @@
 import 'package:analyzer/dart/element/element.dart';
 
 import '../analysis/entry_point_collector.dart';
+import '../extensions/dart_type_extensions.dart';
 import '../logging/diagnostic_reporter.dart';
 import 'async_propagation_result.dart';
 import 'binding_key.dart';
 
-/// Validates that component entry-point getters are declared as `Future<T>`
-/// (or `Provider<T>`) when their binding chain is async.
+/// Validates that each component entry point's `Future` wrapper matches its
+/// binding chain: `Future<T>` or `Provider<Future<T>>` when the chain is async,
+/// `T` or `Provider<T>` when it is sync.
 ///
 /// Phase 5 of graph validation. Must be called after `AsyncPropagator` so
 /// that [AsyncPropagationResult.asyncBindings] is fully populated.
@@ -15,16 +17,32 @@ class EntryPointValidator {
   EntryPointValidator({required DiagnosticReporter reporter}) : _reporter = reporter;
   final DiagnosticReporter _reporter;
 
-  /// Reports each entry point that is async in the binding graph but not
-  /// declared as `Future<T>` or `Provider<T>`.
+  /// Reports each entry point whose `Future` wrapper does not match whether
+  /// its binding chain is async.
   void validate(AsyncPropagationResult asyncResult, List<EntryPoint> entryPoints) {
     // Group sync-broken entry points by async root to deduplicate diagnostics:
     // N getters depending on the same async root → one aggregated error.
     final Map<String, _AsyncGroup> byRoot = {};
     for (final EntryPoint ep in entryPoints) {
-      final BindingKey key = asyncResult.entryPointKey(ep.key);
-      if (asyncResult.asyncBindings[key] != true) continue;
-      if (ep.isFuture || ep.isProvider) continue;
+      final BindingKey key = asyncResult.widenedKey(ep.key);
+      // No status means no binding, which the resolver has already reported.
+      final bool? isAsync = asyncResult.asyncBindings[key];
+      if (isAsync == null || isAsync == ep.isFuture) continue;
+
+      if (!isAsync) {
+        // The resolver has reported the missing binding, and it may be the
+        // async one the `Future` was declared for.
+        if (asyncResult.hasUnboundDependency(key)) continue;
+
+        // A sync chain has no async root to group by.
+        _reporter.errorForElement(
+          ep.element,
+          message:
+              "Component getter '${ep.element.name ?? '<unknown>'}' is declared asynchronous but its dependency chain is synchronous.",
+          suggestion: "Change the getter return type from '${_typeLabel(ep)}' to '${_fittingType(ep)}'.",
+        );
+        continue;
+      }
 
       final String? asyncRoot = asyncResult.findAsyncRoot(key);
       assert(
@@ -61,17 +79,12 @@ class EntryPointValidator {
           firstEp.element,
           message:
               "Component getter '$getterName' is declared synchronous but its dependency chain is asynchronous.$rootInfo",
-          suggestion: "Change the getter return type from '$typeLabel' to 'Future<$typeLabel>'.",
+          suggestion: "Change the getter return type from '$typeLabel' to '${_fittingType(firstEp)}'.",
         );
       } else {
         final List<String> names = _renderNames(group.entries);
         final String namesList = names.join(', ');
-        final String typeChanges = group.entries
-            .map((ep) {
-              final String label = _typeLabel(ep);
-              return "'$label' → 'Future<$label>'";
-            })
-            .join('; ');
+        final String typeChanges = group.entries.map((ep) => "'${_typeLabel(ep)}' → '${_fittingType(ep)}'").join('; ');
         _reporter.errorForElement(
           firstEp.element,
           message:
@@ -107,6 +120,18 @@ class EntryPointValidator {
     MethodElement(:final returnType) => returnType.getDisplayString(),
     _ => ep.key.debugLabel,
   };
+
+  // The return type the getter should declare. Only the `Future` wrapper
+  // changes, so `Provider` stays outermost and `?` stays on the inner type.
+  String _fittingType(EntryPoint ep) {
+    final String type = switch (ep.element) {
+      GetterElement(:final returnType) ||
+      MethodElement(:final returnType) => returnType.unwrapProviderAndFuture().resolvedType.getDisplayString(),
+      _ => ep.key.debugLabel,
+    };
+    final String inner = ep.isFuture ? type : 'Future<$type>';
+    return ep.isProvider ? 'Provider<$inner>' : inner;
+  }
 }
 
 class _AsyncGroup {

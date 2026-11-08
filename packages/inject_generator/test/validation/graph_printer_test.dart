@@ -151,6 +151,157 @@ void main() {
       expect(output, isNot(contains('...')));
     });
 
+    test('nullable entry point satisfied by widening — shows the non-nullable subtree', () {
+      // Service? → Service → HttpClient
+      final kService = _key(cls('Service'));
+      final kHttp = _key(cls('HttpClient'));
+
+      final bindingMap = {
+        kService: _source(kService, cls('Service')),
+        kHttp: _source(kHttp, cls('HttpClient')),
+      };
+      final depEdges = {
+        kService: [kHttp],
+        kHttp: <BindingKey>[],
+      };
+      final gr = _graphResult(bindingMap: bindingMap, dependencyEdges: depEdges);
+      final ar = _asyncResult(asyncBindings: {}, bindingMap: bindingMap, dependencyEdges: depEdges);
+
+      final printer = GraphPrinter(
+        componentClass: cls('SimpleApp'),
+        entryPoints: [_ep(kService.toNullable, cls('Service'))],
+        graphResult: gr,
+        asyncResult: ar,
+      );
+
+      expect(printer.render(), contains('  └── Service\n      └── HttpClient\n'));
+    });
+
+    test('nullable dependency satisfied by widening — shows the non-nullable subtree under the class', () {
+      // Repository → Service? → Service → HttpClient
+      final kRepository = _key(cls('Repository'));
+      final kService = _key(cls('Service'));
+      final kHttp = _key(cls('HttpClient'));
+
+      final bindingMap = {
+        kRepository: _source(kRepository, cls('Repository')),
+        kService: _source(kService, cls('Service')),
+        kHttp: _source(kHttp, cls('HttpClient')),
+      };
+      final depEdges = {
+        kRepository: [kService.toNullable],
+        kService: [kHttp],
+        kHttp: <BindingKey>[],
+      };
+      final gr = _graphResult(bindingMap: bindingMap, dependencyEdges: depEdges);
+      final ar = _asyncResult(asyncBindings: {}, bindingMap: bindingMap, dependencyEdges: depEdges);
+
+      final printer = GraphPrinter(
+        componentClass: cls('SimpleApp'),
+        entryPoints: [_ep(kRepository, cls('Repository'))],
+        graphResult: gr,
+        asyncResult: ar,
+      );
+
+      expect(printer.render(), contains('  └── Repository\n      └── Service\n          └── HttpClient\n'));
+    });
+
+    test('readers of Foo and Foo? count as receivers of one shared node', () {
+      // UseCaseA → Service; UseCaseB → Service? → Service
+      final kUseCaseA = _key(cls('UseCaseA'));
+      final kUseCaseB = _key(cls('UseCaseB'));
+      final kService = _key(cls('Service'));
+
+      final bindingMap = {
+        kUseCaseA: _source(kUseCaseA, cls('UseCaseA')),
+        kUseCaseB: _source(kUseCaseB, cls('UseCaseB')),
+        kService: _source(kService, cls('Service')),
+      };
+      final depEdges = {
+        kUseCaseA: [kService],
+        kUseCaseB: [kService.toNullable],
+        kService: <BindingKey>[],
+      };
+      final gr = _graphResult(bindingMap: bindingMap, dependencyEdges: depEdges);
+      final ar = _asyncResult(asyncBindings: {}, bindingMap: bindingMap, dependencyEdges: depEdges);
+
+      final printer = GraphPrinter(
+        componentClass: cls('SimpleApp'),
+        entryPoints: [_ep(kUseCaseA, cls('UseCaseA')), _ep(kUseCaseB, cls('UseCaseB'))],
+        graphResult: gr,
+        asyncResult: ar,
+      );
+
+      final output = printer.render();
+
+      expect(output, contains('Service (injected by: UseCaseA, UseCaseB)'));
+      expect(output, isNot(contains('Service?')));
+    });
+
+    test('widened dependency of a shared node — shared block shows the non-nullable subtree', () {
+      // UseCaseA → Repository; UseCaseB → Repository; Repository → Service? → Service → HttpClient
+      final kUseCaseA = _key(cls('UseCaseA'));
+      final kUseCaseB = _key(cls('UseCaseB'));
+      final kRepository = _key(cls('Repository'));
+      final kService = _key(cls('Service'));
+      final kHttp = _key(cls('HttpClient'));
+
+      final bindingMap = {
+        kUseCaseA: _source(kUseCaseA, cls('UseCaseA')),
+        kUseCaseB: _source(kUseCaseB, cls('UseCaseB')),
+        kRepository: _source(kRepository, cls('Repository')),
+        kService: _source(kService, cls('Service')),
+        kHttp: _source(kHttp, cls('HttpClient')),
+      };
+      final depEdges = {
+        kUseCaseA: [kRepository],
+        kUseCaseB: [kRepository],
+        kRepository: [kService.toNullable],
+        kService: [kHttp],
+        kHttp: <BindingKey>[],
+      };
+      final gr = _graphResult(bindingMap: bindingMap, dependencyEdges: depEdges);
+      final ar = _asyncResult(asyncBindings: {}, bindingMap: bindingMap, dependencyEdges: depEdges);
+
+      final printer = GraphPrinter(
+        componentClass: cls('SimpleApp'),
+        entryPoints: [_ep(kUseCaseA, cls('UseCaseA')), _ep(kUseCaseB, cls('UseCaseB'))],
+        graphResult: gr,
+        asyncResult: ar,
+      );
+
+      expect(
+        printer.render(),
+        contains('  Repository (injected by: UseCaseA, UseCaseB)\n  └── Service\n      └── HttpClient\n'),
+      );
+    });
+
+    test('a class reading both Foo and Foo? — draws the subtree once', () {
+      // Repository → Service and Service?, both resolved by Service
+      final kRepository = _key(cls('Repository'));
+      final kService = _key(cls('Service'));
+
+      final bindingMap = {
+        kRepository: _source(kRepository, cls('Repository')),
+        kService: _source(kService, cls('Service')),
+      };
+      final depEdges = {
+        kRepository: [kService, kService.toNullable],
+        kService: <BindingKey>[],
+      };
+      final gr = _graphResult(bindingMap: bindingMap, dependencyEdges: depEdges);
+      final ar = _asyncResult(asyncBindings: {}, bindingMap: bindingMap, dependencyEdges: depEdges);
+
+      final printer = GraphPrinter(
+        componentClass: cls('SimpleApp'),
+        entryPoints: [_ep(kRepository, cls('Repository'))],
+        graphResult: gr,
+        asyncResult: ar,
+      );
+
+      expect('Service'.allMatches(printer.render()), hasLength(1));
+    });
+
     test('diamond — Heater shared by Brewer and Grinder — pub-style references in main tree', () {
       // CoffeeShop → Brewer (@singleton, @async) → Heater (@singleton)
       //           └→ Grinder                     → Heater (@singleton)

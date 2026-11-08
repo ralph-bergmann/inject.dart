@@ -31,7 +31,7 @@ import 'provision_listener.dart';
 /// The framework generates `CoffeeShop$Component` with a **synchronous** static
 /// `create` factory. Asynchronous resolution does not change `create`; instead a
 /// getter whose dependency chain is `@asynchronous` is exposed as `Future<T>`
-/// (or `Provider<T>`) and awaited at that entry point.
+/// (or `Provider<Future<T>>`) and awaited at that entry point.
 ///
 /// `CoffeeShop` declares `static const create` as a convenience accessor to
 /// `CoffeeShop$Component.create` — not strictly necessary, but useful to

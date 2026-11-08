@@ -964,6 +964,129 @@ void main() {
       );
     });
 
+    test('entry_point_wrapper_mismatch error path', () async {
+      final String source = File('$_goldenDir/entry_point_wrapper_mismatch.dart').readAsStringSync();
+
+      final (:result, :logs) = await _runPipelineWithLogs(source, 'entry_point_wrapper_mismatch');
+
+      expect(
+        result.outputs.where((id) => id.path.endsWith('.inject.dart')),
+        isEmpty,
+        reason: 'Graph validation error must suppress .inject.dart output',
+      );
+
+      final List<String> severeMessages = logs.where((l) => l.level == Level.SEVERE).map((l) => l.message).toList();
+      expect(severeMessages, hasLength(6), reason: 'Each getter reads its own type, so nothing aggregates');
+
+      final List<String> sourceLines = source.split('\n');
+      for (final (String declaration, Matcher expected) in [
+        ('Future<A> get a;', _asyncGetter('a', from: 'Future<A>', to: 'A')),
+        ('Provider<Future<B>> get b;', _asyncGetter('b', from: 'Provider<Future<B>>', to: 'Provider<B>')),
+        ('Future<D?> get d;', _asyncGetter('d', from: 'Future<D?>', to: 'D?')),
+        ('Provider<Future<F?>> get f;', _asyncGetter('f', from: 'Provider<Future<F?>>', to: 'Provider<F?>')),
+      ]) {
+        final int line = sourceLines.indexWhere((l) => l.contains(declaration)) + 1;
+        expect(
+          severeMessages,
+          anyElement(allOf(contains('entry_point_wrapper_mismatch.dart:$line:'), expected)),
+          reason: "Expected the async-getter error at '$declaration'",
+        );
+      }
+      for (final (String declaration, String getter, String provider, String from, String to) in [
+        ('Provider<C> get c;', 'c', 'AppModule.provideC', 'Provider<C>', 'Provider<Future<C>>'),
+        ('Provider<E?> get e;', 'e', 'AppModule.provideE', 'Provider<E?>', 'Provider<Future<E?>>'),
+      ]) {
+        final int line = sourceLines.indexWhere((l) => l.contains(declaration)) + 1;
+        expect(
+          severeMessages,
+          anyElement(
+            allOf(
+              contains('entry_point_wrapper_mismatch.dart:$line:'),
+              contains("Component getter '$getter' is declared synchronous"),
+              contains("The provider '$provider' is asynchronous."),
+              contains("from '$from' to '$to'"),
+            ),
+          ),
+          reason: "Expected the sync-getter error at '$declaration'",
+        );
+      }
+    });
+
+    test('subcomp_entry_point_async_mismatch error path', () async {
+      final String source = File('$_goldenDir/subcomp_entry_point_async_mismatch.dart').readAsStringSync();
+
+      final (:result, :logs) = await _runPipelineWithLogs(source, 'subcomp_entry_point_async_mismatch');
+
+      expect(
+        result.outputs.where((id) => id.path.endsWith('.inject.dart')),
+        isEmpty,
+        reason: 'Graph validation error must suppress .inject.dart output',
+      );
+      expectMatchesGolden(
+        result.readerWriter.testing.readString(result.outputs.singleWhere((id) => id.path.endsWith('.factory.dart'))),
+        '$_goldenDir/subcomp_entry_point_async_mismatch.factory.dart',
+      );
+
+      final List<String> severeMessages = logs.where((l) => l.level == Level.SEVERE).map((l) => l.message).toList();
+      expect(severeMessages, hasLength(3));
+
+      final List<String> sourceLines = source.split('\n');
+      final int barViewLine = sourceLines.indexWhere((l) => l.contains('BarView get barView;')) + 1;
+      expect(
+        severeMessages,
+        anyElement(
+          allOf(
+            contains('subcomp_entry_point_async_mismatch.dart:$barViewLine:'),
+            contains("Component getter 'barView' is declared synchronous"),
+            contains("The async provider 'SessionModule.provideBar' in the dependency chain"),
+            contains("from 'BarView' to 'Future<BarView>'"),
+          ),
+        ),
+        reason: "A child class reading Bar? must follow the child's async Bar, not the parent's sync Bar?",
+      );
+      final int fooLine = sourceLines.indexWhere((l) => l.contains('Foo? get foo;')) + 1;
+      expect(
+        severeMessages,
+        anyElement(
+          allOf(
+            contains('subcomp_entry_point_async_mismatch.dart:$fooLine:'),
+            contains("Component getter 'foo' is declared synchronous"),
+            contains("The provider 'SessionModule.provideFoo' is asynchronous."),
+            contains("from 'Foo?' to 'Future<Foo?>'"),
+          ),
+        ),
+        reason: "The child's async Foo must win over the parent's sync Foo?",
+      );
+      final int clockLine = sourceLines.indexWhere((l) => l.contains('Future<Clock> get clock;')) + 1;
+      expect(
+        severeMessages,
+        anyElement(
+          allOf(
+            contains('subcomp_entry_point_async_mismatch.dart:$clockLine:'),
+            _asyncGetter('clock', from: 'Future<Clock>', to: 'Clock'),
+          ),
+        ),
+        reason: "A Future getter over the parent's sync binding must report the async-getter error",
+      );
+    });
+
+    test('nullable_child_shadows_parent golden', () async {
+      await runPipelineGolden(
+        fixtureName: 'nullable_child_shadows_parent',
+        goldenDir: _goldenDir,
+        expectFactory: true,
+      );
+    });
+
+    test('nullable_child_owns_both_forms golden', () async {
+      await runPipelineGolden(
+        fixtureName: 'nullable_child_owns_both_forms',
+        goldenDir: _goldenDir,
+        expectFactory: true,
+        injectBuilderOptions: BuilderOptions({'nullable_duplicate_binding_policy': 'allow'}),
+      );
+    });
+
     test('nullable_dep_cycle error path', () async {
       final String source = File('$_goldenDir/nullable_dep_cycle.dart').readAsStringSync();
 
@@ -1274,6 +1397,12 @@ void main() {
     });
   });
 }
+
+/// Matches the error for a getter declared async over a sync binding chain.
+Matcher _asyncGetter(String getter, {required String from, required String to}) => allOf(
+  contains("Component getter '$getter' is declared asynchronous but its dependency chain is synchronous."),
+  contains("from '$from' to '$to'"),
+);
 
 /// Runs the factory → inject pipeline on [source] and returns the result with
 /// every log record of the build.

@@ -102,7 +102,7 @@ class Settings {
   be async).
 - `create()` stays **synchronous**. Async resolution surfaces at the **entry
   point**: a component getter whose chain is async must be declared `Future<T>`
-  (or `Provider<T>`) and you `await` that getter. A plain-`T` getter over an
+  (or `Provider<Future<T>>`) and you `await` that getter. A plain-`T` getter over an
   async chain is a build error.
 - To inject the `Future` itself (no unwrapping), **omit** `@asynchronous` — the
   binding type stays `Future<T>` and the consumer awaits it explicitly.

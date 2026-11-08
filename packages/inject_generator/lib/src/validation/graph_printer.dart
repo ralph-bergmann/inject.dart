@@ -26,7 +26,7 @@ class GraphPrinter {
     final receiverSets = <BindingKey, Set<BindingKey>>{};
     for (final MapEntry(key: parent, value: deps) in graphResult.dependencyEdges.entries) {
       for (final dep in deps) {
-        receiverSets.putIfAbsent(dep, () => <BindingKey>{}).add(parent);
+        receiverSets.putIfAbsent(asyncResult.widenedKey(dep), () => <BindingKey>{}).add(parent);
       }
     }
     // Materialize into sorted lists for determinism; capture shared keys.
@@ -77,7 +77,7 @@ class GraphPrinter {
       final isLast = i == sortedEntryPoints.length - 1;
       final connector = isLast ? _ell : _tee;
       final childPrefix = isLast ? '  $_blank' : '  $_pipe';
-      _renderNode(ep.key, '  $connector', childPrefix, {}, 0, out);
+      _renderNode(_asyncResult.widenedKey(ep.key), '  $connector', childPrefix, {}, 0, out);
     }
   }
 
@@ -98,12 +98,11 @@ class GraphPrinter {
       );
       out.writeln('  $label');
 
-      final deps = _graphResult.dependencyEdges[sharedKey] ?? [];
-      if (deps.isNotEmpty) {
+      final sortedDeps = _sortedDeps(sharedKey);
+      if (sortedDeps.isNotEmpty) {
         // Seed `seen` with the block root so a non-shared cycle hidden under
         // a shared root (validator-missed cycle) can't recurse to depth limit.
         final blockSeen = {sharedKey};
-        final sortedDeps = deps.toList()..sort((a, b) => a.debugLabel.compareTo(b.debugLabel));
         for (var i = 0; i < sortedDeps.length; i++) {
           final dep = sortedDeps[i];
           final isLast = i == sortedDeps.length - 1;
@@ -137,11 +136,10 @@ class GraphPrinter {
     final isAsync = _asyncResult.asyncBindings[key] ?? false;
     out.writeln('$connector${key.formattedLabel(isSingleton: isSingleton, isAsync: isAsync)}');
 
-    final deps = _graphResult.dependencyEdges[key] ?? [];
-    if (deps.isEmpty) return;
+    final sortedDeps = _sortedDeps(key);
+    if (sortedDeps.isEmpty) return;
 
     final nextSeen = {...seen, key};
-    final sortedDeps = deps.toList()..sort((a, b) => a.debugLabel.compareTo(b.debugLabel));
     for (var i = 0; i < sortedDeps.length; i++) {
       final dep = sortedDeps[i];
       final isLast = i == sortedDeps.length - 1;
@@ -150,4 +148,10 @@ class GraphPrinter {
       _renderNode(dep, connector2, childPrefix2, nextSeen, depth + 1, out);
     }
   }
+
+  // Nodes are drawn under the key that a read really uses, so a widened `Foo?`
+  // shows the `Foo` subtree. A class reading both `Foo` and `Foo?` has one node.
+  List<BindingKey> _sortedDeps(BindingKey key) =>
+      (_graphResult.dependencyEdges[key] ?? const <BindingKey>[]).map(_asyncResult.widenedKey).toSet().toList()
+        ..sort((a, b) => a.debugLabel.compareTo(b.debugLabel));
 }

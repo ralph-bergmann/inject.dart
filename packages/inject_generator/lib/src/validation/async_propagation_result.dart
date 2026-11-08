@@ -11,22 +11,48 @@ class AsyncPropagationResult {
     required Map<BindingKey, bool> asyncBindings,
     required Map<BindingKey, BindingSource> bindingMap,
     required Map<BindingKey, List<BindingKey>> dependencyEdges,
+    Set<BindingKey> shadowedKeys = const {},
   }) : asyncBindings = Map.unmodifiable(asyncBindings),
        _bindingMap = Map.unmodifiable(bindingMap),
-       _dependencyEdges = Map.unmodifiable(dependencyEdges);
+       _dependencyEdges = Map.unmodifiable(dependencyEdges),
+       _shadowedKeys = Set.unmodifiable(shadowedKeys);
 
   /// Maps each [BindingKey] to whether the binding requires async
   /// initialization (either directly or transitively).
+  ///
+  /// In a subcomponent's merged result, a `Foo?` that the child's own `Foo`
+  /// shadows holds the status of that `Foo`, because only child code reads it.
   final Map<BindingKey, bool> asyncBindings;
 
   final Map<BindingKey, BindingSource> _bindingMap;
   final Map<BindingKey, List<BindingKey>> _dependencyEdges;
+  final Set<BindingKey> _shadowedKeys;
 
-  /// The key that holds the async status of an entry point declared as [key].
+  /// The key that a read of [key] in this graph really uses.
   ///
   /// `Foo?` reads `Foo` when no exact `Foo?` binding exists, the resolver's
-  /// nullable widening.
-  BindingKey entryPointKey(BindingKey key) => key.isNullable && !_bindingMap.containsKey(key) ? key.nonNullable : key;
+  /// nullable widening. In a subcomponent's merged result it also reads `Foo`
+  /// when the child's own `Foo` shadows the parent's exact `Foo?`. The parent's
+  /// own readers are not covered by that case.
+  BindingKey widenedKey(BindingKey key) =>
+      key.isNullable && (_shadowedKeys.contains(key) || !_bindingMap.containsKey(key)) ? key.nonNullable : key;
+
+  /// Whether a dependency reachable from [key] has no binding.
+  ///
+  /// The async status of such a chain is open: the missing binding could be
+  /// async once it exists.
+  bool hasUnboundDependency(BindingKey key) {
+    final visited = <BindingKey>{key};
+    final List<BindingKey> queue = [key];
+    for (var i = 0; i < queue.length; i++) {
+      final BindingKey current = queue[i];
+      if (!_bindingMap.containsKey(current) && !_dependencyEdges.containsKey(current)) return true;
+      for (final BindingKey dep in _dependencyEdges[current] ?? const []) {
+        if (visited.add(dep)) queue.add(dep);
+      }
+    }
+    return false;
+  }
 
   /// Whether [key] is directly async (i.e. the binding itself is annotated
   /// `@asynchronous` or returns a `Future<T>`), as opposed to being only
