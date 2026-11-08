@@ -46,6 +46,13 @@ melos:
       packageFilters:
         flutter: true
 
+    clean:
+      run: melos run clean:flutter
+    clean:flutter:
+      run: melos exec -c 1 --fail-fast -- "flutter clean"
+      packageFilters:
+        flutter: true
+
     build:
       run: melos run build:dart && melos run build:flutter
     build:dart:
