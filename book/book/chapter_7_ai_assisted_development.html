@@ -155,17 +155,21 @@
                     <main>
                         <h1 id="ai-coding-assistants"><a class="header" href="#ai-coding-assistants">AI Coding Assistants</a></h1>
 <p>Most developers now build with an AI coding assistant, so inject.dart ships
-first-class guidance for them. Your assistant gets the annotations, the
-<code>build_runner</code> workflow, and the compile-time DI model right — without you
-re-explaining it every session. There are two complementary channels: a rules
-document and installable Agent Skills.</p>
+guidance for them. With it, your assistant gets the annotations, the
+<code>build_runner</code> workflow, and the compile-time DI model right, and you don’t have
+to explain them every session. The guidance comes in two forms: a rules document
+and installable Agent Skills.</p>
 <h2 id="ai-rules-file"><a class="header" href="#ai-rules-file">AI rules file</a></h2>
+<p><a href="https://github.com/ralph-bergmann/inject.dart/blob/master/rules/rules.md"><code>rules/rules.md</code></a> describes inject.dart in one document: the
+annotations, the build steps, testing, and common mistakes. Copy it into the
+file your assistant reads project rules from, such as <code>AGENTS.md</code> or
+<code>CLAUDE.md</code>. You can drop the section on golden tests, which only matters when
+you work on the generator itself.</p>
 <h2 id="agent-skills"><a class="header" href="#agent-skills">Agent Skills</a></h2>
 <p>For agents that support the <a href="https://agentskills.io/specification">Agent Skills</a> format (Claude Code and
 others), inject.dart provides task-focused skills under <a href="https://github.com/ralph-bergmann/inject.dart/tree/master/packages/inject_annotation/skills"><code>skills/</code></a>.
-Where the rules file is one big document, each skill teaches <em>how</em> to perform a
-single concrete task and is activated only when relevant. Install them with
-either tool:</p>
+The rules file is one big document. Each skill teaches one concrete task and
+activates only when relevant. Install them with either tool:</p>
 <pre><code class="language-shell"># Node tool — installs straight from the GitHub repo
 npx skills add https://github.com/ralph-bergmann/inject.dart/tree/master/packages/inject_annotation/skills --skill '*' --agent universal
 
@@ -186,7 +190,7 @@ skills get
 <tr><td><a href="https://github.com/ralph-bergmann/inject.dart/blob/master/packages/inject_annotation/skills/inject_annotation-add-assisted-injection/SKILL.md"><code>inject_annotation-add-assisted-injection</code></a></td><td>Mix injected and runtime parameters with <code>@assistedInject</code> / <code>@assisted</code> / <code>@assistedFactory</code>.</td></tr>
 <tr><td><a href="https://github.com/ralph-bergmann/inject.dart/blob/master/packages/inject_annotation/skills/inject_annotation-inject-provider/SKILL.md"><code>inject_annotation-inject-provider</code></a></td><td>Inject <code>Provider&lt;T&gt;</code> for lazy or multiple instances.</td></tr>
 <tr><td><a href="https://github.com/ralph-bergmann/inject.dart/blob/master/packages/inject_annotation/skills/inject_annotation-add-provision-listener/SKILL.md"><code>inject_annotation-add-provision-listener</code></a></td><td>Observe provisioning with <code>ProvisionListener&lt;T&gt;</code> + <code>@provisionListener</code>.</td></tr>
-<tr><td><a href="https://github.com/ralph-bergmann/inject.dart/blob/master/packages/inject_annotation/skills/inject_annotation-flutter-view-model/SKILL.md"><code>inject_annotation-flutter-view-model</code></a></td><td>Bind a <code>ChangeNotifier</code> view model to a widget with <code>ViewModelFactory</code> / <code>ViewModelBuilder</code> (sync or async init).</td></tr>
+<tr><td><a href="https://github.com/ralph-bergmann/inject.dart/blob/master/packages/inject_annotation/skills/inject_annotation-flutter-view-model/SKILL.md"><code>inject_annotation-flutter-view-model</code></a></td><td>Bind a <code>ChangeNotifier</code> ViewModel to a widget with <code>ViewModelFactory</code> / <code>ViewModelBuilder</code> (sync or async init).</td></tr>
 <tr><td><a href="https://github.com/ralph-bergmann/inject.dart/blob/master/packages/inject_annotation/skills/inject_annotation-write-tests/SKILL.md"><code>inject_annotation-write-tests</code></a></td><td>Test injected code with a test component + test module + fakes.</td></tr>
 </tbody>
 </table>
@@ -195,39 +199,38 @@ skills get
 <code>@module</code>, <code>@inject</code>, <code>@provides</code>, <code>@singleton</code>, <code>@asynchronous</code>, <code>Qualifier</code>,
 <code>@assistedInject</code> / <code>@assisted</code> / <code>@assistedFactory</code>, <code>@provisionListener</code>), the
 runtime contracts <code>Provider&lt;T&gt;</code> and <code>ProvisionListener&lt;T&gt;</code>, and the
-<code>inject_flutter</code> view-model API.</p>
+<code>inject_flutter</code> ViewModel API.</p>
 <h2 id="the-core-rule"><a class="header" href="#the-core-rule">The core rule</a></h2>
-<p>Whichever channel you use, the one rule that anchors all the guidance is:
-inject.dart is <strong>constructor injection only</strong> — “if it builds, it runs.” A good
-assistant never suggests service-locator patterns (<code>get_it</code>, <code>provider</code> used as
-a locator, or hand-rolled registries), and re-runs code generation after every
-annotation change:</p>
+<p>All of the guidance rests on one rule: inject.dart is constructor injection
+only. “If it builds, it runs.” A good assistant never suggests service-locator
+patterns (<code>get_it</code>, <code>provider</code> used as a locator, or hand-rolled registries) and
+re-runs code generation after every annotation change:</p>
 <pre><code class="language-shell">dart run build_runner build --delete-conflicting-outputs
 </code></pre>
 <h2 id="validating-the-skills"><a class="header" href="#validating-the-skills">Validating the skills</a></h2>
-<p>The skills must stay true to the generator’s <em>actual</em> behaviour, not assumptions
-about it. The strongest check — for example after the generator changes — is to
-<strong>run each skill</strong>: have your AI assistant carry out the task each skill teaches,
-then prove the result compiles and generates correctly.</p>
+<p>The skills must match what the generator does. The strongest check, for example
+after the generator changes, is to run each skill: have your AI assistant carry
+out the task each skill teaches, then confirm that the result compiles and
+generates correctly.</p>
 <ol>
-<li>Create a temporary pure-Dart package <code>_scratch/</code> — a <code>pubspec.yaml</code> with
+<li>Create a temporary pure-Dart package <code>_scratch/</code>. Its <code>pubspec.yaml</code> has
 <code>resolution: workspace</code>, <code>inject_annotation</code> as a dependency, and
 <code>build_runner</code> + <code>inject_generator</code> (plus <code>test</code> if you exercise the testing
-skill) as dev-dependencies.</li>
+skill) as dev dependencies.</li>
 <li>Add <code>_scratch</code> to the <code>workspace:</code> list in the root <code>pubspec.yaml</code>.</li>
-<li>Inside <code>_scratch/</code>, <strong>follow each skill to perform its task</strong> — execute the
-skill as a user would, rather than copying snippets out of it:
+<li>Inside <code>_scratch/</code>, follow each skill to perform its task the way a user
+would. Do not copy snippets out of it. Use
 <code>inject_annotation-setup-di</code> to scaffold the component, <code>inject_annotation-add-injectable</code>
 for a service, <code>inject_annotation-create-module</code> to provide a configured /
 <code>@asynchronous</code> / <code>Qualifier</code>-ed type, then
 <code>inject_annotation-add-assisted-injection</code>, <code>inject_annotation-inject-provider</code>,
 <code>inject_annotation-add-provision-listener</code>, and <code>inject_annotation-write-tests</code>. The
-Flutter-only <code>inject_annotation-flutter-view-model</code> is exercised in a Flutter package
-— <code>examples/flutter_demo</code> already runs it and stays green.</li>
+Flutter-only <code>inject_annotation-flutter-view-model</code> needs a Flutter package:
+<code>examples/flutter_demo</code> already runs it and stays green.</li>
 <li>Run <code>dart pub get</code>, then inside <code>_scratch/</code>: <code>dart run build_runner build</code>
 and <code>dart analyze</code>.</li>
-<li>Confirm the build writes outputs and <code>dart analyze</code> reports <strong>No issues
-found!</strong> — i.e. following the skills produced code that <strong>compiles</strong> and
+<li>Confirm that the build writes outputs and <code>dart analyze</code> reports “No issues
+found!”. That means following the skills produced code that compiles and
 generates correctly. Skim the generated <code>*.inject.dart</code> to confirm the wiring
 matches what each skill claims.</li>
 <li>Delete <code>_scratch/</code> and revert the <code>pubspec.yaml</code> edit.</li>
@@ -245,9 +248,8 @@ found!”, and the generated code compiles and matches what each skill describes
 Show me the output, then remove <code>_scratch/</code> and revert the <code>pubspec.yaml</code>.
 (Validate the Flutter view-model skill against <code>examples/flutter_demo</code>.)</p>
 </blockquote>
-<p>This is how the skills were validated in the first place: run each one for real,
-read the generated output and analyzer result, and document only what the
-generator actually does.</p>
+<p>The skills were first validated this way: run each one for real, read the
+generated output and analyzer result, and document only what the generator does.</p>
 
                     </main>
 

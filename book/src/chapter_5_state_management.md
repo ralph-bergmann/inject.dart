@@ -1,12 +1,12 @@
 # State Management and Application Architecture
 
 This chapter shows how inject.dart fits into a layered Flutter application that
-follows [Flutter's recommended app architecture][flutter-arch]. We will walk
-through the `flutter_demo` reference example — a counter app structured in
-layers — and explain where inject.dart helps and where it deliberately diverges
-from the guide.
+follows [Flutter's recommended app architecture][flutter-arch]. It uses the
+`flutter_demo` reference example, a counter app structured in layers, and
+explains where inject.dart helps and where it deliberately diverges from the
+guide.
 
-The complete source lives in [`examples/flutter_demo`][flutter-demo].
+The complete source is in [`examples/flutter_demo`][flutter-demo].
 
 ## Flutter's recommended architecture
 
@@ -21,20 +21,19 @@ The complete source lives in [`examples/flutter_demo`][flutter-demo].
 | ViewModel    | Holds mutable UI state; extends `ChangeNotifier`  |
 | View         | Renders UI; subscribes to ViewModel               |
 
-Each layer depends only on the layer below it, never on the layer above.
+Each layer depends only on the layer below it.
 
 ### Where inject.dart fits: Step 7
 
 The guide's dependency-wiring step (Step 7) recommends wiring dependencies with
 a runtime service locator such as `get_it`, or a `provider` tree. inject.dart
-takes a different approach: **compile-time constructor injection**.
+uses compile-time constructor injection instead.
 
-Instead of registering bindings in an imperative setup block and resolving them
-at runtime, you annotate your classes and modules, run the generator, and get a
-concrete component class that knows how to build every dependency — verified at
-build time.
+You annotate your classes and modules, run the generator, and get a concrete
+component class that knows how to build every dependency. The build verifies
+the wiring, and nothing is registered in a setup block or resolved at runtime.
 
-The trade-off is the same one described in the Introduction: a codegen step in
+The trade-off is the one described in the Introduction: a codegen step in
 exchange for build-time safety.
 
 ## The `flutter_demo` layers
@@ -62,9 +61,10 @@ lib/
             └── counter_view_model.dart    CounterViewModel (@inject)
 ```
 
-### Domain Model — `Counter`
+### Domain model: `Counter`
 
-A plain immutable class with value semantics. No DI annotation is needed:
+`Counter` is a plain immutable class with value semantics and needs no DI
+annotation:
 
 ```dart
 class Counter {
@@ -80,7 +80,7 @@ Using `freezed` or `built_value` (as Flutter's guide recommends) is an option;
 this example uses a hand-written class to keep the inject.dart concepts front
 and centre.
 
-### Service — `Database` and `DatabaseModule`
+### Service: `Database` and `DatabaseModule`
 
 `Database` is a simulated third-party type. It cannot carry `@inject`, so a
 module provides it. The module also demonstrates the two-line `@Qualifier` form
@@ -112,7 +112,7 @@ class DatabaseModule {
 Both `@databasePath String` and `@databaseName String` have the same Dart type.
 inject.dart routes them correctly because binding identity is `(type, qualifier)`.
 
-### Repository — `CounterRepository`
+### Repository: `CounterRepository`
 
 The repository sits between the raw service and the rest of the app. Consumers
 always work with `Counter` domain models; they never touch `Database` directly:
@@ -136,13 +136,13 @@ class CounterRepository {
 ```
 
 `@singleton` means the same `CounterRepository` instance is shared across the
-whole component — a single source of truth for the counter state.
+whole component, so the counter state has a single source of truth.
 
-### Use Case — `IncrementCounterUseCase`
+### Use case: `IncrementCounterUseCase`
 
-A use case encapsulates one business operation. This one is **stateless** — it
-holds only a reference to its collaborator — so it is marked `@singleton`: a
-single shared instance is safe and avoids needless allocations.
+A use case encapsulates one business operation. This one is stateless and holds
+only a reference to its collaborator, so it is marked `@singleton`. A single
+shared instance is safe and avoids needless allocations.
 
 ```dart
 @inject
@@ -160,14 +160,14 @@ class IncrementCounterUseCase {
 ```
 
 Whether a binding should be a singleton depends on whether it carries
-per-consumer mutable state, **not** on the lifecycles of its dependencies. A use
-case that *did* hold consumer-specific state would drop `@singleton` and receive
-a fresh instance per injection instead.
+per-consumer mutable state. The lifecycles of its dependencies play no part. A
+use case that held consumer-specific state would drop `@singleton` and receive a
+fresh instance per injection.
 
-`CounterViewModel` injects `IncrementCounterUseCase`; the repository is wired
-automatically by the generator.
+`CounterViewModel` injects `IncrementCounterUseCase`, and the generator wires
+the repository automatically.
 
-### ViewModel — `CounterViewModel`
+### ViewModel: `CounterViewModel`
 
 The ViewModel holds all mutable state and keeps the View as a `StatelessWidget`:
 
@@ -202,16 +202,16 @@ class CounterViewModel extends ChangeNotifier {
 }
 ```
 
-Note `Future<int>` — this is a raw future binding **without** `@asynchronous`.
+`Future<int>` is a raw future binding without `@asynchronous`.
 `AppModule.provideInitialCount()` returns `Future.value(0)` synchronously to
-*provision*; `CounterViewModel` holds the `Future` and awaits it in `init()`.
-This keeps the ViewModel chain synchronous from the generator's perspective,
-which is required by `ViewModelFactory`.
+*provision*, and `CounterViewModel` holds the `Future` and awaits it in
+`init()`. This keeps the ViewModel chain synchronous from the generator's
+perspective, which `ViewModelFactory` requires.
 
 Dependencies are kept `private`; the View can only access what the ViewModel
 intentionally exposes through its public API.
 
-### View — `HomePage` and `MyApp`
+### View: `HomePage` and `MyApp`
 
 The View uses `@assistedInject` to receive the `ViewModelFactory` from the
 graph and runtime parameters from the caller:
@@ -260,7 +260,7 @@ class HomePage extends StatelessWidget {
 The `part 'home_page.factory.dart';` directive is required because the factory
 builder writes the synthesised `HomePageFactory` into that part file.
 
-### Component root — `MainComponent`
+### Component root: `MainComponent`
 
 ```dart
 import 'main.inject.dart' as g;
@@ -287,16 +287,16 @@ abstract class MainComponent {
 Module order is meaningful: `AppModule` first, `DatabaseModule` second. If both
 provided the same `(type, qualifier)` pair, `DatabaseModule` would win.
 
-`Provider<CounterRepository>` as an entry point defers creation to `.get()` —
-useful for lazy access or passing the provider to non-DI code.
+`Provider<CounterRepository>` as an entry point defers creation to `.get()`,
+which is useful for lazy access or for passing the provider to non-DI code.
 
 ## `@asynchronous` in the app module
 
-`flutter_demo` showcases both async patterns (see [Core Concepts](./chapter_4_core_concepts.md#asynchronous-providers----asynchronous)):
+`flutter_demo` uses both async patterns (see [Core Concepts](./chapter_4_core_concepts.md#asynchronous-providers-asynchronous)):
 
-- `AppModule.provideAppInfo()` — `@asynchronous`, binding type `AppInfo`
-- `AppModule.provideWelcomeMessage(AppInfo)` — `@asynchronous`, receives `AppInfo` already resolved
-- `AppModule.provideInitialCount()` — **no** `@asynchronous`, binding type `Future<int>`
+- `AppModule.provideAppInfo()`: `@asynchronous`, binding type `AppInfo`
+- `AppModule.provideWelcomeMessage(AppInfo)`: `@asynchronous`, receives `AppInfo` already resolved
+- `AppModule.provideInitialCount()`: no `@asynchronous`, binding type `Future<int>`
 
 The welcome-message chain propagates async-ness to the component entry point
 (`Future<String> get welcomeMessage`). The initial-count chain stays
@@ -312,7 +312,7 @@ CreationLogListener provideCreationLogListener() => CreationLogListener();
 ```
 
 `CreationLogListener implements ProvisionListener<ChangeNotifier>`, so it fires
-for every `ChangeNotifier` the component provisions — here, every
+for every `ChangeNotifier` the component provisions, here every
 `CounterViewModel` instance. It is a `@singleton` so one listener observes all
 provisioning events.
 

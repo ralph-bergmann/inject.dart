@@ -1,7 +1,7 @@
 # Core Concepts
 
 This chapter is the complete annotation reference. Every concept maps to real
-code in the [`flutter_demo`][flutter-demo] example; the table below links each
+code in the [`flutter_demo`][flutter-demo] example, and this table links each
 annotation to the file that demonstrates it.
 
 | Concept                | Annotation              | Demonstrated in `flutter_demo`                     |
@@ -16,7 +16,7 @@ annotation to the file that demonstrates it.
 | Provision hook         | `@provisionListener`    | [`app_module.dart`][appmod]                        |
 | Use case               | `@inject @singleton`    | [`increment_counter_use_case.dart`][usecase]       |
 
-## Constructor injection — `@inject`
+## Constructor injection: `@inject`
 
 Annotate a class (or a specific constructor) and the generator wires it
 wherever the type is needed:
@@ -32,13 +32,13 @@ class CounterRepository {
 }
 ```
 
-All constructor parameters become dependencies. The generator resolves them
-recursively — `CounterRepository` depends on `Database`, which is provided by a
-module (see below). You never call `CounterRepository(database: ...)` by hand.
+All constructor parameters become dependencies, and the generator resolves them
+recursively. `CounterRepository` depends on `Database`, which a module provides
+(see below). You never call `CounterRepository(database: ...)` by hand.
 
-**Multiple constructors:** a class may have more than one `@inject` constructor
-(named or factory) — but each must carry a unique `@Qualifier` so the generator
-can tell the resulting bindings apart:
+A class may have more than one `@inject` constructor (named or factory), but
+each must carry a unique `@Qualifier` so the generator can tell the resulting
+bindings apart:
 
 ```dart
 const prod = Qualifier(#prod);
@@ -60,9 +60,9 @@ consumers request the one they want with the matching `@Qualifier`.
 
 ## Modules and `@provides`
 
-For types you do not own — third-party classes, abstract interfaces, or types
-that need custom construction logic — declare a `@module` with `@provides`
-methods:
+Declare a `@module` with `@provides` methods for types you do not own, such as
+third-party classes and abstract interfaces, and for types that need custom
+construction logic:
 
 ```dart
 @module
@@ -77,13 +77,13 @@ class DatabaseModule {
 ```
 
 The generator calls `provideDatabase` whenever a `Database` is needed, passing
-the correct `String` values via the qualifiers (see [`@Qualifier`](#named-bindings----qualifier) below).
+the correct `String` values via the qualifiers (see [`@Qualifier`](#named-bindings-qualifier) below).
 
-A `@provides` method can itself take dependencies — the generator wires them
-automatically. This creates a natural chain: modules compose into components
-without manual wiring.
+A `@provides` method can take dependencies of its own, and the generator wires
+them automatically. Modules therefore compose into components without manual
+wiring.
 
-## Shared instances — `@singleton`
+## Shared instances: `@singleton`
 
 Add `@singleton` to guarantee a single instance for the component's lifetime:
 
@@ -104,17 +104,17 @@ class DatabaseModule {
 `identical(component.counterRepository, component.counterRepository)` is
 guaranteed to be `true`.
 
-**View models are deliberately *not* singletons.** Each widget gets a fresh
-instance with isolated state that is created in `initState` and disposed in
-`dispose`. If view models were singletons, all instances of a screen would
-share the same state.
+ViewModels are deliberately not singletons. Each widget gets a fresh instance
+with its own state, created in `initState` and disposed in `dispose`. With a
+singleton ViewModel, all instances of a screen would share the same state.
 
-## Named bindings — `@Qualifier`
+## Named bindings: `@Qualifier`
 
 When two providers return the same Dart type, a qualifier makes them distinct.
-The binding identity in inject.dart is `(type, qualifier)`, not `type` alone.
+inject.dart identifies a binding by the pair `(type, qualifier)`.
 
-The idiomatic form is two lines — declare once, use as annotation:
+The usual form takes two lines. Declare the qualifier once, then use it as an
+annotation:
 
 ```dart
 const databasePath = Qualifier(#databasePath);
@@ -143,14 +143,14 @@ Both `@databasePath String` and `@databaseName String` have the same Dart type.
 inject.dart routes each correctly because it tracks the qualifier alongside the
 type.
 
-**Rule:** a `@Qualifier` is part of the binding key. `@prod String` and
-`@test String` are *different* keys and never override each other.
+A `@Qualifier` is part of the binding key, so `@prod String` and `@test String`
+are different keys and never override each other.
 
-## Asynchronous providers — `@asynchronous`
+## Asynchronous providers: `@asynchronous`
 
 inject.dart distinguishes two ways to expose a `Future<T>`:
 
-### With `@asynchronous` — binding type is `T`
+### With `@asynchronous`: binding type is `T`
 
 ```dart
 const welcome = Qualifier(#welcome);
@@ -174,25 +174,23 @@ class AppModule {
 }
 ```
 
-`@asynchronous` tells the generator: *unwrap the `Future` and register the
-binding as `T`, not `Future<T>`*.
+`@asynchronous` tells the generator to unwrap the `Future` and register the
+binding as `T` instead of `Future<T>`.
 
-Consequences:
-- `provideWelcomeMessage` receives `AppInfo` — not `Future<AppInfo>`. The
-  generator inserted the `await` transparently.
-- Async-ness *propagates* upward. The component entry point becomes
-  `Future<String>`:
+`provideWelcomeMessage` therefore receives `AppInfo` directly, because the
+generator inserts the `await` for you. Async-ness also propagates upward, so the
+component entry point becomes `Future<String>`:
 
 ```dart
 // In main():
 final message = await component.welcomeMessage; // Future<String>
 ```
 
-The `await` at the entry point is not a contradiction — `@asynchronous` means
-"the binding type is `T` so intermediate providers see `T`". At the component
-boundary you cross back into async-world.
+You still need the `await` at the entry point. `@asynchronous` makes the binding
+type `T`, so intermediate providers see `T`, but at the component boundary you
+cross back into async code.
 
-### Without `@asynchronous` — binding type is `Future<T>`
+### Without `@asynchronous`: binding type is `Future<T>`
 
 ```dart
 @module
@@ -220,12 +218,11 @@ class CounterViewModel extends ChangeNotifier {
 }
 ```
 
-**Important for `ViewModelFactory`:** a provider marked `@asynchronous` in the
-ViewModel's dependency chain makes the entire chain async. `ViewModelFactory`
-requires *synchronous* provider resolution, so mixing `@asynchronous` deps into
-a ViewModel chain is a build error. Raw `Future<T>` bindings (no
-`@asynchronous`) are safe because the provision itself is synchronous — the
-`Future` object is handed over immediately without awaiting.
+A provider marked `@asynchronous` in a ViewModel's dependency chain makes the
+entire chain async. `ViewModelFactory` requires synchronous provider resolution,
+so an `@asynchronous` dependency in that chain is a build error. Raw `Future<T>`
+bindings (no `@asynchronous`) are safe because the provision itself is
+synchronous: the `Future` object is handed over immediately, without awaiting.
 
 ### Choosing between the two
 
@@ -234,16 +231,16 @@ a ViewModel chain is a build error. Raw `Future<T>` bindings (no
 | downstream consumers should see `T`, not `Future` | the consumer owns the await (e.g. in `init()`)     |
 | async-ness should propagate to the entry point    | the chain must stay synchronous (a `ViewModelFactory` dependency) |
 
-The choice is about the **binding type** — whether dependents receive `T` or
-`Future<T>` — not about how quickly the future completes. A raw `Future<T>` is
-the right tool whenever a synchronous consumer sits in the chain, regardless of
-whether the future resolves instantly or after a real I/O round-trip.
+The choice depends on the binding type, meaning whether dependents receive `T`
+or `Future<T>`. How quickly the future completes plays no part. A raw
+`Future<T>` is the right tool whenever a synchronous consumer sits in the chain,
+whether the future resolves instantly or after a real I/O round trip.
 
 ### A third option: resolve *before* the graph
 
-Both variants keep the async work *inside* the graph. Often the simplest escape
-from async-ness is to do the work **before** building the component and hand
-the finished object in via a pre-built module instance (see
+Both variants keep the async work inside the graph. It is often simpler to do
+the work before building the component and pass the finished object in through
+a pre-built module instance (see
 [The generated `create` factory](#the-generated-create-factory)):
 
 ```dart
@@ -264,11 +261,11 @@ Future<void> main() async {
 }
 ```
 
-Everything downstream injects a plain `Database` — no `@asynchronous`, no
-`Future<T>` entry points, no async propagation, and the chain stays safe for
+Everything downstream injects a plain `Database`. You need no `@asynchronous`
+and no `Future<T>` entry points, and the chain stays safe for
 `ViewModelFactory`.
 
-## Lazy and on-demand access — `Provider<T>`
+## Lazy and on-demand access: `Provider<T>`
 
 A `Provider<T>` as a component entry point defers creation to call time:
 
@@ -286,24 +283,25 @@ final repo = component.counterRepositoryProvider.get();
 Use `Provider<T>` when:
 - you want lazy initialisation (don't create until first use),
 - you need to pass the provider reference to non-DI code,
-- or you need multiple independent instances — but only for **non-`@singleton`**
-  bindings; a `@singleton` provider returns the same cached instance on every
-  `.get()`.
+- or you need multiple independent instances. This works only for
+  non-`@singleton` bindings, because a `@singleton` provider returns the same
+  cached instance on every `.get()`.
 
-`ViewModelFactory<T>` (from `inject_flutter`) is itself built on `Provider<T>` —
-a concrete, in-repo example of the pattern.
+`ViewModelFactory<T>` (from `inject_flutter`) is itself built on `Provider<T>`,
+so the repo has a concrete example of the pattern.
 
 > **Note:** `Provider<T>` works as a component entry point, as a `@provides`
-> method return type, and as a constructor parameter on any `@inject` class —
-> injected like any other dependency. There the generator passes the provider
-> itself (not its resolved value), so the consumer controls when `.get()` runs.
+> method return type, and as a constructor parameter on any `@inject` class. A
+> constructor parameter is injected like any other dependency: the generator
+> passes the provider itself (not its resolved value), so the consumer controls
+> when `.get()` runs.
 >
 > A `Provider<T>` constructor parameter needs a synchronous dependency chain.
 > Over an `@asynchronous` chain it is a build error, because `.get()` must return
 > `T` synchronously. At an `@inject` constructor, inject `T` directly; the class
 > then becomes async too.
 
-## Runtime parameters — `@assistedInject`
+## Runtime parameters: `@assistedInject`
 
 Some constructor parameters are only known at the call site (a route argument,
 a widget key). Mark them `@assisted` and inject the rest from the graph:
@@ -331,8 +329,8 @@ abstract class HomePageFactory {
 }
 ```
 
-The factory is automatically available as a binding — inject it wherever you
-build `HomePage`:
+The factory is automatically available as a binding, so you can inject it
+wherever you build `HomePage`:
 
 ```dart
 class MyApp extends StatelessWidget {
@@ -348,8 +346,8 @@ class MyApp extends StatelessWidget {
 
 ### Explicit `@assistedFactory`
 
-If you need a custom factory shape — a different method name, multiple `create`
-variants, or a specific class name — declare it yourself:
+Declare the factory yourself if you need a different method name, multiple
+`create` variants, or a specific class name:
 
 ```dart
 @assistedFactory
@@ -375,10 +373,10 @@ factory builder can write into them:
 part 'home_page.factory.dart';
 ```
 
-## Observing provisions — `@provisionListener`
+## Observing provisions: `@provisionListener`
 
-`ProvisionListener<T>` is a callback fired after every instance of `T` is
-created by the component. Use it for centralised logging, metrics, or tracking
+`ProvisionListener<T>` is a callback that fires each time the component creates
+an instance of `T`. Use it for centralised logging, metrics, or tracking
 resources that need explicit cleanup:
 
 ```dart
@@ -402,18 +400,16 @@ class AppModule {
 }
 ```
 
-Three annotations work together:
-
-- `@provides` — exposes the listener as a binding.
-- `@singleton` — the same instance observes every provisioned object.
-- `@provisionListener` — registers it as a hook.
+`@provides` exposes the listener as a binding, `@singleton` makes the same
+instance observe every provisioned object, and `@provisionListener` registers it
+as a hook.
 
 The generic parameter narrows scope: `ProvisionListener<ChangeNotifier>` fires
 only for `ChangeNotifier` subtypes; `ProvisionListener<Object>` is a catch-all.
 
 ## Typedef dependencies
 
-inject.dart supports **typedef-wrapped** function types and record types as
+inject.dart supports typedef-wrapped function types and record types as
 dependency types:
 
 ```dart
@@ -439,11 +435,10 @@ class AppModule {
 
 Source: `packages/inject_generator/test/golden/code_generator/typedef_module_component.dart`
 
-**Raw function types and raw record types without a typedef are not supported.**
-The typedef is required for the generator to identify the dependency type
-unambiguously.
+Raw function types and raw record types without a typedef are not supported.
+The generator needs the typedef to identify the dependency type unambiguously.
 
-### Auto-synthesized typedef: `ViewModelFactory<T>`
+### Auto-synthesised typedef: `ViewModelFactory<T>`
 
 `ViewModelFactory<T extends ChangeNotifier>` from `inject_flutter` is a typedef:
 
@@ -465,23 +460,22 @@ builder if it fails (without an `error` builder the failure is reported through
 synchronous `init`.
 
 The generator synthesises the `ViewModelFactory<T>` binding automatically when
-it encounters an `@inject` class that extends `ChangeNotifier`. You never write
-a `@provides` method for `ViewModelFactory` — the synthesis happens behind the
-scenes. This is an extension of the assisted-injection mechanism: the generator
-detects that `ViewModelBuilder<T>`'s constructor accepts injectable parameters
+it encounters an `@inject` class that extends `ChangeNotifier`, so you never
+write a `@provides` method for `ViewModelFactory`. This extends the
+assisted-injection mechanism: the generator detects that `ViewModelBuilder<T>`'s constructor accepts injectable parameters
 (a `Provider<T>`) and synthesises accordingly.
 
 ## The generated `create` factory
 
 The generated component class exposes a factory constructor `create`, usually
 aliased via `static const create = g.AppComponent$Component.create;`. Its
-signature is derived from the component's module list: one **named parameter
-per module**, in `@Component([...])` declaration order.
+signature comes from the component's module list: one named parameter per
+module, in `@Component([...])` declaration order.
 
-- A module with a public no-arg constructor becomes an *optional* parameter —
-  when omitted, `create` instantiates the module itself.
-- A module whose constructor takes parameters becomes a **`required`**
-  parameter — you build the instance and pass it in.
+- A module with a public no-arg constructor becomes an optional parameter. If
+  you omit it, `create` instantiates the module itself.
+- A module whose constructor takes parameters becomes a `required` parameter.
+  You build the instance and pass it in.
 
 ```dart
 @module
@@ -505,43 +499,40 @@ abstract class AppComponent {
 final component = AppComponent.create(dbModule: DbModule('app.db'));
 ```
 
-Passing a pre-built module instance is a first-class feature, not a loophole.
-It is the intended channel for:
+A pre-built module instance is the intended way to pass in:
 
-- **runtime values** the graph cannot know at compile time (file paths, flags,
-  tokens) — the inject.dart counterpart to Dagger's `@BindsInstance`;
-- **objects that need async construction** — `await` them in `main()` and pass
-  the result in; the whole graph stays synchronous (see
+- runtime values the graph cannot know at compile time, such as file paths,
+  flags, or tokens (the inject.dart counterpart to Dagger's `@BindsInstance`);
+- objects that need async construction: `await` them in `main()` and pass the
+  result in, and the whole graph stays synchronous (see
   [A third option: resolve before the graph](#a-third-option-resolve-before-the-graph));
-- **externally-constructed objects**, including objects obtained from another
-  component — see
-  [Composing Components](./chapter_8_multiple_components.md);
-- **pre-configured fakes** in tests — see
-  [Testing](./chapter_6_testing.md).
+- externally constructed objects, including objects obtained from another
+  component (see
+  [Composing Components](./chapter_8_multiple_components.md));
+- pre-configured fakes in tests (see
+  [Testing](./chapter_6_testing.md)).
 
-`create` is always **synchronous**, no matter how many `@asynchronous` bindings
-the graph contains — async-ness surfaces at the entry points instead (see
-above).
+`create` is always synchronous, no matter how many `@asynchronous` bindings the
+graph contains. Async-ness surfaces at the entry points instead (see above).
 
-One closing rule: a component itself declares **no constructors**. `@inject`
-and `@assistedInject` constructors belong on injectable classes, never on the
-component — the generated `create` factory is the only way a component comes
-to life.
+A component itself declares no constructors. `@inject` and `@assistedInject`
+constructors belong on injectable classes, and the generated `create` factory is
+the only way to create a component.
 
 ## Module override semantics
 
-When two or more modules provide the same `(type, qualifier)` pair, the **later
-module wins**:
+When two or more modules provide the same `(type, qualifier)` pair, the later
+module wins:
 
 ```dart
 @Component([ModuleA, ModuleB])   // ModuleB overrides ModuleA for shared keys
 abstract class AppComponent { ... }
 ```
 
-This is the same convention as Dagger 2 on Android. It makes two patterns
-trivial:
+Dagger 2 and Hilt behave differently here: they report two bindings for the same
+key as a build error. The later-module rule makes two patterns easy.
 
-**Test-mock swap:**
+To swap in a test fake, list the test module after the real one:
 
 ```dart
 // Production component
@@ -568,7 +559,7 @@ class TestDatabaseModule {
 }
 ```
 
-**Environment swap:** use separate components sharing a base module:
+To swap environments, use separate components that share a base module:
 
 ```dart
 @Component([BaseModule, ProdModule])
@@ -578,9 +569,8 @@ abstract class ProdComponent { ... }
 abstract class StagingComponent { ... }
 ```
 
-> **Note on qualifiers and override:** `@prod String` and `@test String` are
-> *different* keys. Override only fires when both the type *and* the qualifier
-> are identical.
+> **Note:** An override applies only when both the type and the qualifier are
+> identical. `@prod String` and `@test String` are different keys.
 
 ## Builder options
 
@@ -606,7 +596,7 @@ qualifier:
 |----------|------------------------------------------------------------------|
 | `error`  | Build error (default). Having both is almost always a mistake.   |
 | `warn`   | Both kept, a WARNING is emitted on the second binding.           |
-| `allow`  | Both kept silently — pre-policy behaviour, useful for migration. |
+| `allow`  | Both kept silently: pre-policy behaviour, useful for migration.  |
 
 ### `debug_graph`
 

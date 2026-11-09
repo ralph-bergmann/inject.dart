@@ -1,16 +1,16 @@
 # Testing with Dependency Injection
 
-One of the strongest benefits of constructor injection is testability: because
-every dependency is an explicit parameter, you can substitute test
-implementations without modifying production code. inject.dart's module-override
-mechanism makes this a zero-boilerplate operation.
+Constructor injection makes code easy to test. Every dependency is an explicit
+parameter, so you can substitute test implementations without changing
+production code. With inject.dart's module overrides, you do this without
+boilerplate.
 
-The complete test code lives in [`examples/flutter_demo/test/`][flutter-demo-test].
+The complete test code is in [`examples/flutter_demo/test/`][flutter-demo-test].
 
-## The pattern in one sentence
+## The pattern
 
-Create a `@Component` for tests that lists a fake module **after** the real
-module. The later module wins, so its binding replaces the real one.
+Create a `@Component` for tests that lists a fake module after the real module.
+The later module wins, so its binding replaces the real one.
 
 ## Repository test
 
@@ -76,8 +76,8 @@ class TestDatabaseModule {
 
 `TestDatabaseModule` provides a `Database` binding for the same key
 `(Database, null)` as `DatabaseModule.provideDatabase`. Because it appears
-*after* `DatabaseModule` in the component list, it wins. `CounterRepository`
-receives a `FakeDatabase` — without any change to `CounterRepository` itself.
+after `DatabaseModule` in the component list, it wins, and `CounterRepository`
+receives a `FakeDatabase` with no change to its own code.
 
 ### `FakeDatabase`
 
@@ -97,11 +97,15 @@ class FakeDatabase extends Database {
 }
 ```
 
+The fake extends the real `Database` and overrides its I/O methods with
+in-memory ones, so you test the `CounterRepository` logic in isolation, without
+any file-system access.
+
 ### Alternative: pass a pre-configured module instance
 
 Listing the override module in `@Component([...])` is enough when the module
-has a no-arg constructor. If the fake needs **per-test configuration**, give
-the module a constructor parameter — the generated `create` then *requires* an
+has a no-arg constructor. If the fake needs per-test configuration, give the
+module a constructor parameter. The generated `create` then requires an
 instance, and each test builds its own:
 
 ```dart
@@ -121,12 +125,9 @@ final component = TestRepositoryComponent.create(
 );
 ```
 
-This is the same module-instance mechanism used to connect components — see
-[Composing Components and Multi-Package Projects](./chapter_8_multiple_components.md).
-
-The fake extends the real `Database` and overrides its I/O methods with
-in-memory ones — so the `CounterRepository` logic is tested in isolation without
-any file-system access.
+The same module-instance mechanism connects components, as
+[Composing Components and Multi-Package Projects](./chapter_8_multiple_components.md)
+shows.
 
 ## ViewModel test
 
@@ -184,9 +185,9 @@ class TestViewModelModule {
 ```
 
 `TestViewModelModule` provides both `CounterRepository` (as a fake) and
-`Future<int>` (the initial count). `IncrementCounterUseCase` is wired
-automatically — it is `@inject` and its `CounterRepository` dep is satisfied by
-the module.
+`Future<int>` (the initial count). The generator wires
+`IncrementCounterUseCase` automatically, because it is `@inject` and the module
+satisfies its `CounterRepository` dependency.
 
 ## Generating test code
 
@@ -209,28 +210,27 @@ Or for a specific file:
 flutter test test/repository_test.dart
 ```
 
-## Key principles
+## Guidelines
 
-1. **Separate test component per test scope.** One component per layer avoids
-   coupling repository tests to ViewModel details and vice versa.
+Give each test scope its own test component. One component per layer keeps
+repository tests independent of ViewModel details, and the other way around.
 
-2. **Use modules to override, not mocking frameworks.** inject.dart tests never
-   use `mockito`, `mocktail`, or similar. You provide a fake implementation and
-   swap it in via a later module. The generator then produces a real, compile-
-   checked component for the test — no reflection, no dynamic proxies.
+Override with modules and skip mocking frameworks. inject.dart tests never use
+`mockito`, `mocktail`, or similar. You provide a fake implementation and swap it
+in through a later module. The generator then produces a real, compile-checked
+component for the test, with no reflection or dynamic proxies.
 
-3. **Every dependency is explicit.** Because every parameter is injected, you
-   always know exactly what a test component uses. There is no hidden global
-   state to reset between tests.
+Every parameter is injected, so you always know exactly what a test component
+uses, and there is no hidden global state to reset between tests.
 
-4. **The generator validates the test component too.** If `TestViewModelModule`
-   forgets to provide `Future<int>`, the build fails — not the test at runtime.
+The generator validates the test component too. If `TestViewModelModule` forgets
+to provide `Future<int>`, the build fails before any test runs.
 
 ## Beyond unit tests
 
 The module-override pattern applies equally to integration and widget tests.
 Create a component with a module that provides a fake HTTP client, a fake
-database, or any other boundary — the rest of the graph is wired identically to
-production.
+database, or any other boundary. The rest of the graph is wired the same way as
+in production.
 
 [flutter-demo-test]: https://github.com/ralph-bergmann/inject.dart/tree/master/examples/flutter_demo/test

@@ -1,9 +1,9 @@
 # Quickstart
 
-This chapter builds a counter app the way [`flutter_demo`][flutter-demo] does —
+This chapter builds a counter app the way [`flutter_demo`][flutter-demo] does:
 a small, layered Flutter app that follows [Flutter's recommended
-architecture][flutter-arch]. Every snippet is taken from that example; open the
-linked files alongside this chapter for the complete, running source.
+architecture][flutter-arch]. Every snippet comes from that example. Open the
+linked files next to this chapter to see the complete, running source.
 
 By the end you will know how to:
 
@@ -35,12 +35,12 @@ inject.dart wires dependencies through a handful of annotations:
 | Assisted    | `@assistedInject`     | Mixes graph-injected and runtime parameters              |
 | Component   | `@Component`          | Root of the graph; exposes entry points                  |
 
-Everything starts from a `@Component`. The generator traces the graph from its
-entry points and resolves every dependency transitively — at build time.
+Everything starts from a `@Component`. At build time, the generator traces the
+graph from its entry points and resolves every dependency transitively.
 
 ## The files
 
-The app is split by layer, mirroring `flutter_demo`:
+The app is split by layer, like `flutter_demo`:
 
 ```
 lib/
@@ -60,12 +60,12 @@ lib/
             └── counter_view_model.dart                 CounterViewModel
 ```
 
-## Step 1 — Provide a third-party type with a module
+## Step 1: Provide a third-party type with a module
 
 `Database` stands in for a third-party library (Drift, Hive, Isar, …). It can't
 carry `@inject`, so a `@module` binds it. The module also shows the two-line
-`@Qualifier` form to distinguish two `String` config values of the same Dart
-type ([more in Core Concepts](./chapter_4_core_concepts.md#named-bindings----qualifier)):
+`@Qualifier` form to tell two `String` config values apart ([more in Core
+Concepts](./chapter_4_core_concepts.md#named-bindings-qualifier)):
 
 ```dart
 // lib/src/data/services/database.dart
@@ -107,9 +107,9 @@ class Database {
 `@provides` tells the generator how to build a `Database`; `@singleton` shares
 one instance across the graph. Full source: [`database.dart`][db].
 
-## Step 2 — Annotate your own classes with `@inject`
+## Step 2: Annotate your own classes with `@inject`
 
-`Counter` is a plain immutable domain model — no annotation needed:
+`Counter` is a plain immutable domain model and needs no annotation:
 
 ```dart
 // lib/src/domain/models/counter.dart
@@ -164,10 +164,10 @@ class IncrementCounterUseCase {
 resolving each parameter from the graph. Full source:
 [`counter_repository.dart`][repo], [`increment_counter_use_case.dart`][usecase].
 
-## Step 3 — The ViewModel
+## Step 3: The ViewModel
 
-The ViewModel holds the mutable UI state and extends `ChangeNotifier`. It is
-**not** a singleton — each screen gets its own:
+The ViewModel holds the mutable UI state and extends `ChangeNotifier`. Each
+screen gets its own, so it is not a singleton:
 
 ```dart
 // lib/src/features/home/counter_view_model.dart
@@ -196,17 +196,17 @@ class CounterViewModel extends ChangeNotifier {
 }
 ```
 
-`_initialCount` is a raw `Future<int>` binding (no `@asynchronous`) — the
+`_initialCount` is a raw `Future<int>` binding (no `@asynchronous`), and the
 ViewModel awaits it itself in `init()`. This keeps the ViewModel's dependency
 chain synchronous, which `ViewModelFactory` requires ([the two async patterns
-are explained in Core Concepts](./chapter_4_core_concepts.md#asynchronous-providers----asynchronous)).
+are explained in Core Concepts](./chapter_4_core_concepts.md#asynchronous-providers-asynchronous)).
 Full source: [`counter_view_model.dart`][vm].
 
-## Step 4 — Widgets with `@assistedInject`
+## Step 4: Widgets with `@assistedInject`
 
 A widget needs DI-managed dependencies (a `ViewModelFactory`) *and* runtime
 parameters (`key`, `title`). `@assistedInject` mixes the two. **Each file that
-declares an `@assistedInject` constructor needs its own
+declares an `@assistedInject` constructor must have its own
 `part '<file>.factory.dart';` directive** so the factory builder can write the
 generated factory next to it:
 
@@ -251,16 +251,16 @@ class HomePage extends StatelessWidget {
 
 - `@assisted` parameters (`key`, `title`) come from the caller at runtime.
 - Parameters without `@assisted` (`viewModelFactory`) come from the graph.
-- The generator synthesises a `HomePageFactory` into `home_page.factory.dart` —
-  you never write it.
-- `ViewModelFactory<CounterViewModel>` (from `inject_flutter`) creates the VM in
-  `initState`, runs the `init:` callback you pass once (awaiting it when async
-  and showing `loading:` meanwhile), rebuilds the subtree on `notifyListeners()`,
-  and disposes the VM in `dispose`. Passing `init: (vm) => vm.init()` is what
-  runs `init()` — the factory does not call it automatically.
+- The generator synthesises a `HomePageFactory` into `home_page.factory.dart`,
+  so you never write it.
+- `ViewModelFactory<CounterViewModel>` (from `inject_flutter`) creates the
+  ViewModel in `initState`, runs the `init:` callback you pass once (awaiting it
+  when async and showing `loading:` meanwhile), rebuilds the subtree on
+  `notifyListeners()`, and disposes the ViewModel in `dispose`. The factory does not call `init()`
+  automatically. It runs only because you pass `init: (vm) => vm.init()`.
 
-The root `MyApp` widget follows the same pattern — its own file, its own `part`
-directive, injecting the synthesised `HomePageFactory`:
+The root `MyApp` widget follows the same pattern, with its own file and its own
+`part` directive. It injects the synthesised `HomePageFactory`:
 
 ```dart
 // lib/src/features/app/my_app.dart
@@ -286,7 +286,7 @@ class MyApp extends StatelessWidget {
 
 Full source: [`home_page.dart`][home], [`my_app.dart`][myapp].
 
-## Step 5 — A module for the initial count
+## Step 5: A module for the initial count
 
 `CounterViewModel` needs a `Future<int>` for its initial value. A small
 `AppModule` provides it:
@@ -302,16 +302,15 @@ class AppModule {
 ```
 
 > In `flutter_demo`, `AppModule` also wires app metadata (an `@asynchronous`
-> `AppInfo`), a `@welcome` message, and a `@provisionListener` — see
+> `AppInfo`), a `@welcome` message, and a `@provisionListener`. See
 > [`app_module.dart`][appmod] and [Core Concepts](./chapter_4_core_concepts.md).
 
-## Step 6 — Declare the component
+## Step 6: Declare the component
 
 The component is the graph root. It lists its modules and exposes entry points.
-A component is an abstract graph declaration — it never declares constructors
-of its own. Since no class in `main.dart` declares an `@assistedInject`
-constructor, the file needs **no** `part` directive; it imports the generated
-component library instead:
+It is an abstract graph declaration and never declares constructors of its own.
+No class in `main.dart` declares an `@assistedInject` constructor, so the file
+needs no `part` directive. It imports the generated component library instead:
 
 ```dart
 // lib/main.dart
@@ -328,12 +327,12 @@ abstract class MainComponent {
 }
 ```
 
-- `import 'main.inject.dart' as g;` — the generated component class lives here;
-  the `as g` prefix keeps generated names out of your namespace.
+- `import 'main.inject.dart' as g;` imports the generated component class. The
+  `as g` prefix keeps generated names out of your namespace.
 - Module order matters: a later module overrides an earlier one for the same
   `(type, qualifier)` key.
 
-## Step 7 — Run the generator
+## Step 7: Run the generator
 
 ```bash
 dart run build_runner build
@@ -341,15 +340,15 @@ dart run build_runner build
 
 The generator writes, next to each source file:
 
-- `lib/main.inject.dart` — the component implementation (next to `main.dart`).
-- `lib/src/features/home/home_page.factory.dart` — `HomePageFactory`.
-- `lib/src/features/app/my_app.factory.dart` — `MyAppFactory`.
+- `lib/main.inject.dart`: the component implementation (next to `main.dart`).
+- `lib/src/features/home/home_page.factory.dart`: `HomePageFactory`.
+- `lib/src/features/app/my_app.factory.dart`: `MyAppFactory`.
 
-A `.factory.dart` is emitted **only** for files that declare `@assistedInject`
+A `.factory.dart` is emitted only for files that declare `@assistedInject`
 (or `@assistedFactory`). `main.dart` has neither, so there is no
 `main.factory.dart`.
 
-## Step 8 — Use the component in `main()`
+## Step 8: Use the component in `main()`
 
 ```dart
 void main() {
@@ -365,10 +364,10 @@ produces a `MyApp` with every injected dependency already in place.
 
 ### "Component 'MainComponent' has no entry points"
 
-A `@Component` must expose at least one entry point — an abstract getter or
+A `@Component` must expose at least one entry point: an abstract getter or
 method (here, `myAppFactory`). Add one if your component has none.
 
-### "Could not find a way to provide X"
+### "No binding found for type 'X'"
 
 The generator has no binding for a dependency. Common causes:
 
@@ -379,11 +378,11 @@ The generator has no binding for a dependency. Common causes:
 
 ### Missing `part '<file>.factory.dart';` directive
 
-A file with an `@assistedInject` (or `@assistedFactory`) constructor needs a
-`part '<file>.factory.dart';` directive **in that same file** — for example
-`part 'home_page.factory.dart';` in `home_page.dart`. It is *not* added to the
-component file unless another class in that same file declares an assisted
-constructor (the component itself never does).
+A file with an `@assistedInject` (or `@assistedFactory`) constructor must have
+a `part '<file>.factory.dart';` directive in that same file, for example
+`part 'home_page.factory.dart';` in `home_page.dart`. The component file needs
+one only if another class in it declares an assisted constructor. The component
+itself never does.
 
 ## Complete example
 

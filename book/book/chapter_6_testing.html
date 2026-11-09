@@ -154,14 +154,14 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="testing-with-dependency-injection"><a class="header" href="#testing-with-dependency-injection">Testing with Dependency Injection</a></h1>
-<p>One of the strongest benefits of constructor injection is testability: because
-every dependency is an explicit parameter, you can substitute test
-implementations without modifying production code. inject.dart’s module-override
-mechanism makes this a zero-boilerplate operation.</p>
-<p>The complete test code lives in <a href="https://github.com/ralph-bergmann/inject.dart/tree/master/examples/flutter_demo/test"><code>examples/flutter_demo/test/</code></a>.</p>
-<h2 id="the-pattern-in-one-sentence"><a class="header" href="#the-pattern-in-one-sentence">The pattern in one sentence</a></h2>
-<p>Create a <code>@Component</code> for tests that lists a fake module <strong>after</strong> the real
-module. The later module wins, so its binding replaces the real one.</p>
+<p>Constructor injection makes code easy to test. Every dependency is an explicit
+parameter, so you can substitute test implementations without changing
+production code. With inject.dart’s module overrides, you do this without
+boilerplate.</p>
+<p>The complete test code is in <a href="https://github.com/ralph-bergmann/inject.dart/tree/master/examples/flutter_demo/test"><code>examples/flutter_demo/test/</code></a>.</p>
+<h2 id="the-pattern"><a class="header" href="#the-pattern">The pattern</a></h2>
+<p>Create a <code>@Component</code> for tests that lists a fake module after the real module.
+The later module wins, so its binding replaces the real one.</p>
 <h2 id="repository-test"><a class="header" href="#repository-test">Repository test</a></h2>
 <p><code>CounterRepository</code> depends on <code>Database</code>. In tests, substitute <code>FakeDatabase</code>:</p>
 <pre><code class="language-dart">// test/repository_test.dart
@@ -222,8 +222,8 @@ class TestDatabaseModule {
 </code></pre>
 <p><code>TestDatabaseModule</code> provides a <code>Database</code> binding for the same key
 <code>(Database, null)</code> as <code>DatabaseModule.provideDatabase</code>. Because it appears
-<em>after</em> <code>DatabaseModule</code> in the component list, it wins. <code>CounterRepository</code>
-receives a <code>FakeDatabase</code> — without any change to <code>CounterRepository</code> itself.</p>
+after <code>DatabaseModule</code> in the component list, it wins, and <code>CounterRepository</code>
+receives a <code>FakeDatabase</code> with no change to its own code.</p>
 <h3 id="fakedatabase"><a class="header" href="#fakedatabase"><code>FakeDatabase</code></a></h3>
 <pre><code class="language-dart">// test/data/services/fake_database.dart
 
@@ -239,10 +239,13 @@ class FakeDatabase extends Database {
   Future&lt;int&gt; selectCount() =&gt; Future.value(_fakeCount);
 }
 </code></pre>
+<p>The fake extends the real <code>Database</code> and overrides its I/O methods with
+in-memory ones, so you test the <code>CounterRepository</code> logic in isolation, without
+any file-system access.</p>
 <h3 id="alternative-pass-a-pre-configured-module-instance"><a class="header" href="#alternative-pass-a-pre-configured-module-instance">Alternative: pass a pre-configured module instance</a></h3>
 <p>Listing the override module in <code>@Component([...])</code> is enough when the module
-has a no-arg constructor. If the fake needs <strong>per-test configuration</strong>, give
-the module a constructor parameter — the generated <code>create</code> then <em>requires</em> an
+has a no-arg constructor. If the fake needs per-test configuration, give the
+module a constructor parameter. The generated <code>create</code> then requires an
 instance, and each test builds its own:</p>
 <pre><code class="language-dart">@module
 class TestDatabaseModule {
@@ -259,11 +262,9 @@ final component = TestRepositoryComponent.create(
   testDatabaseModule: TestDatabaseModule(FakeDatabase()),
 );
 </code></pre>
-<p>This is the same module-instance mechanism used to connect components — see
-<a href="./chapter_8_multiple_components.html">Composing Components and Multi-Package Projects</a>.</p>
-<p>The fake extends the real <code>Database</code> and overrides its I/O methods with
-in-memory ones — so the <code>CounterRepository</code> logic is tested in isolation without
-any file-system access.</p>
+<p>The same module-instance mechanism connects components, as
+<a href="./chapter_8_multiple_components.html">Composing Components and Multi-Package Projects</a>
+shows.</p>
 <h2 id="viewmodel-test"><a class="header" href="#viewmodel-test">ViewModel test</a></h2>
 <p>The same pattern applies one layer up. Substitute <code>FakeCounterRepository</code> to
 isolate <code>CounterViewModel</code>:</p>
@@ -316,9 +317,9 @@ class TestViewModelModule {
 }
 </code></pre>
 <p><code>TestViewModelModule</code> provides both <code>CounterRepository</code> (as a fake) and
-<code>Future&lt;int&gt;</code> (the initial count). <code>IncrementCounterUseCase</code> is wired
-automatically — it is <code>@inject</code> and its <code>CounterRepository</code> dep is satisfied by
-the module.</p>
+<code>Future&lt;int&gt;</code> (the initial count). The generator wires
+<code>IncrementCounterUseCase</code> automatically, because it is <code>@inject</code> and the module
+satisfies its <code>CounterRepository</code> dependency.</p>
 <h2 id="generating-test-code"><a class="header" href="#generating-test-code">Generating test code</a></h2>
 <p>After writing the test component, run the generator:</p>
 <pre><code class="language-bash">dart run build_runner build
@@ -330,33 +331,22 @@ the module.</p>
 <p>Or for a specific file:</p>
 <pre><code class="language-bash">flutter test test/repository_test.dart
 </code></pre>
-<h2 id="key-principles"><a class="header" href="#key-principles">Key principles</a></h2>
-<ol>
-<li>
-<p><strong>Separate test component per test scope.</strong> One component per layer avoids
-coupling repository tests to ViewModel details and vice versa.</p>
-</li>
-<li>
-<p><strong>Use modules to override, not mocking frameworks.</strong> inject.dart tests never
-use <code>mockito</code>, <code>mocktail</code>, or similar. You provide a fake implementation and
-swap it in via a later module. The generator then produces a real, compile-
-checked component for the test — no reflection, no dynamic proxies.</p>
-</li>
-<li>
-<p><strong>Every dependency is explicit.</strong> Because every parameter is injected, you
-always know exactly what a test component uses. There is no hidden global
-state to reset between tests.</p>
-</li>
-<li>
-<p><strong>The generator validates the test component too.</strong> If <code>TestViewModelModule</code>
-forgets to provide <code>Future&lt;int&gt;</code>, the build fails — not the test at runtime.</p>
-</li>
-</ol>
+<h2 id="guidelines"><a class="header" href="#guidelines">Guidelines</a></h2>
+<p>Give each test scope its own test component. One component per layer keeps
+repository tests independent of ViewModel details, and the other way around.</p>
+<p>Override with modules and skip mocking frameworks. inject.dart tests never use
+<code>mockito</code>, <code>mocktail</code>, or similar. You provide a fake implementation and swap it
+in through a later module. The generator then produces a real, compile-checked
+component for the test, with no reflection or dynamic proxies.</p>
+<p>Every parameter is injected, so you always know exactly what a test component
+uses, and there is no hidden global state to reset between tests.</p>
+<p>The generator validates the test component too. If <code>TestViewModelModule</code> forgets
+to provide <code>Future&lt;int&gt;</code>, the build fails before any test runs.</p>
 <h2 id="beyond-unit-tests"><a class="header" href="#beyond-unit-tests">Beyond unit tests</a></h2>
 <p>The module-override pattern applies equally to integration and widget tests.
 Create a component with a module that provides a fake HTTP client, a fake
-database, or any other boundary — the rest of the graph is wired identically to
-production.</p>
+database, or any other boundary. The rest of the graph is wired the same way as
+in production.</p>
 
                     </main>
 

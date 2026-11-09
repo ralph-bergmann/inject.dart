@@ -154,47 +154,42 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="introduction"><a class="header" href="#introduction">Introduction</a></h1>
-<p>Welcome to the inject.dart documentation — compile-time dependency injection
-for Dart and Flutter. This book walks you through the concepts, annotation
-reference, and best practices for using inject.dart in real applications.</p>
-<h2 id="what-is-dependency-injection"><a class="header" href="#what-is-dependency-injection">What is Dependency Injection?</a></h2>
+<p>inject.dart is a compile-time dependency injection library for Dart and
+Flutter. This book explains how it works and how to use it in real
+applications, and it includes a reference for every annotation.</p>
+<h2 id="what-is-dependency-injection"><a class="header" href="#what-is-dependency-injection">What is dependency injection?</a></h2>
 <p><a href="https://en.wikipedia.org/wiki/Dependency_injection">Dependency injection (DI)</a>
-is a design pattern where a class receives its collaborators from the outside
-rather than creating them itself. Instead of a <code>CounterRepository</code> constructing
-its own <code>Database</code>, the database is passed in through the constructor. The
-dependency is <em>injected</em>.</p>
-<p>This library implements
+is a design pattern in which a class gets its collaborators from outside and
+does not create them itself. A <code>CounterRepository</code>, for example, receives its
+<code>Database</code> through the constructor. The dependency is <em>injected</em>.</p>
+<p>inject.dart uses
 <a href="https://en.wikipedia.org/wiki/Dependency_injection#Constructor_injection">constructor injection</a>:
-every dependency is an explicit constructor parameter. There is no hidden
-registry, no <code>Type → Instance</code> map, and no global state.</p>
-<h2 id="why-compile-time"><a class="header" href="#why-compile-time">Why Compile-time?</a></h2>
-<p>Most DI frameworks resolve the dependency graph at runtime — your app registers
-bindings in a setup block and calls <code>.get&lt;Foo&gt;()</code> when it needs something. The
-graph is only fully known after the app starts.</p>
-<p>inject.dart resolves the graph <em>before</em> your app runs, as part of the build:</p>
-<ul>
-<li><strong>Missing bindings</strong> produce a build error, not a crash at screen 7.</li>
-<li><strong>Cyclic dependencies</strong> are detected statically, not by a stack overflow.</li>
-<li><strong>Qualifier mismatches</strong> fail the build, not an assertion at call time.</li>
-<li><strong>Zero runtime overhead</strong>: the generator emits plain Dart that the compiler
-optimises like hand-written code. No reflection, no <code>dart:mirrors</code>.</li>
-<li><strong>Refactor-safe</strong>: rename a class and the analyzer shows every affected
-wiring. No magic strings, no <code>Type</code> lookups.</li>
-</ul>
+every dependency is an explicit constructor parameter. The library has no
+hidden registry or <code>Type → Instance</code> map, and no global state.</p>
+<h2 id="why-compile-time"><a class="header" href="#why-compile-time">Why compile-time?</a></h2>
+<p>Most DI frameworks resolve the dependency graph at runtime. Your app registers
+bindings in a setup block and calls <code>.get&lt;Foo&gt;()</code> when it needs something, so
+the full graph is known only after the app starts.</p>
+<p>inject.dart resolves the graph <em>before</em> your app runs, as part of the build. A
+missing binding, a dependency cycle, or a qualifier mismatch fails the build.
+With a runtime framework, the same mistakes show up as a crash at screen 7, a
+stack overflow, or a failed assertion at call time.</p>
+<p>The generator emits plain Dart that the compiler optimises like hand-written
+code, so there is no runtime overhead and no reflection or <code>dart:mirrors</code>.
+Refactoring is safer too: rename a class and the analyzer shows every affected
+wiring, because nothing depends on magic strings or <code>Type</code> lookups.</p>
 <blockquote>
-<p>For precision: what we call “compile-time DI” actually runs during the build
-step, before final compilation. “Build-time DI” would be technically more
-accurate, but “compile-time” is the established term contrasting with runtime
-approaches.</p>
+<p>What we call “compile-time DI” runs during the build step, before final
+compilation. “Build-time DI” would be more accurate, but “compile-time” is the
+established term for the contrast with runtime approaches.</p>
 </blockquote>
-<h2 id="how-injectdart-compares-to-get_it-and-injectable"><a class="header" href="#how-injectdart-compares-to-get_it-and-injectable">How inject.dart Compares to get_it and injectable</a></h2>
+<h2 id="how-injectdart-compares-to-get_it-and-injectable"><a class="header" href="#how-injectdart-compares-to-get_it-and-injectable">How inject.dart compares to get_it and injectable</a></h2>
 <p><code>get_it</code> is the most widely used DI solution in the Flutter ecosystem. It is a
 runtime service locator: bindings are registered in an imperative setup block
 and resolved dynamically via <code>GetIt.I&lt;Foo&gt;()</code> calls scattered through app code.
 <code>injectable</code> generates those registration calls into <code>get_it</code>, but the locator
 itself and its runtime failure modes remain.</p>
-<p>inject.dart takes a different approach — generating the <strong>entire</strong> component
-implementation from annotations. The comparison is honest:</p>
+<p>inject.dart generates the entire component implementation from annotations.</p>
 <div class="table-wrapper">
 <table>
 <thead>
@@ -206,38 +201,36 @@ implementation from annotations. The comparison is honest:</p>
 <tr><td>Cyclic dependency</td><td>runtime error</td><td>build error</td></tr>
 <tr><td>Qualifier mismatch</td><td>runtime</td><td>build error</td></tr>
 <tr><td>Service locator calls in app code</td><td>yes (<code>GetIt.I&lt;Foo&gt;()</code>)</td><td>none</td></tr>
-<tr><td>Registration boilerplate</td><td>hand-written or generated</td><td>none — annotate &amp; run <code>build_runner</code></td></tr>
+<tr><td>Registration boilerplate</td><td>hand-written or generated</td><td>none: annotate &amp; run <code>build_runner</code></td></tr>
 <tr><td>Generated artefact</td><td>registrations into <code>get_it</code></td><td>full component implementation</td></tr>
 </tbody>
 </table>
 </div>
-<p><strong>Honest cons of inject.dart:</strong> there is a codegen step — you run
-<code>dart run build_runner build</code> whenever annotated code changes, and generated
-files (<code>*.inject.dart</code>, <code>*.factory.dart</code>) need to be managed (or committed, in
-the case of the pub.dev example). <code>get_it</code> has zero codegen and a smaller
-initial surface area for trivial apps.</p>
-<p>The compile-time value proposition matters most in larger codebases where a
-missing binding or a refactoring mistake would otherwise be invisible until it
-crashes in production.</p>
-<h2 id="about-this-library"><a class="header" href="#about-this-library">About This Library</a></h2>
+<p>The downside of inject.dart is the code generation step. You must run
+<code>dart run build_runner build</code> whenever annotated code changes, and you have to
+manage the generated files (<code>*.inject.dart</code>, <code>*.factory.dart</code>) or commit them,
+as the pub.dev example does. <code>get_it</code> needs no code generation and has less to
+set up in a trivial app.</p>
+<p>Compile-time checks pay off most in larger codebases, where a missing binding
+or a refactoring mistake could otherwise stay hidden until it crashes in
+production.</p>
+<h2 id="about-this-library"><a class="header" href="#about-this-library">About this library</a></h2>
 <p>inject.dart is inspired by <a href="https://dagger.dev/">Dagger</a>, the annotation-based
 DI framework used in Android development. The annotation vocabulary
 (<code>@inject</code>, <code>@provides</code>, <code>@singleton</code>, <code>@Component</code>, <code>@module</code>) maps closely to
 Dagger’s, so the mental model transfers if you have Android experience.</p>
 <p>The generator emits code that is nearly identical to what you would write by
 hand: immutable component classes with <code>late final</code> singleton fields, typed
-provider classes, and factory methods. The output is readable, diffable Dart —
-not a black box.</p>
-<h2 id="who-this-book-is-for"><a class="header" href="#who-this-book-is-for">Who This Book Is For</a></h2>
-<ul>
-<li><strong>New to DI:</strong> learn the fundamentals and how to apply them in Flutter.</li>
-<li><strong>Runtime DI → compile-time:</strong> see why static analysis at build time changes
-the refactoring and debugging experience.</li>
-<li><strong>Dagger / Hilt background:</strong> the concepts map directly; this book focuses on
-the Dart/Flutter-specific parts.</li>
-</ul>
-<p>In the following chapters we build up from installation to a full layered
-Flutter app, then cover testing patterns and the complete annotation reference.</p>
+provider classes, and factory methods. You can read and diff the output like
+any other Dart code.</p>
+<h2 id="who-this-book-is-for"><a class="header" href="#who-this-book-is-for">Who this book is for</a></h2>
+<p>If you are new to DI, this book teaches the fundamentals and how to apply them
+in Flutter. Readers coming from a runtime DI framework will see how static
+analysis at build time changes refactoring and debugging. Dagger and Hilt users
+will find that the concepts map directly and can focus on the Dart and Flutter
+specifics.</p>
+<p>The following chapters build up from installation to a full layered Flutter
+app, then cover testing patterns and the complete annotation reference.</p>
 
                     </main>
 
