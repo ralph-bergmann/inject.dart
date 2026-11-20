@@ -1,5 +1,5 @@
 ---
-name: inject_annotation-add-provision-listener
+name: inject-annotation-add-provision-listener
 description: Adds a ProvisionListener in inject.dart to observe dependency provisioning — a cross-cutting hook called after each instance is created, for logging, metrics, lifecycle tracking, or registering Closeables. Implement ProvisionListener<T> and provide it from a @module with @provisionListener + @singleton. Use when the user says "log every provisioned dependency", "hook into object creation", "track instances", "provision listener", or wants an observer over the DI graph.
 license: BSD-3-Clause
 metadata:

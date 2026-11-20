@@ -1,5 +1,5 @@
 ---
-name: inject_annotation-add-injectable
+name: inject-annotation-add-injectable
 description: Adds a new injectable class (service, repository, use case, view model) to an existing inject.dart graph by annotating it with @inject, declaring its dependencies as constructor parameters, optionally marking it @singleton, and exposing it from a component. Use when the user says "inject this class", "add a service/repository", "make X injectable", "share one instance with @singleton", or hits a missing-binding error for a class they own.
 license: BSD-3-Clause
 metadata:
@@ -15,8 +15,8 @@ Annotate it with `@inject`; the generator adds it to the graph and supplies its
 constructor dependencies.
 
 If the type is a third-party class, an interface, or needs construction logic,
-use `inject_annotation-create-module` instead. If the project has no component yet,
-start with `inject_annotation-setup-di`.
+use `inject-annotation-create-module` instead. If the project has no component yet,
+start with `inject-annotation-setup-di`.
 
 ## Task progress
 
@@ -66,12 +66,12 @@ parameters work.
 
 Every parameter is a dependency resolved from the graph. Each parameter type
 must itself have a binding — an `@inject` class/constructor (this skill) or a
-`@provides` method (`inject_annotation-create-module`). A type with no binding is a
+`@provides` method (`inject-annotation-create-module`). A type with no binding is a
 **build error**, which is exactly inject.dart's "if it builds, it runs"
 guarantee.
 
 To defer creation or get multiple instances of a dependency, declare the
-parameter as `Provider<T>` (see `inject_annotation-inject-provider`).
+parameter as `Provider<T>` (see `inject-annotation-inject-provider`).
 
 ### 3. Decide on `@singleton`
 
@@ -127,6 +127,6 @@ dart analyze
 - **Expecting a shared instance without `@singleton`** → each dependent gets its
   own instance.
 - **`@singleton` on a Flutter view model** → forbidden; view models are owned
-  per widget (see `inject_annotation-flutter-view-model`).
+  per widget (see `inject-annotation-flutter-view-model`).
 - **`@asynchronous` on an `@inject` class** → no effect (constructors can't be
   async) and emits a warning; async belongs on `@provides` methods.

@@ -1,5 +1,5 @@
 ---
-name: inject_annotation-inject-provider
+name: inject-annotation-inject-provider
 description: Injects a Provider<T> in inject.dart instead of T to defer construction to call time or to obtain multiple independent instances of a non-singleton (object pools, lazy or optional dependencies, per-operation instances). Use when the user says "lazy dependency", "create instances on demand", "Provider<T>", "object pool", or needs more than one instance of a type, or wants to avoid building a dependency until it is actually needed.
 license: BSD-3-Clause
 metadata:
@@ -117,5 +117,5 @@ dart analyze
   the inner `T` must be resolvable.
 
 > Flutter note: a `ViewModelFactory<T>` wraps a `Provider<T>` internally — use
-> `inject_annotation-flutter-view-model` for `ChangeNotifier` view models rather than a
+> `inject-annotation-flutter-view-model` for `ChangeNotifier` view models rather than a
 > raw `Provider`.

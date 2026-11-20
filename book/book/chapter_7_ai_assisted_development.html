@@ -184,14 +184,14 @@ skills get
 <tr><th>Skill</th><th>Use it to…</th></tr>
 </thead>
 <tbody>
-<tr><td><a href="https://github.com/ralph-bergmann/inject.dart/blob/master/packages/inject_annotation/skills/inject_annotation-setup-di/SKILL.md"><code>inject_annotation-setup-di</code></a></td><td>Add <code>build_runner</code> + inject.dart and scaffold the root component (from scratch).</td></tr>
-<tr><td><a href="https://github.com/ralph-bergmann/inject.dart/blob/master/packages/inject_annotation/skills/inject_annotation-add-injectable/SKILL.md"><code>inject_annotation-add-injectable</code></a></td><td>Make a class injectable with <code>@inject</code> and expose it; <code>@singleton</code>.</td></tr>
-<tr><td><a href="https://github.com/ralph-bergmann/inject.dart/blob/master/packages/inject_annotation/skills/inject_annotation-create-module/SKILL.md"><code>inject_annotation-create-module</code></a></td><td>Provide third-party / configured types with a <code>@module</code> (<code>@provides</code>, <code>@asynchronous</code>, <code>Qualifier</code>).</td></tr>
-<tr><td><a href="https://github.com/ralph-bergmann/inject.dart/blob/master/packages/inject_annotation/skills/inject_annotation-add-assisted-injection/SKILL.md"><code>inject_annotation-add-assisted-injection</code></a></td><td>Mix injected and runtime parameters with <code>@assistedInject</code> / <code>@assisted</code> / <code>@assistedFactory</code>.</td></tr>
-<tr><td><a href="https://github.com/ralph-bergmann/inject.dart/blob/master/packages/inject_annotation/skills/inject_annotation-inject-provider/SKILL.md"><code>inject_annotation-inject-provider</code></a></td><td>Inject <code>Provider&lt;T&gt;</code> for lazy or multiple instances.</td></tr>
-<tr><td><a href="https://github.com/ralph-bergmann/inject.dart/blob/master/packages/inject_annotation/skills/inject_annotation-add-provision-listener/SKILL.md"><code>inject_annotation-add-provision-listener</code></a></td><td>Observe provisioning with <code>ProvisionListener&lt;T&gt;</code> + <code>@provisionListener</code>.</td></tr>
-<tr><td><a href="https://github.com/ralph-bergmann/inject.dart/blob/master/packages/inject_annotation/skills/inject_annotation-flutter-view-model/SKILL.md"><code>inject_annotation-flutter-view-model</code></a></td><td>Bind a <code>ChangeNotifier</code> ViewModel to a widget with <code>ViewModelFactory</code> / <code>ViewModelBuilder</code> (sync or async init).</td></tr>
-<tr><td><a href="https://github.com/ralph-bergmann/inject.dart/blob/master/packages/inject_annotation/skills/inject_annotation-write-tests/SKILL.md"><code>inject_annotation-write-tests</code></a></td><td>Test injected code with a test component + test module + fakes.</td></tr>
+<tr><td><a href="https://github.com/ralph-bergmann/inject.dart/blob/master/packages/inject_annotation/skills/inject-annotation-setup-di/SKILL.md"><code>inject-annotation-setup-di</code></a></td><td>Add <code>build_runner</code> + inject.dart and scaffold the root component (from scratch).</td></tr>
+<tr><td><a href="https://github.com/ralph-bergmann/inject.dart/blob/master/packages/inject_annotation/skills/inject-annotation-add-injectable/SKILL.md"><code>inject-annotation-add-injectable</code></a></td><td>Make a class injectable with <code>@inject</code> and expose it; <code>@singleton</code>.</td></tr>
+<tr><td><a href="https://github.com/ralph-bergmann/inject.dart/blob/master/packages/inject_annotation/skills/inject-annotation-create-module/SKILL.md"><code>inject-annotation-create-module</code></a></td><td>Provide third-party / configured types with a <code>@module</code> (<code>@provides</code>, <code>@asynchronous</code>, <code>Qualifier</code>).</td></tr>
+<tr><td><a href="https://github.com/ralph-bergmann/inject.dart/blob/master/packages/inject_annotation/skills/inject-annotation-add-assisted-injection/SKILL.md"><code>inject-annotation-add-assisted-injection</code></a></td><td>Mix injected and runtime parameters with <code>@assistedInject</code> / <code>@assisted</code> / <code>@assistedFactory</code>.</td></tr>
+<tr><td><a href="https://github.com/ralph-bergmann/inject.dart/blob/master/packages/inject_annotation/skills/inject-annotation-inject-provider/SKILL.md"><code>inject-annotation-inject-provider</code></a></td><td>Inject <code>Provider&lt;T&gt;</code> for lazy or multiple instances.</td></tr>
+<tr><td><a href="https://github.com/ralph-bergmann/inject.dart/blob/master/packages/inject_annotation/skills/inject-annotation-add-provision-listener/SKILL.md"><code>inject-annotation-add-provision-listener</code></a></td><td>Observe provisioning with <code>ProvisionListener&lt;T&gt;</code> + <code>@provisionListener</code>.</td></tr>
+<tr><td><a href="https://github.com/ralph-bergmann/inject.dart/blob/master/packages/inject_annotation/skills/inject-annotation-flutter-view-model/SKILL.md"><code>inject-annotation-flutter-view-model</code></a></td><td>Bind a <code>ChangeNotifier</code> ViewModel to a widget with <code>ViewModelFactory</code> / <code>ViewModelBuilder</code> (sync or async init).</td></tr>
+<tr><td><a href="https://github.com/ralph-bergmann/inject.dart/blob/master/packages/inject_annotation/skills/inject-annotation-write-tests/SKILL.md"><code>inject-annotation-write-tests</code></a></td><td>Test injected code with a test component + test module + fakes.</td></tr>
 </tbody>
 </table>
 </div>
@@ -220,12 +220,12 @@ skill) as dev dependencies.</li>
 <li>Add <code>_scratch</code> to the <code>workspace:</code> list in the root <code>pubspec.yaml</code>.</li>
 <li>Inside <code>_scratch/</code>, follow each skill to perform its task the way a user
 would. Do not copy snippets out of it. Use
-<code>inject_annotation-setup-di</code> to scaffold the component, <code>inject_annotation-add-injectable</code>
-for a service, <code>inject_annotation-create-module</code> to provide a configured /
+<code>inject-annotation-setup-di</code> to scaffold the component, <code>inject-annotation-add-injectable</code>
+for a service, <code>inject-annotation-create-module</code> to provide a configured /
 <code>@asynchronous</code> / <code>Qualifier</code>-ed type, then
-<code>inject_annotation-add-assisted-injection</code>, <code>inject_annotation-inject-provider</code>,
-<code>inject_annotation-add-provision-listener</code>, and <code>inject_annotation-write-tests</code>. The
-Flutter-only <code>inject_annotation-flutter-view-model</code> needs a Flutter package:
+<code>inject-annotation-add-assisted-injection</code>, <code>inject-annotation-inject-provider</code>,
+<code>inject-annotation-add-provision-listener</code>, and <code>inject-annotation-write-tests</code>. The
+Flutter-only <code>inject-annotation-flutter-view-model</code> needs a Flutter package:
 <code>examples/flutter_demo</code> already runs it and stays green.</li>
 <li>Run <code>dart pub get</code>, then inside <code>_scratch/</code>: <code>dart run build_runner build</code>
 and <code>dart analyze</code>.</li>

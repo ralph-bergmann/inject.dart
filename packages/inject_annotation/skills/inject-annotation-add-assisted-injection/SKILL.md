@@ -1,5 +1,5 @@
 ---
-name: inject_annotation-add-assisted-injection
+name: inject-annotation-add-assisted-injection
 description: Adds assisted injection in inject.dart for objects whose constructor mixes graph-provided dependencies with runtime arguments supplied at call time — using @assistedInject on the constructor, @assisted on the runtime parameters, and an @assistedFactory interface (or a generator-synthesized factory). Use when some constructor parameters are known only at runtime (an id, a model, a Key), when the user says "assisted injection", "factory with runtime parameters", or needs to pass arguments into an injected object.
 license: BSD-3-Clause
 metadata:

@@ -1,5 +1,5 @@
 ---
-name: inject_annotation-write-tests
+name: inject-annotation-write-tests
 description: Writes tests for inject.dart code by defining a test @component with a test @module that overrides real bindings with fakes, then resolving subjects from the component in setUp. Use when the user says "test injected code", "write tests for my DI graph", "mock a dependency in inject.dart", "test component/module", or wants to swap a real implementation for a fake in tests.
 license: BSD-3-Clause
 metadata:

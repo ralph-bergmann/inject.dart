@@ -1,5 +1,5 @@
 ---
-name: inject_annotation-setup-di
+name: inject-annotation-setup-di
 description: Sets up inject.dart compile-time dependency injection in a Dart or Flutter project from scratch — adds inject_annotation, inject_generator and build_runner, scaffolds the root @component, makes a first class injectable, and runs code generation. Use when a project has no DI yet, when adding inject.dart, or when the user asks to set up dependency injection, create a component, or configure build_runner for inject.dart.
 license: BSD-3-Clause
 metadata:
@@ -25,9 +25,9 @@ are declared as constructor parameters and wired by the generated component.
 - The user says "set up dependency injection", "add inject.dart", "create a
   component", or "configure build_runner" for inject.dart.
 
-To grow an existing graph instead, use `inject_annotation-add-injectable` (add a
-class), `inject_annotation-create-module` (provide a third-party type) or
-`inject_annotation-flutter-view-model` (Flutter view models).
+To grow an existing graph instead, use `inject-annotation-add-injectable` (add a
+class), `inject-annotation-create-module` (provide a third-party type) or
+`inject-annotation-flutter-view-model` (Flutter view models).
 
 ## Task progress
 
@@ -64,7 +64,7 @@ options such as `debug_graph: true`.)
 Annotate the class with `@inject` (the idiomatic placement). Constructor
 parameters are the class's dependencies; the generator resolves them from the
 graph. (`@inject` may also go on a specific constructor — including named/factory
-constructors; see `inject_annotation-add-injectable`.)
+constructors; see `inject-annotation-add-injectable`.)
 
 ```dart
 @inject

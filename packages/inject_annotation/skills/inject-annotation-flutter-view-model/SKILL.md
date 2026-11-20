@@ -1,5 +1,5 @@
 ---
-name: inject_annotation-flutter-view-model
+name: inject-annotation-flutter-view-model
 description: Binds a ChangeNotifier view model to a Flutter widget with inject.dart's inject_flutter package — inject a ViewModelFactory<T>, call it to get a ViewModelBuilder that owns the view model lifecycle, and run a synchronous or asynchronous init with loading/error widgets. Use when the user says "create a view model", "inject a ViewModel", "ViewModelFactory/ViewModelBuilder", "MVVM with inject.dart", "ChangeNotifier in Flutter DI", or needs widget-scoped state with async initialization.
 license: BSD-3-Clause
 metadata:
@@ -23,7 +23,7 @@ flutter pub add inject_flutter
 ```
 
 (`inject_annotation`, `inject_generator` and `build_runner` must already be set
-up — see `inject_annotation-setup-di`.)
+up — see `inject-annotation-setup-di`.)
 
 ## Task progress
 
@@ -111,7 +111,7 @@ class CounterPage extends StatelessWidget {
 
 (To pass the factory into the widget through the graph alongside runtime
 parameters like a title or `Key`, combine this with
-`inject_annotation-add-assisted-injection`.)
+`inject-annotation-add-assisted-injection`.)
 
 ### 4. Add `init` (synchronous or asynchronous)
 

@@ -1,5 +1,5 @@
 ---
-name: inject_annotation-create-module
+name: inject-annotation-create-module
 description: Creates an inject.dart @module that provides types you cannot annotate directly — third-party classes, interfaces bound to implementations, configured values, async resources — via @provides methods, including @singleton, @asynchronous (Future<T> resolved to T), and Qualifier for multiple bindings of one type. Use when the user says "create a module", "provide X", "bind interface to implementation", "configure a dependency", needs an async/qualified binding, or hits a missing-binding error for a type without an @inject constructor.
 license: BSD-3-Clause
 metadata:
@@ -16,7 +16,7 @@ to construct types it cannot annotate directly: third-party classes
 configured values, or asynchronously created resources.
 
 If the type is a class you own, prefer an `@inject` constructor
-(`inject_annotation-add-injectable`) — it needs no module.
+(`inject-annotation-add-injectable`) — it needs no module.
 
 ## Task progress
 
