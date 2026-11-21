@@ -7,46 +7,52 @@ import 'package:inject_generator/src/extensions/dart_type_extensions.dart';
 import 'package:test/test.dart';
 
 void main() {
-  group('DartTypeExt typeRef / nullableTypeRef fallback', () {
-    // The fallback branch in _buildTypeRef is reached for types that are
-    // neither InterfaceType nor an aliased typedef. RecordType literals
-    // (without a typedef alias) take that path.
+  group('DartTypeExt typeRef / nullableTypeRef on record types', () {
+    test('non-nullable record type via typeRef() emits no ?', () async {
+      final DartType type = await _fieldTypeOf('(int, String) tuple = (1, "a");');
 
-    test('non-nullable record type via typeRef() emits bare symbol', () async {
-      final DartType type = await _recordTypeOf('(int, String) tuple = (1, "a");');
-
-      expect(_symbol(type.typeRef()), '(int, String)');
+      expect(_emit(type.typeRef()), '(int, String)');
     });
 
     test('already-nullable record type via typeRef() preserves single ?', () async {
-      final DartType type = await _recordTypeOf('(int, String)? tuple = null;');
+      final DartType type = await _fieldTypeOf('(int, String)? tuple = null;');
 
-      expect(_symbol(type.typeRef()), '(int, String)?');
+      expect(_emit(type.typeRef()), '(int, String)?');
     });
 
     test('non-nullable record type via nullableTypeRef() adds single ?', () async {
-      final DartType type = await _recordTypeOf('(int, String) tuple = (1, "a");');
+      final DartType type = await _fieldTypeOf('(int, String) tuple = (1, "a");');
 
-      expect(_symbol(type.nullableTypeRef()), '(int, String)?');
+      expect(_emit(type.nullableTypeRef()), '(int, String)?');
     });
 
     test('already-nullable record type via nullableTypeRef() stays single ? (no double ??)', () async {
-      // Regression for an already-nullable record type:
-      // `_buildTypeRef` used to concat `'$display?'` blindly, producing
-      // `Type??` when the type was already nullable AND forceNullable=true.
-      final DartType type = await _recordTypeOf('(int, String)? tuple = null;');
+      final DartType type = await _fieldTypeOf('(int, String)? tuple = null;');
 
-      expect(_symbol(type.nullableTypeRef()), '(int, String)?');
+      expect(_emit(type.nullableTypeRef()), '(int, String)?');
+    });
+  });
+
+  group('DartTypeExt typeRef / nullableTypeRef display-string fallback', () {
+    // A type parameter is neither an InterfaceType, an alias, a function type
+    // nor a record type, so it takes the display-string fallback.
+
+    test('already-nullable type parameter via nullableTypeRef() stays single ? (no double ??)', () async {
+      // The fallback used to append `?` blindly, producing `T??` when the type
+      // was already nullable and forceNullable was true.
+      final DartType type = await _fieldTypeOf('T? value = null;');
+
+      expect(_emit(type.nullableTypeRef()), 'T?');
     });
   });
 }
 
-/// Resolves a class with a single field of the given declaration and returns
-/// the resolved [DartType] of that field.
-Future<DartType> _recordTypeOf(String fieldDecl) async {
+/// Resolves a generic class with a single field of the given declaration and
+/// returns the resolved [DartType] of that field.
+Future<DartType> _fieldTypeOf(String fieldDecl) async {
   final LibraryElement library = await resolveSource(
     '''
-      class Holder {
+      class Holder<T> {
         final $fieldDecl
       }
     ''',
@@ -57,4 +63,4 @@ Future<DartType> _recordTypeOf(String fieldDecl) async {
   return holder.fields.first.type;
 }
 
-String _symbol(Reference ref) => ref.symbol!;
+String _emit(Reference ref) => ref.accept(DartEmitter(useNullSafetySyntax: true)).toString();

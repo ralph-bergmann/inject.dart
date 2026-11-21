@@ -83,6 +83,15 @@ void main() {
     );
 
     test(
+      'synthesized_record_type_assisted golden',
+      () => runPipelineGolden(
+        fixtureName: 'synthesized_record_type_assisted',
+        goldenDir: _goldenDir,
+        expectFactory: true,
+      ),
+    );
+
+    test(
       'synthesized_no_injected_deps golden',
       () => runPipelineGolden(
         fixtureName: 'synthesized_no_injected_deps',

@@ -1,8 +1,8 @@
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
-import 'package:code_builder/code_builder.dart' hide FunctionType;
-import 'package:code_builder/code_builder.dart' as cb show FunctionType;
+import 'package:code_builder/code_builder.dart' hide FunctionType, RecordType;
+import 'package:code_builder/code_builder.dart' as cb show FunctionType, RecordType;
 
 import 'element_extensions.dart';
 
@@ -125,8 +125,8 @@ extension DartTypeExt on DartType {
           ..types.addAll(alias.typeArguments.map((t) => t.typeRef(sourceUri: sourceUri))),
       );
     }
-    // An inline function type needs a structured reference: its display string
-    // would drop the import prefixes of the types inside it.
+    // Inline function and record types need a structured reference: their
+    // display string would drop the import prefixes of the types inside them.
     if (type case FunctionType()) {
       return cb.FunctionType(
         (b) => b
@@ -153,6 +153,16 @@ extension DartTypeExt on DartType {
           ..namedParameters.addAll({
             for (final p in type.formalParameters.where((p) => p.isOptionalNamed))
               p.name!: p.type.typeRef(sourceUri: sourceUri),
+          })
+          ..isNullable = forceNullable || type.nullabilitySuffix == NullabilitySuffix.question,
+      );
+    }
+    if (type case RecordType()) {
+      return cb.RecordType(
+        (b) => b
+          ..positionalFieldTypes.addAll(type.positionalFields.map((f) => f.type.typeRef(sourceUri: sourceUri)))
+          ..namedFieldTypes.addAll({
+            for (final f in type.namedFields) f.name: f.type.typeRef(sourceUri: sourceUri),
           })
           ..isNullable = forceNullable || type.nullabilitySuffix == NullabilitySuffix.question,
       );
