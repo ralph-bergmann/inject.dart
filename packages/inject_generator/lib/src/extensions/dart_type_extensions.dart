@@ -2,6 +2,7 @@ import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:code_builder/code_builder.dart' hide FunctionType;
+import 'package:code_builder/code_builder.dart' as cb show FunctionType;
 
 import 'element_extensions.dart';
 
@@ -122,6 +123,38 @@ extension DartTypeExt on DartType {
           ..url = sourceUri != null ? element.resolvePublicUri(sourceUri: sourceUri) : null
           ..isNullable = forceNullable || type.nullabilitySuffix == NullabilitySuffix.question
           ..types.addAll(alias.typeArguments.map((t) => t.typeRef(sourceUri: sourceUri))),
+      );
+    }
+    // An inline function type needs a structured reference: its display string
+    // would drop the import prefixes of the types inside it.
+    if (type case FunctionType()) {
+      return cb.FunctionType(
+        (b) => b
+          ..returnType = type.returnType.typeRef(sourceUri: sourceUri)
+          ..types.addAll(
+            type.typeParameters.map(
+              (p) => TypeReference(
+                (t) => t
+                  ..symbol = p.name
+                  ..bound = p.bound?.typeRef(sourceUri: sourceUri),
+              ),
+            ),
+          )
+          ..requiredParameters.addAll(
+            type.formalParameters.where((p) => p.isRequiredPositional).map((p) => p.type.typeRef(sourceUri: sourceUri)),
+          )
+          ..optionalParameters.addAll(
+            type.formalParameters.where((p) => p.isOptionalPositional).map((p) => p.type.typeRef(sourceUri: sourceUri)),
+          )
+          ..namedRequiredParameters.addAll({
+            for (final p in type.formalParameters.where((p) => p.isRequiredNamed))
+              p.name!: p.type.typeRef(sourceUri: sourceUri),
+          })
+          ..namedParameters.addAll({
+            for (final p in type.formalParameters.where((p) => p.isOptionalNamed))
+              p.name!: p.type.typeRef(sourceUri: sourceUri),
+          })
+          ..isNullable = forceNullable || type.nullabilitySuffix == NullabilitySuffix.question,
       );
     }
     final String raw = type.getDisplayString();

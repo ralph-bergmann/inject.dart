@@ -74,6 +74,15 @@ void main() {
     );
 
     test(
+      'synthesized_function_type_assisted golden',
+      () => runPipelineGolden(
+        fixtureName: 'synthesized_function_type_assisted',
+        goldenDir: _goldenDir,
+        expectFactory: true,
+      ),
+    );
+
+    test(
       'synthesized_no_injected_deps golden',
       () => runPipelineGolden(
         fixtureName: 'synthesized_no_injected_deps',
