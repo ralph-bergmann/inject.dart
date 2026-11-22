@@ -1,3 +1,10 @@
+## 0.4.0
+
+- `exclude` now works like the analyzer's `analyzer: exclude`. The lists of a file and the
+  files it includes are combined; before, the including file replaced them. An
+  `analysis_options.yaml` in a subfolder adds globs relative to its own folder, and the globs
+  from the files above it still apply.
+
 ## 0.3.0
 
 - Read rule options like the analyzer does: from the `analysis_options.yaml` nearest to each file,

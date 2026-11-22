@@ -19,8 +19,7 @@ const viewModelSkill = "See the skill 'inject-annotation-flutter-view-model'.";
 ///
 /// The options live in a top-level `inject_lints` section of
 /// `analysis_options.yaml`, because the plugin's `diagnostics` section only
-/// takes `true`, `false` or a severity. Each pattern is a glob relative to the
-/// package root, so a shared options file works in every package:
+/// takes `true`, `false` or a severity:
 ///
 /// ```yaml
 /// inject_lints:
@@ -30,8 +29,15 @@ const viewModelSkill = "See the skill 'inject-annotation-flutter-view-model'.";
 ///         - test/**
 /// ```
 ///
-/// Like the analyzer, this reads the options file nearest to the library and
-/// follows its `include:` entries.
+/// `exclude` works like the analyzer's own `analyzer: exclude`:
+///
+/// - Each pattern is a glob relative to the folder of the
+///   `analysis_options.yaml` that the package uses, also when the pattern
+///   comes from an included file. A shared file therefore applies its
+///   patterns to each package that includes it.
+/// - The lists of a file and the files it includes are combined.
+/// - An `analysis_options.yaml` in a subfolder adds its own patterns,
+///   relative to its folder. The patterns of the files above it still apply.
 ///
 /// A `package:` include needs the library's session to resolve, so a rule
 /// that runs on parsed results only skips such includes.
@@ -39,47 +45,36 @@ bool isExcludedFromRule(RuleContext context, String ruleName) {
   final Folder? root = context.package?.root;
   if (root == null) return false;
   final File file = context.definingUnit.file;
-  final File? options = _nearestOptionsFile(file.parent, root);
-  if (options == null) return false;
-  final List<String> excludes =
-      _readExcludes(options, ruleName, context.libraryElement?.session.uriConverter, {}) ?? const [];
-
+  final UriConverter? converter = context.libraryElement?.session.uriConverter;
   final p.Context pathContext = root.provider.pathContext;
-  final String relative = p.posix.joinAll(pathContext.split(pathContext.relative(file.path, from: root.path)));
-  return excludes.any((pattern) {
-    try {
-      return Glob(pattern, context: p.posix).matches(relative);
-    } on FormatException {
-      return false; // An invalid pattern excludes nothing.
-    }
-  });
-}
 
-/// The `analysis_options.yaml` in [folder] or the closest folder above it, up
-/// to the package [root].
-File? _nearestOptionsFile(Folder folder, Folder root) {
-  for (Folder current = folder; ; current = current.parent) {
-    final File candidate = current.getFile('analysis_options.yaml');
-    if (candidate.exists) return candidate;
-    if (current.path == root.path || current.isRoot) return null;
+  for (Folder folder = file.parent; ; folder = folder.parent) {
+    final File options = folder.getFile('analysis_options.yaml');
+    if (options.exists) {
+      final String relative = p.posix.joinAll(pathContext.split(pathContext.relative(file.path, from: folder.path)));
+      for (final String pattern in _readExcludes(options, ruleName, converter, {})) {
+        try {
+          if (Glob(pattern, context: p.posix).matches(relative)) return true;
+        } on FormatException {
+          // An invalid pattern excludes nothing.
+        }
+      }
+    }
+    if (folder.path == root.path || folder.isRoot) return false;
   }
 }
 
-/// The `exclude` list of [ruleName] in [file] or the files it includes, or
-/// `null` if none of them sets one.
+/// The `exclude` patterns of [ruleName] in [file] and the files it includes.
 ///
-/// As in the analyzer, the including file wins over its includes, and a later
-/// include wins over an earlier one. [seen] stops include cycles.
-List<String>? _readExcludes(File file, String ruleName, UriConverter? converter, Set<String> seen) {
-  if (!seen.add(file.path) || !file.exists) return null;
+/// As in the analyzer, the lists of all these files are combined. [seen]
+/// stops include cycles.
+Set<String> _readExcludes(File file, String ruleName, UriConverter? converter, Set<String> seen) {
+  if (!seen.add(file.path) || !file.exists) return const {};
   final Object? options;
   try {
     options = loadYaml(file.readAsStringSync());
   } on Exception {
-    return null; // The analyzer reports a broken options file itself.
-  }
-  if (options case {'inject_lints': {'rules': final Map<Object?, Object?> rules}}) {
-    if (rules[ruleName] case {'exclude': final List<Object?> excludes}) return excludes.whereType<String>().toList();
+    return const {}; // The analyzer reports a broken options file itself.
   }
 
   final List<String> includes = switch (options) {
@@ -87,13 +82,16 @@ List<String>? _readExcludes(File file, String ruleName, UriConverter? converter,
     {'include': final List<Object?> includes} => includes.whereType<String>().toList(),
     _ => const [],
   };
-  for (final String include in includes.reversed) {
-    final File? included = _resolveInclude(file, include, converter);
-    if (included == null) continue;
-    final List<String>? excludes = _readExcludes(included, ruleName, converter, seen);
-    if (excludes != null) return excludes;
-  }
-  return null;
+  final Object? rule = switch (options) {
+    {'inject_lints': {'rules': final Map<Object?, Object?> rules}} => rules[ruleName],
+    _ => null,
+  };
+  return {
+    for (final String include in includes)
+      if (_resolveInclude(file, include, converter) case final File included)
+        ..._readExcludes(included, ruleName, converter, seen),
+    if (rule case {'exclude': final List<Object?> excludes}) ...excludes.whereType<String>(),
+  };
 }
 
 /// The file that the `include:` entry [include] in [from] points to: a path

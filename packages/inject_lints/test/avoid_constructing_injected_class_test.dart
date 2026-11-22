@@ -66,9 +66,19 @@ class Plain {}
   }
 
   Future<void> test_nestedOptionsFile() async {
-    newFile('$testPackageTestPath/analysis_options.yaml', 'include: ../analysis_options.yaml\n$_excludeTests');
+    // A nested options file's patterns are relative to its own folder.
+    newFile(
+      '$testPackageTestPath/analysis_options.yaml',
+      'include: ../analysis_options.yaml\n${_exclude('logger_test.dart')}',
+    );
     await _assertTestFileNotReported();
     await assertLints('$_classes\nfinal logger = Logger();\n', ['…Logger']);
+  }
+
+  Future<void> test_nestedOptionsFileKeepsParentExcludes() async {
+    _writeOptions(extra: _excludeTests);
+    newFile('$testPackageTestPath/analysis_options.yaml', 'include: ../analysis_options.yaml\n');
+    await _assertTestFileNotReported();
   }
 
   Future<void> test_relativeInclude() async {
@@ -82,23 +92,19 @@ class Plain {}
     await _assertTestFileNotReported();
   }
 
-  Future<void> test_includingFileWins() async {
+  Future<void> test_includedListsAreCombined() async {
     newFile('$testPackageRootPath/shared.yaml', _excludeTests);
-    _writeOptions(
-      includes: ['shared.yaml'],
-      extra: 'inject_lints:\n  rules:\n    avoid_constructing_injected_class:\n      exclude: []\n',
-    );
-    final String path = '$testPackageTestPath/logger_test.dart';
-    newFile('$testPackageRootPath/lib/classes.dart', _classes);
-    newFile(path, _testCode);
-    await assertDiagnosticsInFile(path, [lint(_testCode.lastIndexOf('Logger'), 6)]);
+    _writeOptions(includes: ['shared.yaml'], extra: _exclude('lib/other/**'));
+    await _assertTestFileNotReported();
   }
 
-  static const _excludeTests =
+  static final _excludeTests = _exclude('test/**');
+
+  static String _exclude(String pattern) =>
       'inject_lints:\n'
       '  rules:\n'
       '    avoid_constructing_injected_class:\n'
-      '      exclude: [test/**]\n';
+      "      exclude: ['$pattern']\n";
 
   void _writeOptions({List<String> includes = const [], String extra = ''}) => newAnalysisOptionsYamlFile(
     testPackageRootPath,

@@ -101,7 +101,7 @@ Add the plugin to the `analysis_options.yaml` at the root of your package:
 
 ```yaml
 plugins:
-  inject_lints: ^0.3.0
+  inject_lints: ^0.4.0
 ```
 
 You do not add `inject_lints` to `pubspec.yaml`, because the analysis server

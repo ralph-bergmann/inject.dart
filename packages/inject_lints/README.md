@@ -17,7 +17,7 @@ workspace:
 
 ```yaml
 plugins:
-  inject_lints: ^0.3.0
+  inject_lints: ^0.4.0
 ```
 
 You do not add `inject_lints` to `pubspec.yaml`. The analysis server fetches
@@ -34,7 +34,7 @@ a list such as `- prefer_single_entry_point`:
 ```yaml
 plugins:
   inject_lints:
-    version: ^0.3.0
+    version: ^0.4.0
     diagnostics:
       prefer_single_entry_point: true
       avoid_generated_component: true
@@ -50,7 +50,7 @@ To turn off a rule, checks included, set it to `false`:
 ```yaml
 plugins:
   inject_lints:
-    version: ^0.3.0
+    version: ^0.4.0
     diagnostics:
       require_provides_annotation: false
 ```
@@ -68,11 +68,23 @@ inject_lints:
         - integration_test/**
 ```
 
-`exclude` lists globs, relative to the package root, for files the rule skips.
-Like the analyzer, the plugin reads the `analysis_options.yaml` nearest to
-each file and follows its `include:` entries, so a shared options file can
-hold this section for all your packages. The including file wins over the
-files it includes.
+`exclude` lists globs for files the rule skips. It works like the analyzer's
+own `analyzer: exclude`:
+
+- A glob is relative to the folder of the package's `analysis_options.yaml`,
+  even when it comes from an included file. A shared options file therefore
+  applies `test/**` to the `test` folder of each package that includes it.
+- The `exclude` lists of a file and the files it includes are combined.
+- An `analysis_options.yaml` in a subfolder adds its own globs, relative to
+  its folder. The globs from the files above it still apply.
+
+| Glob              | Skips                                   |
+|-------------------|-----------------------------------------|
+| `test/**`         | the `test` folder of the package        |
+| `**/generated/**` | every `generated` folder, at any depth  |
+
+To skip a folder in one package only, put the glob in that package's
+`analysis_options.yaml`. It adds to the globs of the shared file.
 
 To use a local copy of the plugin, give a `path` instead of a `version`:
 
