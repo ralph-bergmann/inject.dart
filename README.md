@@ -66,7 +66,7 @@ type, so the IDE marks a mistake before you run `build_runner`. Add it to the
 
 ```yaml
 plugins:
-  inject_lints: ^0.1.0
+  inject_lints: ^0.2.0
 ```
 
 You do not add it to `pubspec.yaml`. Restart the analysis server after the

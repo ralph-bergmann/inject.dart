@@ -3,6 +3,7 @@ import 'package:analysis_server_plugin/registry.dart';
 
 import 'src/fixes.dart';
 import 'src/rules/avoid_asynchronous_on_inject.dart';
+import 'src/rules/avoid_constructing_injected_class.dart';
 import 'src/rules/avoid_generated_component.dart';
 import 'src/rules/avoid_inject_constructor_in_component.dart';
 import 'src/rules/avoid_inline_qualifier.dart';
@@ -61,6 +62,7 @@ class InjectLintsPlugin extends Plugin {
       ..registerLintRule(PreferInjectOverProvides())
       ..registerLintRule(PreferInjectedWidget())
       ..registerLintRule(AvoidInlineQualifier())
-      ..registerLintRule(AvoidManualViewModelBuilder());
+      ..registerLintRule(AvoidManualViewModelBuilder())
+      ..registerLintRule(AvoidConstructingInjectedClass());
   }
 }

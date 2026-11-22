@@ -17,7 +17,7 @@ workspace:
 
 ```yaml
 plugins:
-  inject_lints: ^0.1.0
+  inject_lints: ^0.2.0
 ```
 
 You do not add `inject_lints` to `pubspec.yaml`. The analysis server fetches
@@ -33,7 +33,7 @@ list them under `diagnostics`:
 ```yaml
 plugins:
   inject_lints:
-    version: ^0.1.0
+    version: ^0.2.0
     diagnostics:
       prefer_single_entry_point: true
       avoid_generated_component: true
@@ -41,6 +41,7 @@ plugins:
       prefer_injected_widget: true
       avoid_inline_qualifier: true
       avoid_manual_view_model_builder: true
+      avoid_constructing_injected_class: true
 ```
 
 To turn off a rule, checks included, set it to `false`:
@@ -48,10 +49,26 @@ To turn off a rule, checks included, set it to `false`:
 ```yaml
 plugins:
   inject_lints:
-    version: ^0.1.0
+    version: ^0.2.0
     diagnostics:
       require_provides_annotation: false
 ```
+
+Some rules take options. They go in a top-level `inject_lints` section of the
+same file, because `diagnostics` only takes `true`, `false` or a severity:
+
+```yaml
+inject_lints:
+  rules:
+    avoid_constructing_injected_class:
+      exclude:
+        - test/**
+        - integration_test/**
+```
+
+`exclude` lists globs, relative to the package root, for files the rule skips.
+The plugin reads only the `analysis_options.yaml` at the package root, not
+the files it includes.
 
 To use a local copy of the plugin, give a `path` instead of a `version`:
 
@@ -127,6 +144,7 @@ The style rules are off by default. Enable the ones you want.
 | [`prefer_injected_widget`](#prefer_injected_widget) | A public widget that takes injectable types but is not injected |
 | [`avoid_inline_qualifier`](#avoid_inline_qualifier) | `@Qualifier(#name)` written directly as an annotation |
 | [`avoid_manual_view_model_builder`](#avoid_manual_view_model_builder) | A `ViewModelBuilder` constructed by hand |
+| [`avoid_constructing_injected_class`](#avoid_constructing_injected_class) | An injected class constructed by hand |
 
 ## Components
 
@@ -384,6 +402,44 @@ class Database {}
 
 Skill: [inject-annotation-create-module][create-module]
 
+### avoid_constructing_injected_class
+
+Style rule. A class that carries `@inject` or `@assistedInject`, or whose
+constructor does, comes from the dependency graph. If you construct it by hand,
+you pass its dependencies yourself and lose its scope, such as `@singleton`.
+Inject the class, a `Provider<T>` or its factory instead.
+
+```dart
+@inject
+class Logger {}
+
+final logger = Logger(); // reported
+```
+
+The rule does not report:
+
+- The generated `.inject.dart` files.
+- A class that constructs itself, for example in a factory constructor.
+- Files that match `exclude`.
+
+The rule only sees calls such as `Logger()`. It does not report a tear-off
+such as `Logger.new` or a dot shorthand such as `.new()`.
+
+The rule checks tests too. In a test, take the class from a test component
+whose module swaps in the fakes, as [module override semantics][overrides]
+describes. If your unit tests construct classes by hand instead, exclude
+them:
+
+```yaml
+inject_lints:
+  rules:
+    avoid_constructing_injected_class:
+      exclude:
+        - test/**
+```
+
+Skill: [inject-annotation-setup-di][setup-di]
+
 ## Assisted injection
 
 ### require_assisted_parameter
@@ -495,3 +551,4 @@ diagnostic in the generator, update the matching rule.
 [create-module]: https://github.com/ralph-bergmann/inject.dart/blob/master/packages/inject_annotation/skills/inject-annotation-create-module/SKILL.md
 [assisted-injection]: https://github.com/ralph-bergmann/inject.dart/blob/master/packages/inject_annotation/skills/inject-annotation-add-assisted-injection/SKILL.md
 [view-model]: https://github.com/ralph-bergmann/inject.dart/blob/master/packages/inject_annotation/skills/inject-annotation-flutter-view-model/SKILL.md
+[overrides]: https://github.com/ralph-bergmann/inject.dart#module-override-semantics

@@ -1,5 +1,10 @@
+import 'package:analyzer/analysis_rule/rule_context.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
+import 'package:analyzer/file_system/file_system.dart';
+import 'package:glob/glob.dart';
+import 'package:path/path.dart' as p;
+import 'package:yaml/yaml.dart';
 
 /// Skill names as they appear in the skills' frontmatter, so a reader (or a
 /// coding agent) can load the matching skill straight from a diagnostic.
@@ -7,6 +12,57 @@ const createModuleSkill = "See the skill 'inject-annotation-create-module'.";
 const setupSkill = "See the skill 'inject-annotation-setup-di'.";
 const assistedInjectionSkill = "See the skill 'inject-annotation-add-assisted-injection'.";
 const viewModelSkill = "See the skill 'inject-annotation-flutter-view-model'.";
+
+/// Whether the options exclude the library that [context] analyzes from the
+/// rule [ruleName].
+///
+/// The options live in a top-level `inject_lints` section of the package's
+/// `analysis_options.yaml`, because the plugin's `diagnostics` section only
+/// takes `true`, `false` or a severity. Each pattern is a glob relative to the
+/// package root:
+///
+/// ```yaml
+/// inject_lints:
+///   rules:
+///     avoid_constructing_injected_class:
+///       exclude:
+///         - test/**
+/// ```
+///
+/// shortcut: reads only the package's own `analysis_options.yaml` and ignores
+/// `include:`. Upgrade when projects share these options through an included
+/// file.
+bool isExcludedFromRule(RuleContext context, String ruleName) {
+  final Folder? root = context.package?.root;
+  if (root == null) return false;
+  final p.Context pathContext = root.provider.pathContext;
+  final String relative = p.posix.joinAll(
+    pathContext.split(pathContext.relative(context.definingUnit.file.path, from: root.path)),
+  );
+  return _configuredExcludes(root, ruleName).any((pattern) {
+    try {
+      return Glob(pattern, context: p.posix).matches(relative);
+    } on FormatException {
+      return false; // An invalid pattern excludes nothing.
+    }
+  });
+}
+
+/// The `exclude` list of [ruleName] in the `inject_lints` options.
+Iterable<String> _configuredExcludes(Folder root, String ruleName) {
+  final File file = root.getFile('analysis_options.yaml');
+  if (!file.exists) return const [];
+  final Object? options;
+  try {
+    options = loadYaml(file.readAsStringSync());
+  } on Exception {
+    return const []; // The analyzer reports a broken options file itself.
+  }
+  if (options case {'inject_lints': {'rules': final Map<Object?, Object?> rules}}) {
+    if (rules[ruleName] case {'exclude': final List<Object?> excludes}) return excludes.whereType<String>();
+  }
+  return const [];
+}
 
 /// Whether [element] is declared in the pub package named [package].
 bool isFromPackage(Element element, String package) =>
