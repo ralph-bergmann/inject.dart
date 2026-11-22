@@ -1,9 +1,10 @@
-# Composing Components and Multi-Package Projects
+# Scoping, Composing Components and Multi-Package Projects
 
 Most apps start with a single root component, and many never need another. This
-chapter covers what comes next: monorepos that split infrastructure into packages
-(api, database, auth, analytics, …), and per-feature components that borrow
-objects from a root component.
+chapter covers what comes next: scopes that control how long an object lives
+(including child scopes such as a login session), monorepos that split
+infrastructure into packages (api, database, auth, analytics, …), and
+per-feature components that borrow objects from a root component.
 
 ## One graph or many?
 
@@ -21,16 +22,39 @@ A second component makes sense in these cases:
 - Tests: a test component that swaps real bindings for fakes (see
   [Testing](./chapter_6_testing.md)).
 
-## Singletons are scoped per component instance
+## Scoping: how long an instance lives
 
-`@singleton` guarantees a single instance within one component instance. It is
-not app-global: two components that list the same modules each build their own
-singletons.
+In inject.dart, a scope is a component or subcomponent instance. There are no
+scope annotations to declare. You open a scope by creating a component or
+subcomponent, and you close it by dropping the reference. A scope holds:
+
+- its `@singleton` instances, built once and kept for as long as the scope
+  lives;
+- the values passed to its `create(...)`, such as module instances or the
+  signed-in `Credentials`;
+- for a subcomponent, its own bindings, which code outside the child cannot
+  reach.
+
+An object without `@singleton` belongs to whoever asked for it. The graph builds
+a new one on every request and keeps no reference, so a widget or another
+object decides how long it lives. It still gets the dependencies of the scope
+that built it: a `BooksViewModel` built by one login session gets that
+session's `BookRepository`. If such an object outlives its scope, it keeps the
+singletons it uses alive.
+
+| Scope | Created by | Ends when | Holds |
+|---|---|---|---|
+| Root component | `MainComponent.create(...)` in `main()` | You drop the component, usually never | Singletons such as `ApiClient`, `Database`, `AuthRepository`, and the module instances passed to `create` |
+| Subcomponent (child scope) | `create(...)` on a factory injected from the parent | You drop the child, for example on logout | Singletons such as the session's `BookRepository`, runtime values such as `Credentials`, and its private bindings |
+
+`@singleton` therefore means one instance per scope, not one per app. Two
+components that list the same modules each build their own singletons.
 
 A second component must therefore never re-list the root's modules to "see" the
 root's objects. It would silently construct duplicates (a second database
 connection, a second HTTP client, …). Pass in the objects that must be shared,
-as shown below.
+as shown below. For a scope that should see everything the root has, use a
+subcomponent (see [Child scopes: subcomponents](#child-scopes-subcomponents)).
 
 ## Marrying packages through modules
 
@@ -225,11 +249,13 @@ inject.dart's version keeps the same shape but inverts the awkward part of
 that dependency: the feature defines the interface, the root implements it,
 and the feature never names an app type at all.
 
-## Session graphs: subcomponents
+## Child scopes: subcomponents
 
-A module can also *install* a `@subcomponent` into the parent component. The
-child graph can access every parent binding, its own bindings stay private, and
-`@singleton` is scoped per child instance. You still just list a module:
+A subcomponent gives you a child scope inside the app-wide scope, such as one
+scope per signed-in user or per screen. A module *installs* a `@subcomponent`
+into the parent component. The child graph can access every parent binding,
+its own bindings stay private, and `@singleton` is scoped per child instance.
+You still just list a module:
 
 ```dart
 @Subcomponent([SessionModule])
@@ -274,21 +300,75 @@ are in the root README's "Runtime values: `@subcomponentFactory`"
 section. `bookshelf` uses exactly this shape to pass the login
 `Credentials` into each session graph.
 
+### What `@singleton` means inside a subcomponent
+
+Each child instance is its own scope:
+
+- A `@singleton` from the subcomponent's own modules is built once per child
+  instance. Every `create(...)` call starts a fresh scope, so each session gets
+  its own `BookRepository`.
+- A `@singleton` from the parent stays in the parent scope. All child instances
+  share it, so every session uses the same `ApiClient`.
+- An `@inject @singleton` class belongs to the parent when the parent graph
+  already uses it, and all children share that instance. When only the child
+  needs it, it belongs to the child and is built once per child instance.
+- A subcomponent cannot override a parent binding. Declaring a binding key that
+  the parent already provides is a build error.
+
+Scopes nest one level deep today: the root and its subcomponents. A
+subcomponent that installs its own subcomponents fails the build with
+"multi-level subcomponent hierarchies are not supported". A session scope and
+a per-screen scope are therefore siblings under the root, not nested inside
+each other.
+
 Subcomponents fit session graphs best. Create the subcomponent on login and drop
-the reference on logout, and every session singleton it held goes with it. No
-explicit teardown is needed, because it was never a root-graph binding.
+the reference on logout. Its singletons and the `Credentials` go with it once
+nothing else references them. No explicit teardown is needed, because none of
+it was ever stored in the root graph.
 [`examples/bookshelf`][bookshelf-readme] is a complete, runnable app built around
 this shape, on top of the same shared-kernel and cross-package-binding patterns
 shown above.
 
-In a Flutter app, `inject_flutter`'s `SubcomponentBuilder<T>` widget owns the
-lifecycle of that child graph. It calls `create` once when mounted, hands the
-instance to `builder`, and calls an optional `dispose` when removed from the
-tree. Only a widget `Key` change recreates the graph. `bookshelf`'s `AuthGate`
-([`lib/src/login/auth_gate.dart`][bookshelf-auth-gate]) shows the pattern:
-it swaps between the login form and a `SubcomponentBuilder<SessionComponent>`
-keyed on the signed-in `Credentials`, so logging out unmounts the subtree and no
-one has to hand-roll a `T? _session` field.
+### Child scopes in Flutter: `SubcomponentBuilder`
+
+In a Flutter app, `inject_flutter`'s `SubcomponentBuilder<T>` widget ties a child
+scope to a part of the widget tree. Mounting the widget opens the scope, and
+unmounting it closes the scope. `bookshelf`'s `AuthGate`
+([`lib/src/login/auth_gate.dart`][bookshelf-auth-gate]) shows the login case.
+There, `SessionComponent` also exposes a `HomePageFactory`, so the home page and
+its view model are built inside the session scope:
+
+```dart
+class _AuthGateState extends State<AuthGate> {
+  Credentials? _credentials;
+
+  @override
+  Widget build(BuildContext context) {
+    final credentials = _credentials;
+    if (credentials == null) {
+      return widget.loginPageFactory.create(
+        onLoggedIn: (c) => setState(() => _credentials = c),
+      );
+    }
+    return SubcomponentBuilder<SessionComponent>(
+      key: ValueKey(credentials),
+      create: () => widget.sessionFactory.create(credentials),
+      builder: (context, session, _) => session.homePageFactory.create(
+        onLogout: () => setState(() => _credentials = null),
+      ),
+    );
+  }
+}
+```
+
+- `create` runs once, when the widget is mounted. It may return a `Future`.
+  The widget then shows `loading` while it runs and `error` if it fails.
+- Only a new `Key` creates a new scope. Keying on the `Credentials` gives every
+  login its own session, and other rebuilds keep the current one.
+- Logging out sets `_credentials` to `null`, which unmounts the
+  `SubcomponentBuilder` and closes the scope. Pass the optional `dispose`
+  callback if the session holds resources you must release yourself.
+  Otherwise dropping the reference is enough.
 
 ## Choosing a composition mechanism
 
@@ -296,6 +376,7 @@ one has to hand-roll a `T? _session` field.
 |--------------------|--------------|----------------------------|----------------------|
 | Relationship       | Parent installs the child; the child sees every parent binding. | None: the two components are independent graphs. | None: the feature defines a contract, the root fulfills it. |
 | Coupling           | The child graph is attached to the parent by installation. | The feature knows the concrete objects it was handed. | The feature knows only its own interface and never an app type. |
+| Scope of `@singleton` | The child's singletons live once per child instance; the parent's are shared by all children. | The feature component has its own scope; borrowed objects keep the root's lifetime. | The feature component has its own scope; borrowed objects stay cached in the root. |
 | When the value is available | Direct field access: parent and child are generated together, with no indirection. | Captured **eagerly**, at the wiring call site. | Fetched **lazily**, per request, preserving the owning graph's scope. |
 | Reach for it when  | Encapsulating an implementation detail, or a scope (a login session, a screen) that should be created and dropped as one unit. | A handful of already-built objects; the simplest possible wiring. | Many or asynchronous dependencies, a deferred-loaded feature, or migrating a Dagger `@Component(dependencies: [...])`. |
 
@@ -321,8 +402,9 @@ drives the feature component in isolation, with no root component involved.
 
 - One root component; more components only for lifecycle, environment, or test
   boundaries.
-- `@singleton` is per component instance. Share objects by passing them, not
-  by re-listing modules.
+- A scope is a component or subcomponent instance. It holds its singletons and
+  the values passed to `create(...)`, and `@singleton` means one instance per
+  scope. Share objects by passing them, not by re-listing modules.
 - Install a package by listing its module in `@Component([...])`; later modules
   override earlier ones.
 - A package split into several internal modules can bundle them behind one
@@ -333,8 +415,11 @@ drives the feature component in isolation, with no root component involved.
   FeatureModule(root.thing))`.
 - To wire a feature with many or async dependencies: define a narrow interface
   the root `implements`, and let a bridge module consume only that interface.
-- Session or encapsulated child graph: install a `@subcomponent` via
-  `@Module(subcomponents: [...])`. Its factory is a normal parent binding.
+- Child scope (a session, a screen) or encapsulated child graph: install a
+  `@subcomponent` via `@Module(subcomponents: [...])`. Its factory is a normal
+  parent binding. Child singletons live once per child instance; parent
+  singletons are shared. In Flutter, `SubcomponentBuilder` opens and closes the
+  child scope together with its widget.
   Remember the subcomponent's own `part '<file>.factory.dart';` directive.
 - The `@Component` lives in the app package; run `build_runner` where
   `@Component`s and `@assistedInject` files live.

@@ -24,6 +24,12 @@ lookups at runtime.
 Each component is a value. In tests you build it with fakes in `setUp`
 and throw it away in `tearDown`, with no global teardown.
 
+Scoping follows the same idea. Each component or subcomponent instance is a
+scope that holds its singletons and the values passed to its `create`. A
+subcomponent adds a child scope, such as one per login session, whose
+bindings stay private. Drop the child and everything it held goes with it,
+while the app-wide singletons stay (see [Scoping][book-scoping]).
+
 For Flutter, the optional `inject_flutter` package connects generated
 providers to the widget lifecycle with a single typedef:
 `ViewModelFactory<T>`.
@@ -360,11 +366,12 @@ final component = AppComponent.create(dbModule: DbModule('app.db'));
 A pre-built module instance is the intended way to pass runtime values
 and externally constructed objects into the graph (the inject.dart
 counterpart to Dagger's `@BindsInstance`). See
-[Composing Components and Multi-Package Projects][book-composing] for
-how the same mechanism connects a feature component to a root
+[Scoping, Composing Components and Multi-Package Projects][book-composing]
+for how the same mechanism connects a feature component to a root
 component.
 
 [book-composing]: https://ralph-bergmann.github.io/inject.dart/chapter_8_multiple_components.html
+[book-scoping]: https://ralph-bergmann.github.io/inject.dart/chapter_8_multiple_components.html#scoping-how-long-an-instance-lives
 
 ### Umbrella modules: `@Module(includes: ...)`
 
@@ -454,6 +461,11 @@ class SessionStore { /* ... */ }
 
 `identical(component.sessionStore, component.sessionStore)` is
 guaranteed to be `true`.
+
+There are no scope annotations: a `@singleton` lives as long as the
+component or
+subcomponent instance that owns its binding. For a shorter child scope,
+such as one per login session, see "Encapsulating subgraphs" below.
 
 ## Named bindings: `@Qualifier`
 
@@ -560,7 +572,9 @@ from the rest of the graph. Examples are an HTTP stack whose client must
 be reachable only through a public service, and a session graph with a
 shorter lifetime than the app. A subcomponent is an encapsulated child
 graph: it can access every parent binding, and its own bindings stay
-private.
+private. It is also how inject.dart does scoping: each subcomponent
+instance is a child scope with its own singletons, runtime values and
+private bindings.
 
 Declare the child graph with `@subcomponent` and install it through a
 module. Listing that module is the only integration step:
@@ -969,7 +983,7 @@ instance instead of re-listing its modules. A package split into several
 internal modules can also bundle them behind one public module with
 `@Module(includes: [...])`, so the app lists only that one module (see
 "Umbrella modules" above).
-[Composing Components and Multi-Package Projects][book-composing]
+[Scoping, Composing Components and Multi-Package Projects][book-composing]
 explains which mechanism to use when.
 
 ## Module override semantics

@@ -126,7 +126,7 @@ final component = TestRepositoryComponent.create(
 ```
 
 The same module-instance mechanism connects components, as
-[Composing Components and Multi-Package Projects](./chapter_8_multiple_components.md)
+[Scoping, Composing Components and Multi-Package Projects](./chapter_8_multiple_components.md)
 shows.
 
 ## ViewModel test

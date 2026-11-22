@@ -104,6 +104,11 @@ class DatabaseModule {
 `identical(component.counterRepository, component.counterRepository)` is
 guaranteed to be `true`.
 
+A `@singleton` lives as long as its component instance. A subcomponent
+opens a shorter child scope, for example one per login session, which also holds
+the runtime values passed to it (see
+[Scoping: how long an instance lives](./chapter_8_multiple_components.md#scoping-how-long-an-instance-lives)).
+
 ViewModels are deliberately not singletons. Each widget gets a fresh instance
 with its own state, created in `initState` and disposed in `dispose`. With a
 singleton ViewModel, all instances of a screen would share the same state.
@@ -508,7 +513,7 @@ A pre-built module instance is the intended way to pass in:
   [A third option: resolve before the graph](#a-third-option-resolve-before-the-graph));
 - externally constructed objects, including objects obtained from another
   component (see
-  [Composing Components](./chapter_8_multiple_components.md));
+  [Scoping, Composing Components and Multi-Package Projects](./chapter_8_multiple_components.md));
 - pre-configured fakes in tests (see
   [Testing](./chapter_6_testing.md)).
 

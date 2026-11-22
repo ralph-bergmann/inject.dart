@@ -36,7 +36,7 @@
             const default_dark_theme = "ayu";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-e5cee16d.js"></script>
+        <script src="toc-46ddf54f.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -243,6 +243,10 @@ class DatabaseModule {
 </code></pre>
 <p><code>identical(component.counterRepository, component.counterRepository)</code> is
 guaranteed to be <code>true</code>.</p>
+<p>A <code>@singleton</code> lives as long as its component instance. A subcomponent
+opens a shorter child scope, for example one per login session, which also holds
+the runtime values passed to it (see
+<a href="./chapter_8_multiple_components.html#scoping-how-long-an-instance-lives">Scoping: how long an instance lives</a>).</p>
 <p>ViewModels are deliberately not singletons. Each widget gets a fresh instance
 with its own state, created in <code>initState</code> and disposed in <code>dispose</code>. With a
 singleton ViewModel, all instances of a screen would share the same state.</p>
@@ -578,7 +582,7 @@ result in, and the whole graph stays synchronous (see
 <a href="#a-third-option-resolve-before-the-graph">A third option: resolve before the graph</a>);</li>
 <li>externally constructed objects, including objects obtained from another
 component (see
-<a href="./chapter_8_multiple_components.html">Composing Components</a>);</li>
+<a href="./chapter_8_multiple_components.html">Scoping, Composing Components and Multi-Package Projects</a>);</li>
 <li>pre-configured fakes in tests (see
 <a href="./chapter_6_testing.html">Testing</a>).</li>
 </ul>
