@@ -176,21 +176,45 @@ you work on the generator itself.
 
 ## Agent Skills
 
-For agents that support the [Agent Skills][agentskills] format (Claude Code and
-others), inject.dart provides task-focused skills under [`skills/`][skills-dir].
-Each skill teaches one concrete DI task. Install them with either tool:
+For agents that support the [Agent Skills][agentskills] format (Claude Code,
+Cursor and others), inject.dart provides task-focused skills under
+[`skills/`][skills-dir]. Each skill teaches one concrete DI task. Install them in
+one of three ways.
+
+### With Dart, for any agent
+
+Dart's [package skills][dart-package-skills] tool copies the skills that your
+dependencies ship into your agent's skills directory, such as `.agents/skills/`.
+Run it in a project that depends on `inject_annotation`:
 
 ```shell
-# Node tool — installs straight from the GitHub repo
-npx skills add https://github.com/ralph-bergmann/inject.dart/tree/master/packages/inject_annotation/skills --skill '*' --agent universal
+dart run skills@ get -p inject_annotation
 ```
 
-```shell
-# Dart tool (https://pub.dev/packages/skills) — discovers skills from your
-# dependency tree and configured GitHub registries, into your IDE's skills dir
-dart pub global activate skills
-skills get
+The skills come from the `inject_annotation` version your project uses, so run
+the command again after you upgrade.
+
+### In Claude Code
+
+Add this repository as a plugin marketplace, then install the plugin:
+
+```text
+/plugin marketplace add ralph-bergmann/inject.dart
+/plugin install inject-annotation@inject-dart
 ```
+
+Claude Code adds the plugin name in front of each skill, for example
+`/inject-annotation:inject-annotation-setup-di`. To get new versions of the
+skills, turn on auto-update for the `inject-dart` marketplace in `/plugin`.
+
+### In Cursor
+
+Open **Customize**, choose **From GitHub Repository**, enter
+`https://github.com/ralph-bergmann/inject.dart`, then install the
+`inject-annotation` plugin. Teams can add the repository as a team marketplace
+instead.
+
+### The skills
 
 | Skill                                                        | Use it to…                                                                                                        |
 |--------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------|
@@ -1147,6 +1171,7 @@ Contributions are welcome. Feel free to open a PR.
 [bookshelf-readme]: https://github.com/ralph-bergmann/inject.dart/blob/master/examples/bookshelf/README.md
 [rules-file]: https://github.com/ralph-bergmann/inject.dart/blob/master/rules/rules.md
 [agentskills]: https://agentskills.io/specification
+[dart-package-skills]: https://dart.dev/ai/package-skills
 [skills-dir]: https://github.com/ralph-bergmann/inject.dart/tree/master/packages/inject_annotation/skills
 [skill-setup]: https://github.com/ralph-bergmann/inject.dart/blob/master/packages/inject_annotation/skills/inject-annotation-setup-di/SKILL.md
 [skill-injectable]: https://github.com/ralph-bergmann/inject.dart/blob/master/packages/inject_annotation/skills/inject-annotation-add-injectable/SKILL.md

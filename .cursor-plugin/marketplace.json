@@ -1,0 +1,17 @@
+{
+  "name": "inject-dart",
+  "owner": {
+    "name": "Ralph Bergmann",
+    "url": "https://github.com/ralph-bergmann"
+  },
+  "metadata": {
+    "description": "Agent skills for inject.dart, compile-time dependency injection for Dart and Flutter."
+  },
+  "plugins": [
+    {
+      "name": "inject-annotation",
+      "source": "./packages/inject_annotation",
+      "description": "Skills that teach an AI agent how to set up and use inject.dart."
+    }
+  ]
+}

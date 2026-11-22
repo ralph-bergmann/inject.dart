@@ -1,0 +1,12 @@
+{
+  "name": "inject-annotation",
+  "description": "Skills that teach an AI agent how to set up and use inject.dart.",
+  "author": {
+    "name": "Ralph Bergmann",
+    "url": "https://github.com/ralph-bergmann"
+  },
+  "homepage": "https://ralph-bergmann.github.io/inject.dart/",
+  "repository": "https://github.com/ralph-bergmann/inject.dart",
+  "license": "BSD-3-Clause",
+  "keywords": ["dart", "flutter", "dependency-injection", "inject.dart"]
+}

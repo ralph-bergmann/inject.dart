@@ -166,18 +166,33 @@ file your assistant reads project rules from, such as <code>AGENTS.md</code> or
 <code>CLAUDE.md</code>. You can drop the section on golden tests, which only matters when
 you work on the generator itself.</p>
 <h2 id="agent-skills"><a class="header" href="#agent-skills">Agent Skills</a></h2>
-<p>For agents that support the <a href="https://agentskills.io/specification">Agent Skills</a> format (Claude Code and
-others), inject.dart provides task-focused skills under <a href="https://github.com/ralph-bergmann/inject.dart/tree/master/packages/inject_annotation/skills"><code>skills/</code></a>.
-The rules file is one big document. Each skill teaches one concrete task and
-activates only when relevant. Install them with either tool:</p>
-<pre><code class="language-shell"># Node tool — installs straight from the GitHub repo
-npx skills add https://github.com/ralph-bergmann/inject.dart/tree/master/packages/inject_annotation/skills --skill '*' --agent universal
-
-# Dart tool (https://pub.dev/packages/skills) — discovers skills from your
-# dependency tree and configured GitHub registries, into your IDE's skills dir
-dart pub global activate skills
-skills get
+<p>For agents that support the <a href="https://agentskills.io/specification">Agent Skills</a> format (Claude Code,
+Cursor and others), inject.dart provides task-focused skills under
+<a href="https://github.com/ralph-bergmann/inject.dart/tree/master/packages/inject_annotation/skills"><code>skills/</code></a>. The rules file is one big document. Each skill teaches
+one concrete task and activates only when relevant. Install them in one of three
+ways.</p>
+<h3 id="with-dart-for-any-agent"><a class="header" href="#with-dart-for-any-agent">With Dart, for any agent</a></h3>
+<p>Dart’s <a href="https://dart.dev/ai/package-skills">package skills</a> tool copies the skills that your
+dependencies ship into your agent’s skills directory, such as <code>.agents/skills/</code>.
+Run it in a project that depends on <code>inject_annotation</code>:</p>
+<pre><code class="language-shell">dart run skills@ get -p inject_annotation
 </code></pre>
+<p>The skills come from the <code>inject_annotation</code> version your project uses, so run
+the command again after you upgrade.</p>
+<h3 id="in-claude-code"><a class="header" href="#in-claude-code">In Claude Code</a></h3>
+<p>Add this repository as a plugin marketplace, then install the plugin:</p>
+<pre><code class="language-text">/plugin marketplace add ralph-bergmann/inject.dart
+/plugin install inject-annotation@inject-dart
+</code></pre>
+<p>Claude Code adds the plugin name in front of each skill, for example
+<code>/inject-annotation:inject-annotation-setup-di</code>. To get new versions of the
+skills, turn on auto-update for the <code>inject-dart</code> marketplace in <code>/plugin</code>.</p>
+<h3 id="in-cursor"><a class="header" href="#in-cursor">In Cursor</a></h3>
+<p>Open <strong>Customize</strong>, choose <strong>From GitHub Repository</strong>, enter
+<code>https://github.com/ralph-bergmann/inject.dart</code>, then install the
+<code>inject-annotation</code> plugin. Teams can add the repository as a team marketplace
+instead.</p>
+<h3 id="the-skills"><a class="header" href="#the-skills">The skills</a></h3>
 <div class="table-wrapper">
 <table>
 <thead>
