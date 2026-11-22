@@ -17,23 +17,24 @@ workspace:
 
 ```yaml
 plugins:
-  inject_lints: ^0.2.0
+  inject_lints: ^0.3.0
 ```
 
 You do not add `inject_lints` to `pubspec.yaml`. The analysis server fetches
 the plugin itself. Restart the analysis server after you change the `plugins`
 section. In VS Code, run **Dart: Restart Analysis Server**.
 
-The plugin must be in the root `analysis_options.yaml`. The analyzer ignores a
-`plugins` section in a nested options file.
+The plugin must be in the root `analysis_options.yaml` or in a file it
+includes. The analyzer ignores a `plugins` section in a nested options file.
 
 This enables the [checks](#checks). To also enable the [style rules](#style-rules),
-list them under `diagnostics`:
+list them under `diagnostics`. `diagnostics` takes a map; the analyzer rejects
+a list such as `- prefer_single_entry_point`:
 
 ```yaml
 plugins:
   inject_lints:
-    version: ^0.2.0
+    version: ^0.3.0
     diagnostics:
       prefer_single_entry_point: true
       avoid_generated_component: true
@@ -49,13 +50,14 @@ To turn off a rule, checks included, set it to `false`:
 ```yaml
 plugins:
   inject_lints:
-    version: ^0.2.0
+    version: ^0.3.0
     diagnostics:
       require_provides_annotation: false
 ```
 
-Some rules take options. They go in a top-level `inject_lints` section of the
-same file, because `diagnostics` only takes `true`, `false` or a severity:
+Some rules take options. They go in a top-level `inject_lints` section next
+to `plugins`, not under `diagnostics`. `diagnostics` only takes `true`,
+`false` or a severity:
 
 ```yaml
 inject_lints:
@@ -67,8 +69,10 @@ inject_lints:
 ```
 
 `exclude` lists globs, relative to the package root, for files the rule skips.
-The plugin reads only the `analysis_options.yaml` at the package root, not
-the files it includes.
+Like the analyzer, the plugin reads the `analysis_options.yaml` nearest to
+each file and follows its `include:` entries, so a shared options file can
+hold this section for all your packages. The including file wins over the
+files it includes.
 
 To use a local copy of the plugin, give a `path` instead of a `version`:
 

@@ -15,6 +15,7 @@ class AvoidConstructingInjectedClassTest extends InjectRuleTest {
   @override
   void setUp() {
     rule = AvoidConstructingInjectedClass();
+    newPackage('shared_lints').addFile('lib/options.yaml', _excludeTests);
     super.setUp();
   }
 
@@ -58,23 +59,58 @@ class Plain {}
   }
 
   Future<void> test_excludedTestDirectory() async {
-    _writeExcludes('[test/**]');
-    newFile('$testPackageRootPath/lib/classes.dart', _classes);
-    final String path = '$testPackageTestPath/logger_test.dart';
-    newFile(path, _testCode);
-    await assertNoDiagnosticsInFile(path);
+    _writeOptions(extra: _excludeTests);
+    await _assertTestFileNotReported();
     // Outside the excluded files, the rule still reports.
     await assertLints('$_classes\nfinal logger = Logger();\n', ['…Logger']);
   }
 
-  void _writeExcludes(String excludes) => newAnalysisOptionsYamlFile(
+  Future<void> test_nestedOptionsFile() async {
+    newFile('$testPackageTestPath/analysis_options.yaml', 'include: ../analysis_options.yaml\n$_excludeTests');
+    await _assertTestFileNotReported();
+    await assertLints('$_classes\nfinal logger = Logger();\n', ['…Logger']);
+  }
+
+  Future<void> test_relativeInclude() async {
+    newFile('$testPackageRootPath/shared.yaml', _excludeTests);
+    _writeOptions(includes: ['shared.yaml']);
+    await _assertTestFileNotReported();
+  }
+
+  Future<void> test_packageInclude() async {
+    _writeOptions(includes: ['package:shared_lints/options.yaml']);
+    await _assertTestFileNotReported();
+  }
+
+  Future<void> test_includingFileWins() async {
+    newFile('$testPackageRootPath/shared.yaml', _excludeTests);
+    _writeOptions(
+      includes: ['shared.yaml'],
+      extra: 'inject_lints:\n  rules:\n    avoid_constructing_injected_class:\n      exclude: []\n',
+    );
+    final String path = '$testPackageTestPath/logger_test.dart';
+    newFile('$testPackageRootPath/lib/classes.dart', _classes);
+    newFile(path, _testCode);
+    await assertDiagnosticsInFile(path, [lint(_testCode.lastIndexOf('Logger'), 6)]);
+  }
+
+  static const _excludeTests =
+      'inject_lints:\n'
+      '  rules:\n'
+      '    avoid_constructing_injected_class:\n'
+      '      exclude: [test/**]\n';
+
+  void _writeOptions({List<String> includes = const [], String extra = ''}) => newAnalysisOptionsYamlFile(
     testPackageRootPath,
-    '${analysisOptionsContent(rules: [rule.name])}\n'
-    'inject_lints:\n'
-    '  rules:\n'
-    '    avoid_constructing_injected_class:\n'
-    '      exclude: $excludes\n',
+    '${analysisOptionsContent(includes: includes, rules: [rule.name])}\n$extra',
   );
+
+  Future<void> _assertTestFileNotReported() async {
+    newFile('$testPackageRootPath/lib/classes.dart', _classes);
+    final String path = '$testPackageTestPath/logger_test.dart';
+    newFile(path, _testCode);
+    await assertNoDiagnosticsInFile(path);
+  }
 
   Future<void> test_generatedFile() async {
     newFile('$testPackageRootPath/lib/classes.dart', _classes);
