@@ -1,3 +1,8 @@
+## 1.2.2
+
+- Document that `Provider<T>` and `@assistedInject` parameters need a synchronous dependency chain.
+- Ship the agent skills as Claude Code and Cursor plugins, and rewrite them in plain language.
+
 ## 1.2.1
 
 - add missing documentation

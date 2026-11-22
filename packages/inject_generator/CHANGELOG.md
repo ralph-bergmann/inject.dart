@@ -1,3 +1,16 @@
+## 1.3.0
+
+- Nullable dependencies (`Foo?`) now compile and resolve to the `Foo` binding, also for entry
+  points and in the cycle check.
+- Fix several typedef provider cases: no provider is synthesized for bound or unbindable function
+  typedefs, false "never used" warnings are gone, and a typedef that returns an SDK type gets a
+  clear error.
+- Report async problems at the parameter that causes them: an async dependency of a factory, a
+  `Provider<T>` parameter over an async binding, and a getter whose `Future` wrapper does not
+  match its binding.
+- Emit import prefixes inside inline function types and record types.
+- Upgrade to `analyzer` ^14.7.0 and `build` ^5.0.0.
+
 ## 1.2.1
 
 - Fix generated imports for outputs outside `lib/`: when a component lives in `example/`, `tool/`,
