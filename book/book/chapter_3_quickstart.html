@@ -468,6 +468,9 @@ abstract class MainComponent {
 <p><code>MainComponent.create()</code> returns the wired component; <code>myAppFactory.create()</code>
 produces a <code>MyApp</code> with every injected dependency already in place.</p>
 <h2 id="troubleshooting"><a class="header" href="#troubleshooting">Troubleshooting</a></h2>
+<p>With the <a href="./chapter_2_installation.html#lint-rules"><code>inject_lints</code> plugin</a>
+enabled, the IDE marks many annotation mistakes before you run the generator.
+Only the generator reports the errors below.</p>
 <h3 id="component-maincomponent-has-no-entry-points"><a class="header" href="#component-maincomponent-has-no-entry-points">“Component ‘MainComponent’ has no entry points”</a></h3>
 <p>A <code>@Component</code> must expose at least one entry point: an abstract getter or
 method (here, <code>myAppFactory</code>). Add one if your component has none.</p>

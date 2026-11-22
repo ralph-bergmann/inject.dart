@@ -1,0 +1,26 @@
+name: inject_lints
+description: >-
+  Analyzer plugin for inject.dart. It reports in the IDE what the inject.dart
+  code generator would reject, and offers optional style rules.
+version: 0.1.0
+documentation: https://ralph-bergmann.github.io/inject.dart/
+repository: https://github.com/ralph-bergmann/inject.dart
+issue_tracker: https://github.com/ralph-bergmann/inject.dart/issues
+topics:
+  - dependency-injection
+  - analyzer
+  - lints
+
+environment:
+  sdk: ^3.13.1
+resolution: workspace
+
+dependencies:
+  analysis_server_plugin: ^0.3.26
+  analyzer: ^14.7.0
+  analyzer_plugin: ^0.14.20
+
+dev_dependencies:
+  analyzer_testing: ^0.4.5
+  test: ^1.31.1
+  test_reflective_loader: ^0.6.0

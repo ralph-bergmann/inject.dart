@@ -362,6 +362,10 @@ produces a `MyApp` with every injected dependency already in place.
 
 ## Troubleshooting
 
+With the [`inject_lints` plugin](./chapter_2_installation.md#lint-rules)
+enabled, the IDE marks many annotation mistakes before you run the generator.
+Only the generator reports the errors below.
+
 ### "Component 'MainComponent' has no entry points"
 
 A `@Component` must expose at least one entry point: an abstract getter or

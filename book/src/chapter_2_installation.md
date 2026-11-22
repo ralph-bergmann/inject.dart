@@ -88,3 +88,45 @@ self-contained.
 
 If you see an error such as `Component 'MainComponent' has no entry points`,
 see the Quickstart chapter's Troubleshooting section.
+
+## Lint rules
+
+The generator checks your annotations and stops the build when something is
+wrong. You only find out after you run `build_runner`. The optional
+`inject_lints` analyzer plugin runs many of these checks while you type, so
+the IDE marks the mistake right away. It also works in `dart analyze` and
+`flutter analyze`.
+
+Add the plugin to the `analysis_options.yaml` at the root of your package:
+
+```yaml
+plugins:
+  inject_lints: ^0.1.0
+```
+
+You do not add `inject_lints` to `pubspec.yaml`, because the analysis server
+fetches the plugin itself. Restart the analysis server after the change. In VS
+Code, run **Dart: Restart Analysis Server**.
+
+From then on the IDE reports, for example, a module method without
+`@provides`, which inject.dart would otherwise skip without a message:
+
+```dart
+@module
+class AppModule {
+  @provides
+  Dio provideDio() => Dio(); // ok
+
+  ApiClient provideApiClient(Dio dio) => ApiClient(dio); // reported
+}
+```
+
+Some rules offer a quick fix, such as adding the missing `@provides`. The
+plugin cannot see the whole dependency graph, so the generator still reports
+a missing binding or a dependency cycle.
+
+The plugin also has style rules, which are off by default. The
+[`inject_lints` README][lints-readme] lists every rule and how to turn rules on
+and off.
+
+[lints-readme]: https://github.com/ralph-bergmann/inject.dart/blob/master/packages/inject_lints/README.md

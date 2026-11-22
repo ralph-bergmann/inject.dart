@@ -216,6 +216,35 @@ pub.dev example is the exception: it commits them so the snapshot is
 self-contained.</p>
 <p>If you see an error such as <code>Component 'MainComponent' has no entry points</code>,
 see the Quickstart chapter’s Troubleshooting section.</p>
+<h2 id="lint-rules"><a class="header" href="#lint-rules">Lint rules</a></h2>
+<p>The generator checks your annotations and stops the build when something is
+wrong. You only find out after you run <code>build_runner</code>. The optional
+<code>inject_lints</code> analyzer plugin runs many of these checks while you type, so
+the IDE marks the mistake right away. It also works in <code>dart analyze</code> and
+<code>flutter analyze</code>.</p>
+<p>Add the plugin to the <code>analysis_options.yaml</code> at the root of your package:</p>
+<pre><code class="language-yaml">plugins:
+  inject_lints: ^0.1.0
+</code></pre>
+<p>You do not add <code>inject_lints</code> to <code>pubspec.yaml</code>, because the analysis server
+fetches the plugin itself. Restart the analysis server after the change. In VS
+Code, run <strong>Dart: Restart Analysis Server</strong>.</p>
+<p>From then on the IDE reports, for example, a module method without
+<code>@provides</code>, which inject.dart would otherwise skip without a message:</p>
+<pre><code class="language-dart">@module
+class AppModule {
+  @provides
+  Dio provideDio() =&gt; Dio(); // ok
+
+  ApiClient provideApiClient(Dio dio) =&gt; ApiClient(dio); // reported
+}
+</code></pre>
+<p>Some rules offer a quick fix, such as adding the missing <code>@provides</code>. The
+plugin cannot see the whole dependency graph, so the generator still reports
+a missing binding or a dependency cycle.</p>
+<p>The plugin also has style rules, which are off by default. The
+<a href="https://github.com/ralph-bergmann/inject.dart/blob/master/packages/inject_lints/README.md"><code>inject_lints</code> README</a> lists every rule and how to turn rules on
+and off.</p>
 
                     </main>
 

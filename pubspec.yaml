@@ -17,6 +17,7 @@ workspace:
   - packages/inject_annotation
   - packages/inject_flutter
   - packages/inject_generator
+  - packages/inject_lints
 
 dev_dependencies:
   melos: ^8.5.0

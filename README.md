@@ -41,6 +41,7 @@ providers to the widget lifecycle with a single typedef:
 | `inject_annotation` | Annotations and runtime types. Add it to every project.           |
 | `inject_generator`  | The code generator. Add as a dev dependency.                      |
 | `inject_flutter`    | `ViewModelFactory` and friends. Add it to Flutter projects.       |
+| `inject_lints`      | Optional analyzer plugin. Enable it in `analysis_options.yaml`.   |
 
 # Installation
 
@@ -55,6 +56,22 @@ For Dart projects (no Flutter integration):
 ```shell
 dart pub add inject_annotation dev:inject_generator dev:build_runner
 ```
+
+## Lint rules
+
+The generator checks your annotations and stops the build when something is
+wrong. The `inject_lints` analyzer plugin runs many of these checks while you
+type, so the IDE marks a mistake before you run `build_runner`. Add it to the
+`analysis_options.yaml` at the root of your package:
+
+```yaml
+plugins:
+  inject_lints: ^0.1.0
+```
+
+You do not add it to `pubspec.yaml`. Restart the analysis server after the
+change. The [`inject_lints` README][lints-readme] lists the rules, the
+optional style rules and the quick fixes.
 
 # Quickstart (Flutter)
 
@@ -1182,6 +1199,7 @@ cd packages/inject_generator && \
 Contributions are welcome. Feel free to open a PR.
 
 [example-main]: https://github.com/ralph-bergmann/inject.dart/blob/master/examples/example/lib/main.dart
+[lints-readme]: https://github.com/ralph-bergmann/inject.dart/blob/master/packages/inject_lints/README.md
 [bookshelf-readme]: https://github.com/ralph-bergmann/inject.dart/blob/master/examples/bookshelf/README.md
 [rules-file]: https://github.com/ralph-bergmann/inject.dart/blob/master/rules/rules.md
 [agentskills]: https://agentskills.io/specification
