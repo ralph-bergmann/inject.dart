@@ -35,6 +35,9 @@ const viewModelSkill = "See the skill 'inject-annotation-flutter-view-model'.";
 ///   `analysis_options.yaml` that the package uses, also when the pattern
 ///   comes from an included file. A shared file therefore applies its
 ///   patterns to each package that includes it.
+/// - The package uses the nearest `analysis_options.yaml` at or above its
+///   root. In a pub workspace, a package without its own file uses the file
+///   of the workspace root.
 /// - The lists of a file and the files it includes are combined.
 /// - An `analysis_options.yaml` in a subfolder adds its own patterns,
 ///   relative to its folder. The patterns of the files above it still apply.
@@ -48,7 +51,9 @@ bool isExcludedFromRule(RuleContext context, String ruleName) {
   final UriConverter? converter = context.libraryElement?.session.uriConverter;
   final p.Context pathContext = root.provider.pathContext;
 
+  bool atOrAbovePackageRoot = false;
   for (Folder folder = file.parent; ; folder = folder.parent) {
+    atOrAbovePackageRoot = atOrAbovePackageRoot || folder.path == root.path;
     final File options = folder.getFile('analysis_options.yaml');
     if (options.exists) {
       final String relative = p.posix.joinAll(pathContext.split(pathContext.relative(file.path, from: folder.path)));
@@ -59,8 +64,10 @@ bool isExcludedFromRule(RuleContext context, String ruleName) {
           // An invalid pattern excludes nothing.
         }
       }
+      // This is the file the package uses; the files above it apply only through `include:`.
+      if (atOrAbovePackageRoot) return false;
     }
-    if (folder.path == root.path || folder.isRoot) return false;
+    if (folder.isRoot) return false;
   }
 }
 

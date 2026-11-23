@@ -1,3 +1,9 @@
+## 0.4.1
+
+- `exclude` now also reads the `analysis_options.yaml` above the package root. In a pub
+  workspace, a package without its own options file uses the file of the workspace root;
+  before, the plugin stopped at the package root and ignored that file's globs.
+
 ## 0.4.0
 
 - `exclude` now works like the analyzer's `analyzer: exclude`. The lists of a file and the

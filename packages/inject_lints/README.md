@@ -74,6 +74,9 @@ own `analyzer: exclude`:
 - A glob is relative to the folder of the package's `analysis_options.yaml`,
   even when it comes from an included file. A shared options file therefore
   applies `test/**` to the `test` folder of each package that includes it.
+- In a pub workspace, a package without its own `analysis_options.yaml` uses
+  the file of the workspace root. Its globs are then relative to the
+  workspace root, for example `app/widgetbook/**`.
 - The `exclude` lists of a file and the files it includes are combined.
 - An `analysis_options.yaml` in a subfolder adds its own globs, relative to
   its folder. The globs from the files above it still apply.

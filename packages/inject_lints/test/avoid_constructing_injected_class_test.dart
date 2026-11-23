@@ -81,6 +81,30 @@ class Plain {}
     await _assertTestFileNotReported();
   }
 
+  Future<void> test_optionsFileAboveThePackage() async {
+    // A pub workspace member without its own options file uses the workspace
+    // root's file. Its globs are relative to that file's folder.
+    deleteFile('$testPackageRootPath/analysis_options.yaml');
+    _writeParentOptions(_exclude('*/test/**'));
+    await _assertTestFileNotReported();
+  }
+
+  Future<void> test_packageOptionsFileHidesTheFileAbove() async {
+    // As in the analyzer, the nearest options file at or above the package
+    // root wins; the file above it applies only through an include.
+    _writeParentOptions(_exclude('*/test/**'));
+    _writeOptions();
+    newFile('$testPackageRootPath/lib/classes.dart', _classes);
+    final String path = '$testPackageTestPath/logger_test.dart';
+    newFile(path, _testCode);
+    await assertDiagnosticsInFile(path, [lint(_testCode.lastIndexOf('Logger'), 6)]);
+  }
+
+  void _writeParentOptions(String extra) => newAnalysisOptionsYamlFile(
+    resourceProvider.pathContext.dirname(testPackageRootPath),
+    '${analysisOptionsContent(rules: [rule.name])}\n$extra',
+  );
+
   Future<void> test_relativeInclude() async {
     newFile('$testPackageRootPath/shared.yaml', _excludeTests);
     _writeOptions(includes: ['shared.yaml']);
